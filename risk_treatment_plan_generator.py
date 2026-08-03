@@ -566,7 +566,7 @@ def main():
         st.subheader("📅 Timeline Analysis")
         
         # Simulate timeline data
-        dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='M')
+        dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='ME')
         timeline_data = []
         
         for date in dates:

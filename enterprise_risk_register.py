@@ -377,7 +377,7 @@ def main():
         st.header("📈 Risk Trends & Forecasting")
         
         # Simulate trend data
-        dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='M')
+        dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='ME')
         trend_data = []
         
         for date in dates:
@@ -426,7 +426,7 @@ def main():
         # Simple forecasting model
         if st.button("📊 Generate Forecast"):
             # Simulate future months
-            future_dates = pd.date_range(start='2025-01-01', end='2025-06-30', freq='M')
+            future_dates = pd.date_range(start='2025-01-01', end='2025-06-30', freq='ME')
             forecast_data = []
             
             for date in future_dates:

@@ -469,7 +469,7 @@ def main():
         st.subheader("📊 Implementation Trends")
         
         # Simulate historical data
-        dates = pd.date_range(start='2023-01-01', end='2024-12-31', freq='M')
+        dates = pd.date_range(start='2023-01-01', end='2024-12-31', freq='ME')
         trend_data = []
         
         for date in dates:

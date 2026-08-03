@@ -631,7 +631,7 @@ def main():
             st.subheader("Trend Analysis")
             
             # Simulate historical data
-            dates = pd.date_range(start='2023-01-01', end='2024-12-31', freq='Q')
+            dates = pd.date_range(start='2023-01-01', end='2024-12-31', freq='QE')
             trend_data = []
             
             for date in dates:

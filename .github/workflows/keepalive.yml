@@ -1,0 +1,30 @@
+name: Keep Streamlit apps awake
+
+# Community Cloud currently sleeps apps after ~12h of inactivity.
+# A visit (HTTP GET) resets the idle timer / helps cold-start waking.
+# Tune gently — this is free-tier community capacity, not a prod SLA.
+
+on:
+  schedule:
+    # Every 8 hours → comfortably under a 12h sleep window
+    - cron: "0 */8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Ping apps
+        run: python tools/keepalive_ping.py

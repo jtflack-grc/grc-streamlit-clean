@@ -1,0 +1,32 @@
+# Streamlit Community Cloud entrypoints for #RUNGRCRaleigh demos.
+# Used by .github/workflows/keepalive.yml — one URL per line.
+
+https://jtflack-fair-calculator.streamlit.app/
+https://jtflack-compliance-dashboard.streamlit.app/
+https://jtflack-vendor-assessment.streamlit.app/
+https://jtflack-roi-calculator.streamlit.app/
+https://jtflack-csf-maturity-assessment.streamlit.app/
+https://jtflack-enterprise-risk-register.streamlit.app/
+https://jtflack-risk-assessment-monte-carlo.streamlit.app/
+https://jtflack-risk-treatment-plan-generator.streamlit.app/
+https://jtflack-control-gap-analysis.streamlit.app/
+https://jtflack-control-tracker.streamlit.app/
+https://jtflack-control-testing-management.streamlit.app/
+https://jtflack-exception-tracking-system.streamlit.app/
+https://jtflack-kpi-tracking-dashboard.streamlit.app/
+https://jtflack-analytics-dashboard-enhanced.streamlit.app/
+https://jtflack-policy-management-system.streamlit.app/
+https://jtflack-incident-response-management.streamlit.app/
+https://jtflack-business-continuity-management.streamlit.app/
+https://jtflack-audit-management-system.streamlit.app/
+https://jtflack-compliance-calendar.streamlit.app/
+https://jtflack-asset-management-system.streamlit.app/
+https://jtflack-data-privacy-management.streamlit.app/
+https://jtflack-third-party-risk-management.streamlit.app/
+https://jtflack-security-metrics-dashboard.streamlit.app/
+https://jtflack-security-awareness-training-tracker.streamlit.app/
+https://jtflack-security-awareness-campaign-manager.streamlit.app/
+https://jtflack-ibm-i-security-assessment.streamlit.app/
+https://jtflack-ibm-i-user-management.streamlit.app/
+https://jtflack-unix-linux-security-assessment.streamlit.app/
+https://jtflack-jde-security-assessment.streamlit.app/

@@ -6,8 +6,8 @@ name: Keep Streamlit apps awake
 
 on:
   schedule:
-    # Every 8 hours → comfortably under a 12h sleep window
-    - cron: "0 */8 * * *"
+    # ~every 10 hours (00:00, 10:00, 20:00 UTC) — under Community Cloud's ~12h idle sleep
+    - cron: "0 0,10,20 * * *"
   workflow_dispatch:
 
 permissions:

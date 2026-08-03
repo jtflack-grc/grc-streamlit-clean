@@ -37,16 +37,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import our IBM i audit core classes
 from ibm_i_audit_core import IBMiSecurityAuditor, IBMiDataManager, IBMiObjectAuthority, IBMiUserProfiles, IBMiSystemValues
+from demo_safety import allow_disk_persistence
 
 # Security configuration
 SESSION_TIMEOUT_MINUTES = 30
 MAX_LOGIN_ATTEMPTS = 5
-SECURE_HEADERS = {
-    "X-Frame-Options": "DENY",
-    "X-Content-Type-Options": "nosniff",
-    "X-XSS-Protection": "1; mode=block",
-    "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
-}
 
 def validate_input(input_string, max_length=1000):
     """Validate and sanitize user input"""
@@ -284,8 +279,9 @@ def main():
         st.header("User Management")
         st.markdown("---")
         
-        # Role-based access control
+        # Role-based access control (demo UX only — not real auth)
         st.subheader("Access Control")
+        st.caption("Demo role switcher only. Public Cloud apps have no real login.")
         current_role = st.selectbox(
             "Current Role",
             ["Admin", "Analyst", "Viewer"],
@@ -320,9 +316,11 @@ def main():
         # Data persistence controls (Admin only)
         if check_permission("Admin"):
             st.subheader("Data Management")
+            if not allow_disk_persistence():
+                st.caption("Disk save/load is disabled on Streamlit Cloud (session-only demo).")
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("Save Data", type="secondary"):
+                if st.button("Save Data", type="secondary", disabled=not allow_disk_persistence()):
                     with show_loading_spinner("Saving data..."):
                         if st.session_state.ibm_i_data.save_data_to_file():
                             add_audit_entry("Data Save", "User data saved successfully")
@@ -331,7 +329,7 @@ def main():
                             add_audit_entry("Data Save", "Failed to save data", status="Failed")
                             st.error("Failed to save data")
             with col2:
-                if st.button("Load Data", type="secondary"):
+                if st.button("Load Data", type="secondary", disabled=not allow_disk_persistence()):
                     with show_loading_spinner("Loading data..."):
                         if st.session_state.ibm_i_data.load_data_from_file():
                             add_audit_entry("Data Load", "User data loaded successfully")

@@ -28,6 +28,8 @@ from enum import Enum
 import pandas as pd
 import numpy as np
 
+from demo_safety import allow_disk_persistence, allow_host_scan
+
 class SecurityLevel(Enum):
     """Security level enumeration"""
     LOW = "Low"
@@ -82,7 +84,9 @@ class UnixLinuxDataManager:
         self.compliance_results = {}
     
     def save_data_to_file(self) -> bool:
-        """Save audit data to JSON file"""
+        """Save audit data to JSON file (local/dev only; disabled on Cloud)."""
+        if not allow_disk_persistence():
+            return False
         try:
             data = {
                 'audit_history': self.audit_history,
@@ -98,7 +102,9 @@ class UnixLinuxDataManager:
             return False
     
     def load_data_from_file(self) -> bool:
-        """Load audit data from JSON file"""
+        """Load audit data from JSON file (local/dev only; disabled on Cloud)."""
+        if not allow_disk_persistence():
+            return False
         try:
             if os.path.exists(self.data_file):
                 with open(self.data_file, 'r') as f:
@@ -210,6 +216,9 @@ class UnixLinuxFileSystemAnalyzer:
     
     def scan_directory(self, directory: str, max_depth: int = 3) -> List[Dict[str, Any]]:
         """Recursively scan directory for security issues"""
+        if not allow_host_scan():
+            return []
+
         results = []
         
         try:
@@ -243,6 +252,13 @@ class UnixLinuxUserAnalyzer:
     
     def analyze_user_accounts(self) -> Dict[str, Any]:
         """Analyze user account security"""
+        if not allow_host_scan():
+            return {
+                'error': 'Live host scan disabled (set ALLOW_HOST_SCAN=1 to enable)',
+                'users': {},
+                'groups': {},
+                'security_issues': [],
+            }
         try:
             # Read /etc/passwd
             with open('/etc/passwd', 'r') as f:
@@ -330,6 +346,13 @@ class UnixLinuxNetworkAnalyzer:
     
     def analyze_network_services(self) -> Dict[str, Any]:
         """Analyze network services and security"""
+        if not allow_host_scan():
+            return {
+                'error': 'Live host scan disabled (set ALLOW_HOST_SCAN=1 to enable)',
+                'listening_ports': [],
+                'network_config': {},
+                'security_issues': [],
+            }
         try:
             # Analyze listening ports
             listening_ports = self._get_listening_ports()
@@ -356,13 +379,19 @@ class UnixLinuxNetworkAnalyzer:
     def _get_listening_ports(self) -> List[Dict[str, Any]]:
         """Get listening ports and services"""
         try:
-            # Use netstat or ss command
+            # Fixed argv only — never shell=True
             if platform.system() == "Linux":
-                cmd = "ss -tlnp"
+                cmd = ["ss", "-tlnp"]
             else:
-                cmd = "netstat -tlnp"
+                cmd = ["netstat", "-tlnp"]
             
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            result = subprocess.run(
+                cmd,
+                shell=False,
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
             ports = []
             
             for line in result.stdout.split('\n')[1:]:
@@ -385,6 +414,9 @@ class UnixLinuxNetworkAnalyzer:
     
     def _analyze_network_config(self) -> Dict[str, Any]:
         """Analyze network configuration"""
+        if not allow_host_scan():
+            return {}
+
         config = {}
         
         # Check common network configuration files
@@ -400,7 +432,7 @@ class UnixLinuxNetworkAnalyzer:
                 try:
                     with open(config_file, 'r') as f:
                         config[config_file] = f.read()
-                except:
+                except Exception:
                     config[config_file] = "Error reading file"
         
         return config
@@ -502,10 +534,18 @@ class UnixLinuxSecurityAuditor:
         self.audit_results = {}
     
     def run_full_audit(self) -> Dict[str, Any]:
-        """Run comprehensive Unix/Linux security audit"""
+        """Run comprehensive Unix/Linux security audit.
+
+        Default is mock data. Live host introspection requires ALLOW_HOST_SCAN=1.
+        """
         start_time = datetime.datetime.now()
         
         try:
+            if not allow_host_scan():
+                self.audit_results = generate_mock_unix_linux_data()
+                self.data_manager.audit_history.append(self.audit_results)
+                return self.audit_results
+
             # Get system information
             self.system_info = self._get_system_info()
             
@@ -527,7 +567,7 @@ class UnixLinuxSecurityAuditor:
                 'audit_duration': (datetime.datetime.now() - start_time).total_seconds()
             }
             
-            # Save to data manager
+            # Save to data manager (no-op on Cloud)
             self.data_manager.audit_history.append(self.audit_results)
             self.data_manager.save_data_to_file()
             

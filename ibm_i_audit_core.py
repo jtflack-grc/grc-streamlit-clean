@@ -15,6 +15,8 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 import logging
 
+from demo_safety import allow_disk_persistence
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,7 +31,10 @@ class IBMiDataManager:
         self.groups = {}  # Add missing groups attribute
         
     def save_data_to_file(self, filename: str = "ibm_i_data.json"):
-        """Save current data to JSON file for persistence"""
+        """Save current data to JSON file for persistence (local/dev only)."""
+        if not allow_disk_persistence():
+            logger.info("Disk persistence disabled (Cloud or ALLOW_DISK_PERSIST=0)")
+            return False
         try:
             data_to_save = {
                 'system_values': self.system_values,
@@ -49,7 +54,10 @@ class IBMiDataManager:
             return False
     
     def load_data_from_file(self, filename: str = "ibm_i_data.json"):
-        """Load data from JSON file"""
+        """Load data from JSON file (local/dev only)."""
+        if not allow_disk_persistence():
+            logger.info("Disk persistence disabled (Cloud or ALLOW_DISK_PERSIST=0)")
+            return False
         try:
             with open(filename, 'r') as f:
                 data = json.load(f)

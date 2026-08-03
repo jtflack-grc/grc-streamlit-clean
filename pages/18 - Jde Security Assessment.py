@@ -23,6 +23,7 @@ import secrets
 from jde_audit_core import (
     JDESecurityAuditor, AccessLevel, SecurityLevel, ComplianceStatus, generate_mock_jde_data
 )
+from demo_safety import allow_disk_persistence
 
 # Security configuration
 SESSION_TIMEOUT_MINUTES = 30
@@ -125,16 +126,18 @@ def main():
         
         # Data persistence controls
         st.header("Data Management")
+        if not allow_disk_persistence():
+            st.caption("Disk save/load is disabled on Streamlit Cloud (session-only demo). Use Export instead.")
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("Save Data", type="secondary"):
+            if st.button("Save Data", type="secondary", disabled=not allow_disk_persistence()):
                 if st.session_state.jde_auditor.data_manager.save_data_to_file():
                     st.success("Data saved!")
                     log_security_event("DATA_SAVED", "Audit data saved to file")
                 else:
                     st.error("Failed to save data")
         with col2:
-            if st.button("Load Data", type="secondary"):
+            if st.button("Load Data", type="secondary", disabled=not allow_disk_persistence()):
                 if st.session_state.jde_auditor.data_manager.load_data_from_file():
                     st.success("Data loaded!")
                     log_security_event("DATA_LOADED", "Audit data loaded from file")

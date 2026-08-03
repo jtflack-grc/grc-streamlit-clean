@@ -21,3 +21,8 @@ Thumbs.db
 
 # Local experiment leftovers
 ibm_i_audit_core_fixed.py
+
+# Local demo persistence (local/dev only)
+ibm_i_data.json
+jde_audit_data.json
+unix_linux_audit_data.json

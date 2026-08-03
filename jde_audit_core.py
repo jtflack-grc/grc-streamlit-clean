@@ -29,6 +29,8 @@ from enum import Enum
 import pandas as pd
 import numpy as np
 
+from demo_safety import allow_disk_persistence
+
 class AccessLevel(Enum):
     """Access level enumeration"""
     NONE = "None"
@@ -97,7 +99,9 @@ class JDEDataManager:
         self.compliance_results = {}
     
     def save_data_to_file(self) -> bool:
-        """Save audit data to JSON file"""
+        """Save audit data to JSON file (local/dev only; disabled on Cloud)."""
+        if not allow_disk_persistence():
+            return False
         try:
             data = {
                 'audit_history': self.audit_history,
@@ -115,7 +119,9 @@ class JDEDataManager:
             return False
     
     def load_data_from_file(self) -> bool:
-        """Load audit data from JSON file"""
+        """Load audit data from JSON file (local/dev only; disabled on Cloud)."""
+        if not allow_disk_persistence():
+            return False
         try:
             if os.path.exists(self.data_file):
                 with open(self.data_file, 'r') as f:

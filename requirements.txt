@@ -1,4 +1,7 @@
-streamlit>=1.28.0
+# GRC Streamlit demos — runtime deps
+# Python 3.10+ recommended
+
+streamlit>=1.28.0,<2
 plotly>=5.17.0
 pandas>=2.0.0
 numpy>=1.24.0

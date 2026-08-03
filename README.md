@@ -1,273 +1,121 @@
-# Interactive GRC Tools
+# GRC Streamlit Clean
 
-This directory contains 25 interactive GRC tools built with Streamlit that demonstrate practical implementation capabilities.
+Small Streamlit GRC demos for **#RUNGRCRaleigh** — GRC Engineering Club (NC) “build in public” work.
 
-## Tools Included
+These are **teaching toys and conversation starters**, not production systems and not portfolio flagships. The mature public work lives at [jtflack-grc.github.io/portfolio](https://jtflack-grc.github.io/portfolio/).
 
-### Risk Management Tools
-1. **FAIR Risk Assessment Calculator** (`fair_risk_calculator.py`)
-   - Factor Analysis of Information Risk (FAIR) implementation
-   - Interactive sliders for risk parameters
-   - Real-time risk calculation and visualization
-   - Risk treatment recommendations
+Shared look: `portfolio_skin.py` (IBM Plex / ink–green tokens aligned with that site) plus `.streamlit/config.toml`. Each Cloud app is a **standalone** entrypoint — sibling multipage links in the sidebar are disabled.
 
-2. **Enterprise Risk Register** (`enterprise_risk_register.py`)
-   - Interactive risk tracking with Monte Carlo simulations
-   - Risk assessment and scoring
-   - Risk treatment planning
-   - Risk trend analysis
+## Live apps
 
-3. **Risk Assessment & Monte Carlo** (`risk_assessment_monte_carlo.py`)
-   - Enhanced quantitative analysis
-   - Monte Carlo simulation for risk modeling
-   - Risk heatmap visualization
-   - Statistical risk analysis
+URLs are also listed in [`tools/streamlit_urls.txt`](tools/streamlit_urls.txt) (used by the keepalive Action).
 
-4. **Risk Treatment Plan Generator** (`risk_treatment_plan_generator.py`)
-   - Dynamic plan creation with templates
-   - Treatment strategy recommendations
-   - Cost-benefit analysis
-   - Implementation tracking
+### Risk
+| App | Live |
+| --- | --- |
+| FAIR Risk Calculator | https://jtflack-fair-calculator.streamlit.app/ |
+| Enterprise Risk Register | https://jtflack-enterprise-risk-register.streamlit.app/ |
+| Risk Assessment & Monte Carlo | https://jtflack-risk-assessment-monte-carlo.streamlit.app/ |
+| Risk Treatment Plan Generator | https://jtflack-risk-treatment-plan-generator.streamlit.app/ |
 
-### Compliance & Control Tools
-5. **Compliance Dashboard** (`compliance_dashboard.py`)
-   - Real-time compliance monitoring
-   - Framework compliance scores
-   - Control effectiveness tracking
-   - Audit findings and action items
+### Compliance & controls
+| App | Live |
+| --- | --- |
+| Compliance Dashboard | https://jtflack-compliance-dashboard.streamlit.app/ |
+| Control Gap Analysis | https://jtflack-control-gap-analysis.streamlit.app/ |
+| Control Tracker | https://jtflack-control-tracker.streamlit.app/ |
+| Control Testing Management | https://jtflack-control-testing-management.streamlit.app/ |
+| Exception Tracking System | https://jtflack-exception-tracking-system.streamlit.app/ |
+| CSF Maturity Assessment | https://jtflack-csf-maturity-assessment.streamlit.app/ |
+| Compliance Calendar | https://jtflack-compliance-calendar.streamlit.app/ |
+| Policy Management System | https://jtflack-policy-management-system.streamlit.app/ |
 
-6. **Control Gap Analysis** (`control_gap_analysis.py`)
-   - Visual gap identification and remediation planning
-   - Framework mapping
-   - Gap prioritization
-   - Remediation cost analysis
+### Vendor / third-party
+| App | Live |
+| --- | --- |
+| Vendor Risk Assessment | https://jtflack-vendor-assessment.streamlit.app/ |
+| Third-Party Risk Management | https://jtflack-third-party-risk-management.streamlit.app/ |
 
-7. **Control Tracker** (`control_tracker.py`)
-   - Real-time control monitoring
-   - Control effectiveness metrics
-   - Control testing management
-   - Control lifecycle tracking
+### Analytics & ROI
+| App | Live |
+| --- | --- |
+| Analytics Dashboard Enhanced | https://jtflack-analytics-dashboard-enhanced.streamlit.app/ |
+| KPI Tracking Dashboard | https://jtflack-kpi-tracking-dashboard.streamlit.app/ |
+| ROI Calculator | https://jtflack-roi-calculator.streamlit.app/ |
+| Security Metrics Dashboard | https://jtflack-security-metrics-dashboard.streamlit.app/ |
 
-8. **Control Testing Management** (`control_testing_management.py`)
-   - Test planning and execution tracking
-   - Test result analysis
-   - Testing schedule management
-   - Defect tracking
+### Awareness, privacy, ops
+| App | Live |
+| --- | --- |
+| Security Awareness Training Tracker | https://jtflack-security-awareness-training-tracker.streamlit.app/ |
+| Security Awareness Campaign Manager | https://jtflack-security-awareness-campaign-manager.streamlit.app/ |
+| Data Privacy Management | https://jtflack-data-privacy-management.streamlit.app/ |
+| Asset Management System | https://jtflack-asset-management-system.streamlit.app/ |
+| Audit Management System | https://jtflack-audit-management-system.streamlit.app/ |
+| Business Continuity Management | https://jtflack-business-continuity-management.streamlit.app/ |
+| Incident Response Management | https://jtflack-incident-response-management.streamlit.app/ |
 
-9. **Exception Tracking System** (`exception_tracking_system.py`)
-   - Live exception management
-   - Exception risk assessment
-   - Expiration tracking
-   - Exception reporting
+### Platform-specific (legacy / ERP demos)
+| App | Live |
+| --- | --- |
+| IBM i Security Assessment | https://jtflack-ibm-i-security-assessment.streamlit.app/ |
+| IBM i User Management | https://jtflack-ibm-i-user-management.streamlit.app/ |
+| Unix/Linux Security Assessment | https://jtflack-unix-linux-security-assessment.streamlit.app/ |
+| JD Edwards Security Assessment | https://jtflack-jde-security-assessment.streamlit.app/ |
 
-### Vendor & Third-Party Management
-10. **Vendor Risk Assessment Tool** (`vendor_risk_assessment.py`)
-    - Comprehensive vendor evaluation
-    - Multi-category risk scoring
-    - Risk level determination
-    - Mitigation recommendations
+Supporting modules (no Streamlit UI): `ibm_i_audit_core.py`, `jde_audit_core.py`, `unix_linux_audit_core.py`.
 
-11. **Third-Party Risk Management** (`third_party_risk_management.py`)
-    - Dynamic vendor classification
-    - Risk scoring matrix
-    - Vendor tiering assessment
-    - Contract risk analysis
+## Local setup
 
-### Analytics & Reporting
-12. **Analytics Dashboard Enhanced** (`analytics_dashboard_enhanced.py`)
-    - Advanced reporting and visualization
-    - Performance benchmarking
-    - Trend analysis
-    - Executive reporting
+**Prerequisites:** Python 3.10+ recommended, `pip`.
 
-13. **KPI Tracking Dashboard** (`kpi_tracking_dashboard.py`)
-    - Real-time performance metrics
-    - KPI trend analysis
-    - Performance alerts
-    - Goal tracking
-
-14. **ROI Calculator** (`roi_calculator.py`)
-    - Interactive business case analysis
-    - Cost-benefit calculations
-    - Investment justification
-    - Financial impact modeling
-
-### Security & Awareness
-15. **Security Awareness Training Tracker** (`security_awareness_training_tracker.py`)
-    - Training completion tracking
-    - Knowledge assessment
-    - Campaign effectiveness
-    - Compliance reporting
-
-16. **Security Awareness Campaign Manager** (`security_awareness_campaign_manager.py`)
-    - Campaign planning and metrics
-    - Content management
-    - Engagement tracking
-    - Effectiveness measurement
-
-17. **Security Metrics Dashboard** (`security_metrics_dashboard.py`)
-    - Security performance metrics
-    - Incident tracking
-    - Security posture assessment
-    - Trend analysis
-
-### Business Continuity & Incident Management
-18. **Business Continuity Management** (`business_continuity_management.py`)
-    - BCP planning and testing
-    - Recovery time objectives
-    - Disaster scenario planning
-    - Business impact analysis
-
-19. **Incident Response Management** (`incident_response_management.py`)
-    - Interactive incident management
-    - Response workflow tracking
-    - Incident categorization
-    - Lessons learned tracking
-
-### Audit & Compliance
-20. **Audit Management System** (`audit_management_system.py`)
-    - Audit planning and execution
-    - Finding management
-    - Remediation tracking
-    - Audit reporting
-
-21. **Compliance Calendar** (`compliance_calendar.py`)
-    - Regulatory deadline tracking
-    - Compliance event management
-    - Reporting schedules
-    - Reminder system
-
-### Asset & Data Management
-22. **Asset Management System** (`asset_management_system.py`)
-    - Asset inventory tracking
-    - Risk assessment
-    - Lifecycle management
-    - Value tracking
-
-23. **Data Privacy Management** (`data_privacy_management.py`)
-    - Privacy impact assessments
-    - Data mapping
-    - Consent management
-    - Privacy compliance tracking
-
-### Policy & Governance
-24. **Policy Management System** (`policy_management_system.py`)
-    - Live policy lifecycle management
-    - Policy version control
-    - Approval workflows
-    - Policy effectiveness tracking
-
-25. **CSF Maturity Assessment** (`csf_maturity_assessment.py`)
-    - NIST CSF framework evaluations
-    - Maturity scoring
-    - Gap analysis
-    - Improvement planning
-
-## Setup Instructions
-
-### Prerequisites
-- Python 3.8 or higher
-- pip package manager
-
-### Installation
-
-1. **Install dependencies:**
 ```bash
+git clone https://github.com/jtflack-grc/grc-streamlit-clean.git
+cd grc-streamlit-clean
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-2. **Run individual tools:**
+**Single app**
+
 ```bash
-# Example: Run FAIR Risk Calculator
 streamlit run fair_risk_calculator.py
-
-# Example: Run Compliance Dashboard
-streamlit run compliance_dashboard.py
-
-# Example: Run Vendor Risk Assessment
-streamlit run vendor_risk_assessment.py
 ```
 
-### Alternative: Run All Tools
+**Local hub** (indexes `pages/` via links on the home screen; Cloud entrypoints do not cross-link)
 
-Each tool can be run independently:
 ```bash
-streamlit run [tool_name].py
+streamlit run Home.py
 ```
 
-## Features
+Theme and branding load from `.streamlit/config.toml` and `portfolio_skin.py`.
 
-### Interactive Elements
-- **Real-time calculations**: All tools update results instantly
-- **Data visualization**: Charts and graphs using Plotly
-- **Form inputs**: Sliders, dropdowns, and text inputs
-- **Responsive design**: Works on desktop and mobile
-- **Professional styling**: Dark theme with consistent branding
+## Repo layout
 
-### Technical Capabilities Demonstrated
-- **Python programming**: Clean, well-documented code
-- **Data analysis**: Pandas and NumPy for calculations
-- **Web development**: Streamlit for rapid prototyping
-- **Data visualization**: Plotly for interactive charts
-- **User experience**: Intuitive interfaces for complex processes
-- **Security**: Proper session state management and data handling
+| Path | Role |
+| --- | --- |
+| `*_*.py` (root) | Standalone Streamlit apps (Cloud entrypoints) |
+| `portfolio_skin.py` | Shared skin + `page_header()` |
+| `.streamlit/config.toml` | Theme; `showSidebarNavigation = false` |
+| `Home.py` / `pages/` | Optional local multipage hub |
+| `tools/streamlit_urls.txt` | Canonical live URL list |
+| `tools/keepalive_ping.py` | Ping helper for GitHub Actions |
+| `.github/workflows/keepalive.yml` | Scheduled pings (~every 10 hours UTC) |
 
-## Deployment
+## Streamlit Cloud notes
 
-### Local Development
-```bash
-streamlit run tool_name.py
-```
+- Each live URL is its own Community Cloud app pointed at a root `*.py` file in this repo.
+- Free Community Cloud **sleeps** apps after ~12 hours idle. The keepalive workflow hits the URL list on a schedule to reduce cold starts — not an uptime SLA.
+- Redeploy / reboot an app in the Streamlit Cloud UI if a push does not pick up.
 
-### Production Deployment
-```bash
-# Using Streamlit Cloud
-streamlit deploy
+## What these are (and aren’t)
 
-# Using Docker
-docker build -t grc-tools .
-docker run -p 8501:8501 grc-tools
-```
+**Are:** interactive GRC concept demos with sample/mock data, useful for club workshops and LinkedIn build-in-public posts under `#RUNGRCRaleigh`.
 
-### Cloud Platforms
-- **Streamlit Cloud**: Free hosting for Streamlit apps
-- **Heroku**: Easy deployment with Procfile
-- **AWS/GCP/Azure**: Container deployment
-- **GitHub Pages**: Static hosting (with limitations)
+**Aren’t:** production GRC platforms, audit-ready systems of record, or replacements for IMPACT!, Legacy Control Lab, Decision-Ready, etc.
 
-## Integration
+## License / credit
 
-### Data Sources
-- **Databases**: PostgreSQL, MySQL, MongoDB
-- **APIs**: REST APIs, GraphQL
-- **Files**: CSV, Excel, JSON
-- **Cloud Services**: AWS, Azure, GCP
-
-### Authentication
-- **OAuth**: Google, Microsoft, GitHub
-- **SAML**: Enterprise SSO
-- **LDAP**: Active Directory integration
-
-## Business Value
-
-These tools demonstrate:
-
-1. **Technical Skills**: Real working applications
-2. **Business Understanding**: Practical GRC solutions
-3. **Automation Capabilities**: Reducing manual effort
-4. **Data Analysis**: Converting data to insights
-5. **User Experience**: Professional interfaces
-6. **Security Awareness**: Proper data handling and privacy
-7. **Scalability**: Production-ready architecture
-
-## Support
-
-For questions or issues:
-1. Check the tool documentation
-2. Review the code comments
-3. Test with sample data
-4. Modify parameters as needed
-
----
-
-*These 25 tools showcase comprehensive GRC implementation capabilities and can be used as live demonstrations during interviews or client presentations.*
+Personal learning and club-demo material from [jtflack-grc](https://github.com/jtflack-grc). Brand wordmark “i on GRC” matches the public portfolio site.

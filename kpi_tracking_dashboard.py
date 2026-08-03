@@ -228,10 +228,10 @@ def main():
     metrics = calculate_kpi_metrics(df)
     
     # Sidebar
-    st.sidebar.header("📊 KPI Management")
+    st.sidebar.header("KPI Management")
     
     # Add new KPI form
-    with st.sidebar.expander("➕ Add New KPI", expanded=False):
+    with st.sidebar.expander("Add New KPI", expanded=False):
         with st.form("add_kpi"):
             col1, col2 = st.columns(2)
             
@@ -256,7 +256,7 @@ def main():
                 st.success("KPI added successfully!")
     
     # Filters
-    st.sidebar.subheader("🔍 Filters")
+    st.sidebar.subheader("Filters")
     
     category_filter = st.sidebar.multiselect(
         "Category",
@@ -284,10 +284,10 @@ def main():
     ]
     
     # Main content
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Dashboard", "📋 KPI List", "📈 Analytics", "🎯 Performance", "📋 Reports"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Dashboard", "KPI List", "Analytics", "Performance", "Reports"])
     
     with tab1:
-        st.header("📊 KPI Dashboard Overview")
+        st.header("KPI Dashboard Overview")
         
         # Key metrics
         col1, col2, col3, col4 = st.columns(4)
@@ -340,7 +340,7 @@ def main():
             st.plotly_chart(fig_category, use_container_width=True)
         
         # Performance vs Target
-        st.subheader("🎯 Performance vs Target")
+        st.subheader("Performance vs Target")
         
         # Calculate performance percentage
         df['performance_pct'] = (df['current_value'] / df['target_value'] * 100).clip(0, 150)
@@ -377,7 +377,7 @@ def main():
         st.plotly_chart(fig_performance, use_container_width=True)
         
         # Trend analysis
-        st.subheader("📈 Trend Analysis")
+        st.subheader("Trend Analysis")
         
         col1, col2 = st.columns(2)
         
@@ -416,7 +416,7 @@ def main():
             st.plotly_chart(fig_cat_perf, use_container_width=True)
     
     with tab2:
-        st.header("📋 KPI List")
+        st.header("KPI List")
         
         # Display filtered KPIs
         if len(filtered_df) > 0:
@@ -428,15 +428,15 @@ def main():
             
             # Add status and trend indicators
             display_df['Status_Icon'] = display_df['status'].map({
-                'On Track': '✅',
-                'At Risk': '⚠️',
-                'Off Track': '❌'
+                'On Track': '',
+                'At Risk': '',
+                'Off Track': ''
             })
             
             display_df['Trend_Icon'] = display_df['trend'].map({
-                'Improving': '↗️',
+                'Improving': '↗',
                 'Stable': '→',
-                'Declining': '↘️'
+                'Declining': '↘'
             })
             
             st.dataframe(
@@ -449,13 +449,13 @@ def main():
             st.warning("No KPIs found matching the selected filters.")
     
     with tab3:
-        st.header("📈 KPI Analytics")
+        st.header("KPI Analytics")
         
         col1, col2 = st.columns(2)
         
         with col1:
             # Historical trend simulation
-            st.subheader("📊 Historical Trends")
+            st.subheader("Historical Trends")
             
             # Simulate historical data for selected KPI
             if len(filtered_df) > 0:
@@ -481,7 +481,7 @@ def main():
         
         with col2:
             # Performance heatmap
-            st.subheader("🔥 Performance Heatmap")
+            st.subheader("Performance Heatmap")
             
             # Create performance matrix
             performance_matrix = df.pivot_table(
@@ -501,7 +501,7 @@ def main():
             st.plotly_chart(fig_heatmap, use_container_width=True)
         
         # Owner accountability
-        st.subheader("👥 Owner Accountability")
+        st.subheader("Owner Accountability")
         
         owner_performance = df.groupby('owner').agg({
             'performance_pct': 'mean',
@@ -522,7 +522,7 @@ def main():
         st.plotly_chart(fig_owner, use_container_width=True)
         
         # Frequency analysis
-        st.subheader("📅 Frequency Analysis")
+        st.subheader("Frequency Analysis")
         
         frequency_counts = df['frequency'].value_counts()
         fig_frequency = px.bar(
@@ -534,13 +534,13 @@ def main():
         st.plotly_chart(fig_frequency, use_container_width=True)
     
     with tab4:
-        st.header("🎯 Performance Management")
+        st.header("Performance Management")
         
         col1, col2 = st.columns(2)
         
         with col1:
             # Performance summary
-            st.subheader("📊 Performance Summary")
+            st.subheader("Performance Summary")
             
             summary_data = {
                 'Metric': [
@@ -566,15 +566,15 @@ def main():
                     f"{metrics['target_achievement']:.1f}%"
                 ],
                 'Status': [
-                    '✅' if metrics['total_kpis'] > 0 else '❌',
-                    '✅' if metrics['on_track_kpis'] > metrics['total_kpis'] * 0.7 else '⚠️',
-                    '⚠️' if metrics['at_risk_kpis'] > 0 else '✅',
-                    '❌' if metrics['off_track_kpis'] > 0 else '✅',
-                    '✅' if metrics['improving_trends'] > metrics['total_kpis'] * 0.5 else '⚠️',
-                    '⚠️' if metrics['stable_trends'] > metrics['total_kpis'] * 0.3 else '✅',
-                    '❌' if metrics['declining_trends'] > 0 else '✅',
-                    '✅' if metrics['avg_performance'] > 80 else '⚠️',
-                    '✅' if metrics['target_achievement'] > 90 else '⚠️'
+                    '' if metrics['total_kpis'] > 0 else '',
+                    '' if metrics['on_track_kpis'] > metrics['total_kpis'] * 0.7 else '',
+                    '' if metrics['at_risk_kpis'] > 0 else '',
+                    '' if metrics['off_track_kpis'] > 0 else '',
+                    '' if metrics['improving_trends'] > metrics['total_kpis'] * 0.5 else '',
+                    '' if metrics['stable_trends'] > metrics['total_kpis'] * 0.3 else '',
+                    '' if metrics['declining_trends'] > 0 else '',
+                    '' if metrics['avg_performance'] > 80 else '',
+                    '' if metrics['target_achievement'] > 90 else ''
                 ]
             }
             
@@ -583,7 +583,7 @@ def main():
         
         with col2:
             # Action items
-            st.subheader("⚡ Action Items")
+            st.subheader("Action Items")
             
             # Identify KPIs needing attention
             attention_kpis = df[df['status'].isin(['At Risk', 'Off Track'])]
@@ -596,19 +596,19 @@ def main():
                 st.success("All KPIs are on track!")
             
             # Management actions
-            st.subheader("⚙️ Management Actions")
+            st.subheader("Management Actions")
             
-            if st.button("🔄 Refresh Data"):
+            if st.button("Refresh Data"):
                 st.rerun()
             
-            if st.button("📧 Send Alerts"):
+            if st.button("Send Alerts"):
                 st.success("Alerts sent to KPI owners!")
             
-            if st.button("📅 Schedule Reviews"):
+            if st.button("Schedule Reviews"):
                 st.success("Review schedule updated!")
         
         # Performance improvement opportunities
-        st.subheader("🚀 Improvement Opportunities")
+        st.subheader("Improvement Opportunities")
         
         # Find KPIs with declining trends
         declining_kpis = df[df['trend'] == 'Declining']
@@ -626,44 +626,44 @@ def main():
                     st.write(f"Owner: {kpi['owner']}")
                 
                 with col3:
-                    if st.button(f"📝 Action Plan", key=f"action_{kpi['kpi_id']}"):
+                    if st.button(f"Action Plan", key=f"action_{kpi['kpi_id']}"):
                         st.success(f"Action plan created for {kpi['name']}!")
         else:
             st.success("No KPIs with declining trends!")
     
     with tab5:
-        st.header("📋 Reports & Export")
+        st.header("Reports & Export")
         
         col1, col2 = st.columns(2)
         
         with col1:
             # Export options
-            st.subheader("📤 Export Options")
+            st.subheader("Export Options")
             
-            if st.button("📊 Export to Excel"):
+            if st.button("Export to Excel"):
                 st.success("KPI report exported to Excel successfully!")
             
-            if st.button("📈 Generate Executive Summary"):
+            if st.button("Generate Executive Summary"):
                 st.success("Executive summary generated!")
             
-            if st.button("📋 Export Performance Report"):
+            if st.button("Export Performance Report"):
                 st.success("Performance report exported!")
             
-            if st.button("📊 Generate Dashboard PDF"):
+            if st.button("Generate Dashboard PDF"):
                 st.success("Dashboard PDF generated!")
         
         with col2:
             # Report scheduling
-            st.subheader("📅 Report Scheduling")
+            st.subheader("Report Scheduling")
             
             report_frequency = st.selectbox("Report Frequency", ["Daily", "Weekly", "Monthly", "Quarterly"])
             report_type = st.selectbox("Report Type", ["Executive Summary", "Detailed Analysis", "Performance Review", "Trend Analysis"])
             
-            if st.button("📅 Schedule Report"):
+            if st.button("Schedule Report"):
                 st.success(f"{report_type} scheduled for {report_frequency} delivery!")
         
         # Executive dashboard
-        st.subheader("👔 Executive Dashboard")
+        st.subheader("Executive Dashboard")
         
         # Key executive metrics
         exec_metrics = {
@@ -689,11 +689,11 @@ def main():
                 'High'
             ],
             'Status': [
-                '✅' if metrics['target_achievement'] > 90 else '⚠️',
-                '✅' if metrics['at_risk_kpis'] + metrics['off_track_kpis'] <= 3 else '⚠️',
-                '✅' if metrics['on_track_kpis'] > metrics['total_kpis'] * 0.8 else '⚠️',
-                '✅' if metrics['improving_trends'] > metrics['total_kpis'] * 0.6 else '⚠️',
-                '✅' if metrics['avg_performance'] > 85 else '⚠️'
+                '' if metrics['target_achievement'] > 90 else '',
+                '' if metrics['at_risk_kpis'] + metrics['off_track_kpis'] <= 3 else '',
+                '' if metrics['on_track_kpis'] > metrics['total_kpis'] * 0.8 else '',
+                '' if metrics['improving_trends'] > metrics['total_kpis'] * 0.6 else '',
+                '' if metrics['avg_performance'] > 85 else ''
             ]
         }
         

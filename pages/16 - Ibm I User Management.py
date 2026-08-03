@@ -1201,7 +1201,7 @@ def show_security_policies():
         
         for policy, value in recommended_policies.items():
             current = password_policies.get(policy, '0')
-            status = "✅ Compliant" if current == value else "⚠️ Non-Compliant"
+            status = "Compliant" if current == value else "Non-Compliant"
             st.markdown(f"**{policy}:** {value} {status}")
     
     # Security policy recommendations

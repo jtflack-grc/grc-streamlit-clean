@@ -272,7 +272,7 @@ def main():
         show_reports()
 
 def show_dashboard():
-    st.header("📊 Business Continuity Dashboard")
+    st.header("Business Continuity Dashboard")
     
     # Key metrics
     col1, col2, col3, col4 = st.columns(4)
@@ -345,7 +345,7 @@ def show_dashboard():
             st.write(f"• {plan['name']} - {plan['next_review'].strftime('%Y-%m-%d')}")
 
 def show_business_processes():
-    st.header("🏢 Business Processes")
+    st.header("Business Processes")
     
     # Add new process
     with st.expander("Add New Business Process"):
@@ -428,7 +428,7 @@ def show_business_processes():
                     st.write(f"  - {backup}")
 
 def show_recovery_plans():
-    st.header("📋 Recovery Plans")
+    st.header("Recovery Plans")
     
     # Add new plan
     with st.expander("Add New Recovery Plan"):
@@ -480,7 +480,7 @@ def show_recovery_plans():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_disaster_scenarios():
-    st.header("⚠️ Disaster Scenarios")
+    st.header("Disaster Scenarios")
     
     # Add new scenario
     with st.expander("Add New Disaster Scenario"):
@@ -522,7 +522,7 @@ def show_disaster_scenarios():
     st.dataframe(risk_matrix, use_container_width=True)
 
 def show_recovery_testing():
-    st.header("🧪 Recovery Testing")
+    st.header("Recovery Testing")
     
     # Add new test
     with st.expander("Add New Recovery Test"):
@@ -581,7 +581,7 @@ def show_recovery_testing():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_critical_assets():
-    st.header("🔧 Critical Assets")
+    st.header("Critical Assets")
     
     # Add new asset
     with st.expander("Add New Critical Asset"):
@@ -634,7 +634,7 @@ def show_critical_assets():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_bcm_metrics():
-    st.header("📈 BCM Metrics & KPIs")
+    st.header("BCM Metrics & KPIs")
     
     # Calculate metrics
     total_processes = len(st.session_state.business_processes)
@@ -690,7 +690,7 @@ def show_bcm_metrics():
     st.plotly_chart(fig, use_container_width=True)
 
 def show_reports():
-    st.header("📊 Reports & Analytics")
+    st.header("Reports & Analytics")
     
     # Report options
     report_type = st.selectbox("Select Report Type", [

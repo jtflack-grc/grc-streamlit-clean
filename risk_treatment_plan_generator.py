@@ -260,7 +260,7 @@ def main():
     metrics = calculate_plan_metrics(df)
     
     # Sidebar filters
-    st.sidebar.header("🔍 Filters")
+    st.sidebar.header("Filters")
     
     # Status filter
     status_filter = st.sidebar.multiselect(
@@ -318,10 +318,10 @@ def main():
         st.metric("Risk Reduction", f"{metrics['avg_inherent_risk'] - metrics['avg_residual_risk']:.1f} pts")
     
     # Tabs for different views
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Treatment Plans", "📊 Analytics", "🛠️ Plan Generator", "📈 Progress Tracking", "⚙️ Management"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Treatment Plans", "Analytics", "Plan Generator", "Progress Tracking", "Management"])
     
     with tab1:
-        st.header("📋 Risk Treatment Plans")
+        st.header("Risk Treatment Plans")
         
         # Treatment plans table
         st.dataframe(
@@ -331,7 +331,7 @@ def main():
         )
         
         # Plan details expander
-        with st.expander("🔍 Plan Details"):
+        with st.expander("Plan Details"):
             selected_plan = st.selectbox("Select Plan", filtered_df['plan_id'].tolist())
             plan_data = filtered_df[filtered_df['plan_id'] == selected_plan].iloc[0]
             
@@ -368,7 +368,7 @@ def main():
                 st.write(f"- {evidence}")
     
     with tab2:
-        st.header("📊 Treatment Plan Analytics")
+        st.header("Treatment Plan Analytics")
         
         col1, col2 = st.columns(2)
         
@@ -414,7 +414,7 @@ def main():
             st.plotly_chart(fig_owner, use_container_width=True)
         
         # Risk reduction analysis
-        st.subheader("🎯 Risk Reduction Analysis")
+        st.subheader("Risk Reduction Analysis")
         
         col1, col2 = st.columns(2)
         
@@ -444,13 +444,13 @@ def main():
             st.plotly_chart(fig_budget_effort, use_container_width=True)
     
     with tab3:
-        st.header("🛠️ Plan Generator")
+        st.header("Plan Generator")
         
         st.write("Create a new risk treatment plan with comprehensive details and automated risk scoring.")
         
         # Plan creation form
         with st.form("new_plan_form"):
-            st.subheader("📝 Plan Information")
+            st.subheader("Plan Information")
             
             col1, col2 = st.columns(2)
             with col1:
@@ -469,7 +469,7 @@ def main():
             threat = st.text_input("Threat", placeholder="e.g., Unauthorized access to sensitive data")
             vulnerability = st.text_input("Vulnerability", placeholder="e.g., Lack of audit trail for database access")
             
-            st.subheader("🎯 Risk Assessment")
+            st.subheader("Risk Assessment")
             
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -482,7 +482,7 @@ def main():
                 inherent_risk_score = impact_rating * likelihood_rating
                 st.metric("Inherent Risk Score", inherent_risk_score)
             
-            st.subheader("🛡️ Treatment Details")
+            st.subheader("Treatment Details")
             
             treatment_plan = st.text_area("Treatment Plan", placeholder="Step-by-step treatment plan...")
             effort_hours = st.number_input("Effort (Hours)", min_value=1, value=40, step=5)
@@ -497,7 +497,7 @@ def main():
             # Evidence tracking
             evidence = st.text_area("Evidence", placeholder="List of evidence files or links...")
             
-            submitted = st.form_submit_button("📋 Generate Treatment Plan")
+            submitted = st.form_submit_button("Generate Treatment Plan")
             
             if submitted:
                 # Create new plan data
@@ -530,22 +530,22 @@ def main():
                 # Generate YAML
                 yaml_content = generate_treatment_plan_yaml(new_plan)
                 
-                st.success("✅ Treatment plan generated successfully!")
+                st.success("Treatment plan generated successfully!")
                 
                 # Display generated plan
-                st.subheader("📄 Generated Treatment Plan")
+                st.subheader("Generated Treatment Plan")
                 st.code(yaml_content, language='yaml')
                 
                 # Download option
                 st.download_button(
-                    label="📥 Download YAML",
+                    label="Download YAML",
                     data=yaml_content,
                     file_name=f"{plan_id}_treatment_plan.yaml",
                     mime="text/yaml"
                 )
     
     with tab4:
-        st.header("📈 Progress Tracking")
+        st.header("Progress Tracking")
         
         # Progress metrics
         col1, col2, col3 = st.columns(3)
@@ -563,7 +563,7 @@ def main():
             st.metric("Budget Utilization", f"{budget_utilization:.1f}%")
         
         # Timeline analysis
-        st.subheader("📅 Timeline Analysis")
+        st.subheader("Timeline Analysis")
         
         # Simulate timeline data
         dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='ME')
@@ -594,7 +594,7 @@ def main():
         st.plotly_chart(fig_timeline, use_container_width=True)
         
         # Risk reduction over time
-        st.subheader("🎯 Risk Reduction Progress")
+        st.subheader("Risk Reduction Progress")
         
         # Simulate risk reduction data
         risk_reduction_data = []
@@ -621,12 +621,12 @@ def main():
         st.plotly_chart(fig_risk_reduction, use_container_width=True)
     
     with tab5:
-        st.header("⚙️ Treatment Plan Management")
+        st.header("Treatment Plan Management")
         
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("📊 Management Dashboard")
+            st.subheader("Management Dashboard")
             
             # Key performance indicators
             st.write("**Key Performance Indicators:**")
@@ -636,14 +636,14 @@ def main():
                 'Current': [str(metrics['total_plans']), f"{completion_rate:.1f}%", f"{on_time_rate:.1f}%", 
                            f"{budget_utilization:.1f}%", f"{metrics['avg_inherent_risk'] - metrics['avg_residual_risk']:.1f} pts", str(metrics['overdue_plans'])],
                 'Target': ['<20', '>80%', '>90%', '<100%', '>15 pts', '0'],
-                'Status': ['✅', '❌', '❌', '✅', '❌', '❌']
+                'Status': ['', '', '', '', '', '']
             }
             
             kpi_df = pd.DataFrame(kpi_data)
             st.dataframe(kpi_df, use_container_width=True, hide_index=True)
             
             # Resource allocation
-            st.subheader("💰 Resource Allocation")
+            st.subheader("Resource Allocation")
             
             resource_data = {
                 'Team': ['DBA Team', 'Cloud Team', 'Network Team', 'Security Team', 'Compliance Team'],
@@ -656,37 +656,37 @@ def main():
             st.dataframe(resource_df, use_container_width=True, hide_index=True)
         
         with col2:
-            st.subheader("🚨 Overdue Plans")
+            st.subheader("Overdue Plans")
             
             overdue_plans = filtered_df[filtered_df['target_date'] < datetime.datetime.now()]
             
             if len(overdue_plans) > 0:
                 for _, plan in overdue_plans.iterrows():
-                    with st.expander(f"⚠️ {plan['plan_id']}: {plan['title']}"):
+                    with st.expander(f"{plan['plan_id']}: {plan['title']}"):
                         st.write(f"**Owner:** {plan['plan_owner']}")
                         st.write(f"**Target Date:** {plan['target_date'].strftime('%Y-%m-%d')}")
                         st.write(f"**Days Overdue:** {(datetime.datetime.now() - plan['target_date']).days}")
                         st.write(f"**Priority:** {plan['priority']}")
                         st.write(f"**Status:** {plan['status']}")
             else:
-                st.success("✅ No overdue plans!")
+                st.success("No overdue plans!")
             
-            st.subheader("📋 Action Items")
+            st.subheader("Action Items")
             
             # Action items based on plan status
             action_items = []
             
             if metrics['overdue_plans'] > 0:
-                action_items.append(f"🔴 Address {metrics['overdue_plans']} overdue plans")
+                action_items.append(f"Address {metrics['overdue_plans']} overdue plans")
             
             if completion_rate < 80:
-                action_items.append(f"🟡 Improve completion rate (currently {completion_rate:.1f}%)")
+                action_items.append(f"Improve completion rate (currently {completion_rate:.1f}%)")
             
             if on_time_rate < 90:
-                action_items.append(f"🟡 Improve on-time delivery (currently {on_time_rate:.1f}%)")
+                action_items.append(f"Improve on-time delivery (currently {on_time_rate:.1f}%)")
             
             if budget_utilization > 100:
-                action_items.append(f"🔴 Review budget allocation (currently {budget_utilization:.1f}%)")
+                action_items.append(f"Review budget allocation (currently {budget_utilization:.1f}%)")
             
             for item in action_items:
                 st.write(item)

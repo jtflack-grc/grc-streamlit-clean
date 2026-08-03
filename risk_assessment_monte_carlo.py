@@ -243,10 +243,10 @@ def main():
     df = load_risk_data()
     
     # Sidebar
-    st.sidebar.header("🎲 Risk Assessment")
+    st.sidebar.header("Risk Assessment")
     
     # Add new risk form
-    with st.sidebar.expander("➕ Add New Risk", expanded=False):
+    with st.sidebar.expander("Add New Risk", expanded=False):
         with st.form("add_risk"):
             col1, col2 = st.columns(2)
             
@@ -271,7 +271,7 @@ def main():
                 st.success("Risk added successfully!")
     
     # Filters
-    st.sidebar.subheader("🔍 Filters")
+    st.sidebar.subheader("Filters")
     
     category_filter = st.sidebar.multiselect(
         "Risk Category",
@@ -302,10 +302,10 @@ def main():
     metrics = calculate_risk_metrics(filtered_df)
     
     # Main content
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Dashboard", "🎲 Monte Carlo", "📈 Risk Analysis", "🔥 Risk Heatmap", "📋 Management"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Dashboard", "Monte Carlo", "Risk Analysis", "Risk Heatmap", "Management"])
     
     with tab1:
-        st.header("📊 Risk Assessment Dashboard")
+        st.header("Risk Assessment Dashboard")
         
         # Key metrics
         col1, col2, col3, col4 = st.columns(4)
@@ -382,7 +382,7 @@ def main():
         st.plotly_chart(fig_risk, use_container_width=True)
     
     with tab2:
-        st.header("🎲 Monte Carlo Simulation")
+        st.header("Monte Carlo Simulation")
         
         # Select risk for simulation
         if len(filtered_df) > 0:
@@ -473,7 +473,7 @@ def main():
             st.warning("No risks available for simulation. Please add risks or adjust filters.")
     
     with tab3:
-        st.header("📈 Risk Analysis")
+        st.header("Risk Analysis")
         
         col1, col2 = st.columns(2)
         
@@ -501,7 +501,7 @@ def main():
             st.plotly_chart(fig_impact_category, use_container_width=True)
         
         # Risk trend analysis (simulated)
-        st.subheader("📊 Risk Trends")
+        st.subheader("Risk Trends")
         
         # Simulate historical data
         dates = pd.date_range(start='2023-01-01', end='2024-12-31', freq='ME')
@@ -531,7 +531,7 @@ def main():
         st.plotly_chart(fig_trend, use_container_width=True)
     
     with tab4:
-        st.header("🔥 Risk Heatmap")
+        st.header("Risk Heatmap")
         
         # Create risk matrix
         risk_matrix = np.zeros((5, 5))
@@ -575,38 +575,38 @@ def main():
                             st.write(f"• **{risk['risk_name']}** - {risk['risk_category']} (Score: {risk['risk_score']})")
     
     with tab5:
-        st.header("📋 Management & Reporting")
+        st.header("Management & Reporting")
         
         col1, col2 = st.columns(2)
         
         with col1:
             # Export options
-            st.subheader("📤 Export Options")
+            st.subheader("Export Options")
             
-            if st.button("📊 Export to Excel"):
+            if st.button("Export to Excel"):
                 st.success("Risk assessment exported to Excel successfully!")
             
-            if st.button("📈 Generate Report"):
+            if st.button("Generate Report"):
                 st.success("Comprehensive risk assessment report generated!")
             
-            if st.button("📋 Export Risk Summary"):
+            if st.button("Export Risk Summary"):
                 st.success("Risk summary exported!")
         
         with col2:
             # Management actions
-            st.subheader("⚙️ Management Actions")
+            st.subheader("Management Actions")
             
-            if st.button("🔄 Refresh Data"):
+            if st.button("Refresh Data"):
                 st.rerun()
             
-            if st.button("📅 Schedule Reviews"):
+            if st.button("Schedule Reviews"):
                 st.success("Review schedule updated!")
             
-            if st.button("📧 Send Notifications"):
+            if st.button("Send Notifications"):
                 st.success("Notifications sent to risk owners!")
         
         # Summary statistics
-        st.subheader("📊 Summary Statistics")
+        st.subheader("Summary Statistics")
         
         summary_data = {
             'Metric': [
@@ -626,12 +626,12 @@ def main():
                 str(metrics['overdue_reviews'])
             ],
             'Status': [
-                '✅' if metrics['total_risks'] > 0 else '❌',
-                '❌' if metrics['critical_risks'] > 0 else '✅',
-                '⚠️' if metrics['high_risks'] > 0 else '✅',
-                '✅' if metrics['avg_risk_score'] <= 10 else '⚠️',
-                '✅' if metrics['total_financial_impact'] > 0 else '❌',
-                '❌' if metrics['overdue_reviews'] > 0 else '✅'
+                '' if metrics['total_risks'] > 0 else '',
+                '' if metrics['critical_risks'] > 0 else '',
+                '' if metrics['high_risks'] > 0 else '',
+                '' if metrics['avg_risk_score'] <= 10 else '',
+                '' if metrics['total_financial_impact'] > 0 else '',
+                '' if metrics['overdue_reviews'] > 0 else ''
             ]
         }
         

@@ -277,7 +277,7 @@ def main():
         show_analytics()
 
 def show_dashboard():
-    st.header("📊 Asset Dashboard")
+    st.header("Asset Dashboard")
     
     # Calculate key metrics
     total_assets = len(st.session_state.assets)
@@ -355,15 +355,15 @@ def show_dashboard():
                 st.write(f"${asset['current_value']:,.0f}")
             with col4:
                 if asset['criticality'] == 'Critical':
-                    st.write("🔴 Critical")
+                    st.write("Critical")
                 elif asset['criticality'] == 'High':
-                    st.write("🟠 High")
+                    st.write("High")
                 else:
-                    st.write("🟡 Medium")
+                    st.write("Medium")
             st.divider()
 
 def show_assets():
-    st.header("💻 Assets")
+    st.header("Assets")
     
     # Add new asset
     with st.expander("Add New Asset"):
@@ -464,7 +464,7 @@ def show_assets():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_categories():
-    st.header("📂 Asset Categories")
+    st.header("Asset Categories")
     
     # Add new category
     with st.expander("Add New Category"):
@@ -495,7 +495,7 @@ def show_categories():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_locations():
-    st.header("📍 Asset Locations")
+    st.header("Asset Locations")
     
     # Add new location
     with st.expander("Add New Location"):
@@ -541,7 +541,7 @@ def show_locations():
             st.plotly_chart(fig, use_container_width=True)
 
 def show_maintenance():
-    st.header("🔧 Asset Maintenance")
+    st.header("Asset Maintenance")
     
     # Add new maintenance record
     with st.expander("Add New Maintenance Record"):
@@ -616,7 +616,7 @@ def show_maintenance():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_licenses():
-    st.header("📜 Asset Licenses")
+    st.header("Asset Licenses")
     
     # Add new license
     with st.expander("Add New License"):
@@ -695,7 +695,7 @@ def show_licenses():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_reports():
-    st.header("📊 Reports & Analytics")
+    st.header("Reports & Analytics")
     
     # Report options
     report_type = st.selectbox("Select Report Type", [
@@ -752,7 +752,7 @@ def show_reports():
             )
 
 def show_analytics():
-    st.header("📈 Analytics & Insights")
+    st.header("Analytics & Insights")
     
     # Calculate metrics
     total_assets = len(st.session_state.assets)

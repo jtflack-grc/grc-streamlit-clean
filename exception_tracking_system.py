@@ -224,10 +224,10 @@ def main():
     metrics = calculate_exception_metrics(df)
     
     # Sidebar
-    st.sidebar.header("⚠️ Exception Management")
+    st.sidebar.header("Exception Management")
     
     # Add new exception form
-    with st.sidebar.expander("➕ Add New Exception", expanded=False):
+    with st.sidebar.expander("Add New Exception", expanded=False):
         with st.form("add_exception"):
             col1, col2 = st.columns(2)
             
@@ -258,7 +258,7 @@ def main():
                 st.success("Exception added successfully!")
     
     # Filters
-    st.sidebar.subheader("🔍 Filters")
+    st.sidebar.subheader("Filters")
     
     status_filter = st.sidebar.multiselect(
         "Status",
@@ -286,10 +286,10 @@ def main():
     ]
     
     # Main content
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Dashboard", "📋 Exception List", "⚠️ Risk Analysis", "📅 Expiration Tracking", "📈 Reports"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Dashboard", "Exception List", "Risk Analysis", "Expiration Tracking", "Reports"])
     
     with tab1:
-        st.header("📊 Exception Dashboard")
+        st.header("Exception Dashboard")
         
         # Key metrics
         col1, col2, col3, col4 = st.columns(4)
@@ -340,7 +340,7 @@ def main():
         st.plotly_chart(fig_risk_dist, use_container_width=True)
         
         # Expiration timeline
-        st.subheader("📅 Expiration Timeline")
+        st.subheader("Expiration Timeline")
         
         # Calculate days to expiration
         today = datetime.datetime.now()
@@ -361,7 +361,7 @@ def main():
         st.plotly_chart(fig_timeline, use_container_width=True)
     
     with tab2:
-        st.header("📋 Exception List")
+        st.header("Exception List")
         
         # Display filtered exceptions
         if len(filtered_df) > 0:
@@ -380,7 +380,7 @@ def main():
             st.warning("No exceptions found matching the selected filters.")
     
     with tab3:
-        st.header("⚠️ Risk Analysis")
+        st.header("Risk Analysis")
         
         col1, col2 = st.columns(2)
         
@@ -406,7 +406,7 @@ def main():
             st.plotly_chart(fig_risk_acceptance, use_container_width=True)
         
         # High-risk exceptions
-        st.subheader("🚨 High-Risk Exceptions (Score > 75)")
+        st.subheader("High-Risk Exceptions (Score > 75)")
         high_risk_df = filtered_df[filtered_df['risk_score'] > 75]
         
         if len(high_risk_df) > 0:
@@ -429,7 +429,7 @@ def main():
             st.info("No high-risk exceptions found.")
     
     with tab4:
-        st.header("📅 Expiration Tracking")
+        st.header("Expiration Tracking")
         
         # Calculate days to expiration
         today = datetime.datetime.now()
@@ -439,7 +439,7 @@ def main():
         expiring_soon = filtered_df[filtered_df['days_to_expiration'] <= 30]
         
         if len(expiring_soon) > 0:
-            st.subheader("⚠️ Expiring Soon (Within 30 Days)")
+            st.subheader("Expiring Soon (Within 30 Days)")
             
             for _, exception in expiring_soon.iterrows():
                 days_left = exception['days_to_expiration']
@@ -464,7 +464,7 @@ def main():
             st.success("No exceptions expiring within 30 days.")
         
         # Expiration trend
-        st.subheader("📈 Expiration Trend")
+        st.subheader("Expiration Trend")
         
         # Group by month
         monthly_expirations = filtered_df.groupby(filtered_df['expiration_date'].dt.to_period('M')).size()
@@ -478,38 +478,38 @@ def main():
         st.plotly_chart(fig_trend, use_container_width=True)
     
     with tab5:
-        st.header("📈 Reports & Analytics")
+        st.header("Reports & Analytics")
         
         col1, col2 = st.columns(2)
         
         with col1:
             # Export options
-            st.subheader("📤 Export Options")
+            st.subheader("Export Options")
             
-            if st.button("📊 Export to Excel"):
+            if st.button("Export to Excel"):
                 st.success("Exception report exported to Excel successfully!")
             
-            if st.button("📈 Generate Risk Report"):
+            if st.button("Generate Risk Report"):
                 st.success("Risk analysis report generated!")
             
-            if st.button("📋 Export Expiration Report"):
+            if st.button("Export Expiration Report"):
                 st.success("Expiration tracking report exported!")
         
         with col2:
             # Management actions
-            st.subheader("⚙️ Management Actions")
+            st.subheader("Management Actions")
             
-            if st.button("🔄 Refresh Data"):
+            if st.button("Refresh Data"):
                 st.rerun()
             
-            if st.button("📧 Send Expiration Notifications"):
+            if st.button("Send Expiration Notifications"):
                 st.success("Expiration notifications sent!")
             
-            if st.button("📅 Schedule Reviews"):
+            if st.button("Schedule Reviews"):
                 st.success("Review schedule updated!")
         
         # Summary statistics
-        st.subheader("📊 Summary Statistics")
+        st.subheader("Summary Statistics")
         
         summary_data = {
             'Metric': [
@@ -537,16 +537,16 @@ def main():
                 str(metrics['critical_exceptions'])
             ],
             'Status': [
-                '✅' if metrics['total_exceptions'] > 0 else '❌',
-                '⚠️' if metrics['open_exceptions'] > 0 else '✅',
-                '⚠️' if metrics['under_review'] > 0 else '✅',
-                '✅' if metrics['approved_exceptions'] > 0 else '❌',
-                '❌' if metrics['expired_exceptions'] > 0 else '✅',
-                '⚠️' if metrics['risk_accepted'] > 0 else '✅',
-                '⚠️' if metrics['expiring_soon'] > 0 else '✅',
-                '❌' if metrics['overdue_reviews'] > 0 else '✅',
-                '✅' if metrics['avg_risk_score'] <= 70 else '⚠️',
-                '❌' if metrics['critical_exceptions'] > 0 else '✅'
+                '' if metrics['total_exceptions'] > 0 else '',
+                '' if metrics['open_exceptions'] > 0 else '',
+                '' if metrics['under_review'] > 0 else '',
+                '' if metrics['approved_exceptions'] > 0 else '',
+                '' if metrics['expired_exceptions'] > 0 else '',
+                '' if metrics['risk_accepted'] > 0 else '',
+                '' if metrics['expiring_soon'] > 0 else '',
+                '' if metrics['overdue_reviews'] > 0 else '',
+                '' if metrics['avg_risk_score'] <= 70 else '',
+                '' if metrics['critical_exceptions'] > 0 else ''
             ]
         }
         

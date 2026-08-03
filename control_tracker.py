@@ -221,10 +221,10 @@ def main():
     df = load_control_data()
     
     # Sidebar
-    st.sidebar.header("🔧 Control Management")
+    st.sidebar.header("Control Management")
     
     # Add new control form
-    with st.sidebar.expander("➕ Add New Control", expanded=False):
+    with st.sidebar.expander("Add New Control", expanded=False):
         with st.form("add_control"):
             col1, col2 = st.columns(2)
             
@@ -247,7 +247,7 @@ def main():
                 st.success("Control added successfully!")
     
     # Filters
-    st.sidebar.subheader("🔍 Filters")
+    st.sidebar.subheader("Filters")
     
     framework_filter = st.sidebar.multiselect(
         "Framework",
@@ -278,10 +278,10 @@ def main():
     metrics = calculate_control_metrics(filtered_df)
     
     # Main content
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Dashboard", "🎛️ Control Inventory", "📈 Analytics", "⚠️ Risk Management", "📋 Management"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Dashboard", "Control Inventory", "Analytics", "Risk Management", "Management"])
     
     with tab1:
-        st.header("📊 Control Dashboard")
+        st.header("Control Dashboard")
         
         # Key metrics
         col1, col2, col3, col4 = st.columns(4)
@@ -357,13 +357,13 @@ def main():
         st.plotly_chart(fig_risk, use_container_width=True)
     
     with tab2:
-        st.header("🎛️ Control Inventory")
+        st.header("Control Inventory")
         
         # Search and sort
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            search_term = st.text_input("🔍 Search Controls", placeholder="Search by ID, name, or description...")
+            search_term = st.text_input("Search Controls", placeholder="Search by ID, name, or description...")
         
         with col2:
             sort_by = st.selectbox("Sort by", ["Control ID", "Status", "Risk Score", "Framework", "Owner"])
@@ -424,7 +424,7 @@ def main():
                 st.caption(f"Implementation Progress: {status_progress[control['status']]}%")
     
     with tab3:
-        st.header("📈 Analytics & Trends")
+        st.header("Analytics & Trends")
         
         col1, col2 = st.columns(2)
         
@@ -466,7 +466,7 @@ def main():
             st.plotly_chart(fig_risk_framework, use_container_width=True)
         
         # Trend analysis (simulated)
-        st.subheader("📊 Implementation Trends")
+        st.subheader("Implementation Trends")
         
         # Simulate historical data
         dates = pd.date_range(start='2023-01-01', end='2024-12-31', freq='ME')
@@ -498,16 +498,16 @@ def main():
         st.plotly_chart(fig_trend, use_container_width=True)
     
     with tab4:
-        st.header("⚠️ Risk Management")
+        st.header("Risk Management")
         
         # High-risk controls
         high_risk_df = filtered_df[filtered_df['risk_score'] >= 70]
         
         if len(high_risk_df) > 0:
-            st.warning(f"⚠️ {len(high_risk_df)} High-Risk Controls Identified")
+            st.warning(f"{len(high_risk_df)} High-Risk Controls Identified")
             
             for _, control in high_risk_df.iterrows():
-                with st.expander(f"🚨 {control['control_id']} - {control['control_name']} (Risk: {control['risk_score']})"):
+                with st.expander(f"{control['control_id']} - {control['control_name']} (Risk: {control['risk_score']})"):
                     col1, col2 = st.columns(2)
                     
                     with col1:
@@ -523,22 +523,22 @@ def main():
                         st.write("3. Establish monitoring")
                         st.write("4. Regular status reviews")
         else:
-            st.success("✅ No high-risk controls identified")
+            st.success("No high-risk controls identified")
         
         # Overdue reviews
         overdue_df = filtered_df[pd.to_datetime(filtered_df['next_review']) < datetime.datetime.now()]
         
         if len(overdue_df) > 0:
-            st.error(f"⏰ {len(overdue_df)} Controls with Overdue Reviews")
+            st.error(f"{len(overdue_df)} Controls with Overdue Reviews")
             
             for _, control in overdue_df.iterrows():
                 days_overdue = (datetime.datetime.now() - pd.to_datetime(control['next_review'])).days
                 st.write(f"• {control['control_id']} - {control['control_name']} ({days_overdue} days overdue)")
         else:
-            st.success("✅ All control reviews are up to date")
+            st.success("All control reviews are up to date")
         
         # Risk heatmap
-        st.subheader("🔥 Risk Heatmap")
+        st.subheader("Risk Heatmap")
         
         # Create risk matrix
         risk_matrix = pd.DataFrame({
@@ -557,38 +557,38 @@ def main():
         st.plotly_chart(fig_heatmap, use_container_width=True)
     
     with tab5:
-        st.header("📋 Management & Reporting")
+        st.header("Management & Reporting")
         
         col1, col2 = st.columns(2)
         
         with col1:
             # Export options
-            st.subheader("📤 Export Options")
+            st.subheader("Export Options")
             
-            if st.button("📊 Export to Excel"):
+            if st.button("Export to Excel"):
                 st.success("Control inventory exported to Excel successfully!")
             
-            if st.button("📈 Generate Report"):
+            if st.button("Generate Report"):
                 st.success("Comprehensive control report generated!")
             
-            if st.button("📋 Export Compliance Summary"):
+            if st.button("Export Compliance Summary"):
                 st.success("Compliance summary exported!")
         
         with col2:
             # Management actions
-            st.subheader("⚙️ Management Actions")
+            st.subheader("Management Actions")
             
-            if st.button("🔄 Refresh Data"):
+            if st.button("Refresh Data"):
                 st.rerun()
             
-            if st.button("📅 Schedule Reviews"):
+            if st.button("Schedule Reviews"):
                 st.success("Review schedule updated!")
             
-            if st.button("📧 Send Notifications"):
+            if st.button("Send Notifications"):
                 st.success("Notifications sent to control owners!")
         
         # Summary statistics
-        st.subheader("📊 Summary Statistics")
+        st.subheader("Summary Statistics")
         
         summary_data = {
             'Metric': [
@@ -608,12 +608,12 @@ def main():
                 metrics['overdue_reviews']
             ],
             'Status': [
-                '✅' if metrics['total_controls'] > 0 else '❌',
-                '✅' if metrics['compliant_controls'] > 0 else '❌',
-                '✅' if metrics['implementation_rate'] >= 80 else '⚠️',
-                '✅' if metrics['avg_risk_score'] <= 50 else '⚠️',
-                '❌' if metrics['high_risk_controls'] > 0 else '✅',
-                '❌' if metrics['overdue_reviews'] > 0 else '✅'
+                '' if metrics['total_controls'] > 0 else '',
+                '' if metrics['compliant_controls'] > 0 else '',
+                '' if metrics['implementation_rate'] >= 80 else '',
+                '' if metrics['avg_risk_score'] <= 50 else '',
+                '' if metrics['high_risk_controls'] > 0 else '',
+                '' if metrics['overdue_reviews'] > 0 else ''
             ]
         }
         

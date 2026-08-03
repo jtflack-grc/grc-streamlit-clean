@@ -223,10 +223,10 @@ def main():
     metrics = calculate_testing_metrics(df)
     
     # Sidebar
-    st.sidebar.header("🧪 Control Testing")
+    st.sidebar.header("Control Testing")
     
     # Add new test form
-    with st.sidebar.expander("➕ Add New Test", expanded=False):
+    with st.sidebar.expander("Add New Test", expanded=False):
         with st.form("add_test"):
             col1, col2 = st.columns(2)
             
@@ -256,7 +256,7 @@ def main():
                 st.success("Control test added successfully!")
     
     # Filters
-    st.sidebar.subheader("🔍 Filters")
+    st.sidebar.subheader("Filters")
     
     result_filter = st.sidebar.multiselect(
         "Result",
@@ -284,10 +284,10 @@ def main():
     ]
     
     # Main content
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Dashboard", "📋 Test List", "🔍 Test Details", "📈 Analytics", "📋 Reports"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Dashboard", "Test List", "Test Details", "Analytics", "Reports"])
     
     with tab1:
-        st.header("📊 Control Testing Dashboard")
+        st.header("Control Testing Dashboard")
         
         # Key metrics
         col1, col2, col3, col4 = st.columns(4)
@@ -328,7 +328,7 @@ def main():
             st.plotly_chart(fig_type, use_container_width=True)
         
         # Priority vs Result matrix
-        st.subheader("🎯 Priority vs Result Matrix")
+        st.subheader("Priority vs Result Matrix")
         
         priority_result_matrix = pd.crosstab(df['priority'], df['result'])
         fig_matrix = px.imshow(
@@ -340,7 +340,7 @@ def main():
         st.plotly_chart(fig_matrix, use_container_width=True)
         
         # Timeline view
-        st.subheader("📅 Testing Timeline")
+        st.subheader("Testing Timeline")
         
         # Calculate days to due date
         today = datetime.datetime.now()
@@ -360,7 +360,7 @@ def main():
         st.plotly_chart(fig_timeline, use_container_width=True)
     
     with tab2:
-        st.header("📋 Control Test List")
+        st.header("Control Test List")
         
         # Display filtered tests
         if len(filtered_df) > 0:
@@ -379,7 +379,7 @@ def main():
             st.warning("No tests found matching the selected filters.")
     
     with tab3:
-        st.header("🔍 Test Details")
+        st.header("Test Details")
         
         # Select test for detailed view
         if len(filtered_df) > 0:
@@ -423,27 +423,27 @@ def main():
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                if st.button("📝 Update Test", key=f"update_{test_data['test_id']}"):
+                if st.button("Update Test", key=f"update_{test_data['test_id']}"):
                     st.success(f"Test {test_data['test_id']} updated!")
             
             with col2:
-                if st.button("📋 Generate Report", key=f"report_{test_data['test_id']}"):
+                if st.button("Generate Report", key=f"report_{test_data['test_id']}"):
                     st.success(f"Report generated for {test_data['test_id']}!")
             
             with col3:
-                if st.button("📎 View Evidence", key=f"evidence_{test_data['test_id']}"):
+                if st.button("View Evidence", key=f"evidence_{test_data['test_id']}"):
                     st.success(f"Evidence opened for {test_data['test_id']}!")
         else:
             st.warning("No tests available for detailed view.")
     
     with tab4:
-        st.header("📈 Testing Analytics")
+        st.header("Testing Analytics")
         
         col1, col2 = st.columns(2)
         
         with col1:
             # Test completion trend
-            st.subheader("📊 Test Completion Trend")
+            st.subheader("Test Completion Trend")
             
             # Group by month
             monthly_tests = df.groupby(df['test_date'].dt.to_period('M')).size()
@@ -458,7 +458,7 @@ def main():
         
         with col2:
             # Pass rate by test type
-            st.subheader("📊 Pass Rate by Test Type")
+            st.subheader("Pass Rate by Test Type")
             
             pass_rate_by_type = df.groupby('test_type')['result'].apply(
                 lambda x: (x == 'Pass').sum() / len(x) * 100
@@ -474,7 +474,7 @@ def main():
             st.plotly_chart(fig_pass_rate, use_container_width=True)
         
         # Framework compliance
-        st.subheader("🏛️ Framework Compliance")
+        st.subheader("Framework Compliance")
         
         # Simulate framework compliance data
         frameworks = ['NIST CSF', 'ISO 27001', 'SOC 2', 'PCI DSS', 'HIPAA']
@@ -489,7 +489,7 @@ def main():
         st.plotly_chart(fig_framework, use_container_width=True)
         
         # Risk-based testing analysis
-        st.subheader("⚠️ Risk-Based Testing Analysis")
+        st.subheader("Risk-Based Testing Analysis")
         
         # Simulate risk scores
         risk_data = []
@@ -516,38 +516,38 @@ def main():
         st.plotly_chart(fig_risk, use_container_width=True)
     
     with tab5:
-        st.header("📋 Reports & Management")
+        st.header("Reports & Management")
         
         col1, col2 = st.columns(2)
         
         with col1:
             # Export options
-            st.subheader("📤 Export Options")
+            st.subheader("Export Options")
             
-            if st.button("📊 Export to Excel"):
+            if st.button("Export to Excel"):
                 st.success("Control testing report exported to Excel successfully!")
             
-            if st.button("📈 Generate Executive Summary"):
+            if st.button("Generate Executive Summary"):
                 st.success("Executive summary generated!")
             
-            if st.button("📋 Export Test Results"):
+            if st.button("Export Test Results"):
                 st.success("Test results exported!")
         
         with col2:
             # Management actions
-            st.subheader("⚙️ Management Actions")
+            st.subheader("Management Actions")
             
-            if st.button("🔄 Refresh Data"):
+            if st.button("Refresh Data"):
                 st.rerun()
             
-            if st.button("📧 Send Reminders"):
+            if st.button("Send Reminders"):
                 st.success("Reminders sent to testers!")
             
-            if st.button("📅 Schedule Reviews"):
+            if st.button("Schedule Reviews"):
                 st.success("Review schedule updated!")
         
         # Summary statistics
-        st.subheader("📊 Summary Statistics")
+        st.subheader("Summary Statistics")
         
         summary_data = {
             'Metric': [
@@ -573,15 +573,15 @@ def main():
                 f"{metrics['avg_completion_rate']:.1f}%"
             ],
             'Status': [
-                '✅' if metrics['total_tests'] > 0 else '❌',
-                '✅' if metrics['passed_tests'] > 0 else '❌',
-                '⚠️' if metrics['failed_tests'] > 0 else '✅',
-                '⚠️' if metrics['in_progress_tests'] > 0 else '✅',
-                '⚠️' if metrics['planned_tests'] > 0 else '✅',
-                '❌' if metrics['overdue_tests'] > 0 else '✅',
-                '⚠️' if metrics['high_priority_tests'] > 0 else '✅',
-                '⚠️' if metrics['tests_with_findings'] > 0 else '✅',
-                '✅' if metrics['avg_completion_rate'] >= 80 else '⚠️'
+                '' if metrics['total_tests'] > 0 else '',
+                '' if metrics['passed_tests'] > 0 else '',
+                '' if metrics['failed_tests'] > 0 else '',
+                '' if metrics['in_progress_tests'] > 0 else '',
+                '' if metrics['planned_tests'] > 0 else '',
+                '' if metrics['overdue_tests'] > 0 else '',
+                '' if metrics['high_priority_tests'] > 0 else '',
+                '' if metrics['tests_with_findings'] > 0 else '',
+                '' if metrics['avg_completion_rate'] >= 80 else ''
             ]
         }
         

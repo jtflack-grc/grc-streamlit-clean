@@ -182,7 +182,7 @@ def main():
     metrics = calculate_risk_metrics(df)
     
     # Sidebar filters
-    st.sidebar.header("🔍 Filters")
+    st.sidebar.header("Filters")
     
     # Status filter
     status_filter = st.sidebar.multiselect(
@@ -234,10 +234,10 @@ def main():
         st.metric("Risk Coverage", f"{(metrics['closed_risks'] + metrics['accepted_risks']) / metrics['total_risks'] * 100:.1f}%")
     
     # Tabs for different views
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Risk Register", "📊 Analytics", "🎲 Monte Carlo", "📈 Trends", "⚙️ Risk Management"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Risk Register", "Analytics", "Monte Carlo", "Trends", "Risk Management"])
     
     with tab1:
-        st.header("📋 Risk Register")
+        st.header("Risk Register")
         
         # Risk register table
         st.dataframe(
@@ -247,7 +247,7 @@ def main():
         )
         
         # Risk details expander
-        with st.expander("🔍 Risk Details"):
+        with st.expander("Risk Details"):
             selected_risk = st.selectbox("Select Risk", filtered_df['id'].tolist())
             risk_data = filtered_df[filtered_df['id'] == selected_risk].iloc[0]
             
@@ -268,7 +268,7 @@ def main():
             st.write(f"**Treatment:** {risk_data['treatment']}")
     
     with tab2:
-        st.header("📊 Risk Analytics")
+        st.header("Risk Analytics")
         
         col1, col2 = st.columns(2)
         
@@ -315,7 +315,7 @@ def main():
             st.plotly_chart(fig_asset, use_container_width=True)
     
     with tab3:
-        st.header("🎲 Monte Carlo Risk Simulation")
+        st.header("Monte Carlo Risk Simulation")
         
         st.write("This simulation models risk score distributions using Monte Carlo methods to understand potential risk scenarios.")
         
@@ -327,7 +327,7 @@ def main():
             st.write(f"Running {simulations:,} simulations...")
         
         with col2:
-            if st.button("🔄 Run Simulation"):
+            if st.button("Run Simulation"):
                 with st.spinner("Running Monte Carlo simulation..."):
                     risk_scores, percentiles = monte_carlo_simulation(filtered_df, simulations)
                     
@@ -374,7 +374,7 @@ def main():
                         st.metric("Low", f"{low_count:,}", f"{low_count/simulations*100:.1f}%")
     
     with tab4:
-        st.header("📈 Risk Trends & Forecasting")
+        st.header("Risk Trends & Forecasting")
         
         # Simulate trend data
         dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='ME')
@@ -421,10 +421,10 @@ def main():
             st.plotly_chart(fig_score_trend, use_container_width=True)
         
         # Forecasting
-        st.subheader("🔮 Risk Forecasting")
+        st.subheader("Risk Forecasting")
         
         # Simple forecasting model
-        if st.button("📊 Generate Forecast"):
+        if st.button("Generate Forecast"):
             # Simulate future months
             future_dates = pd.date_range(start='2025-01-01', end='2025-06-30', freq='ME')
             forecast_data = []
@@ -460,12 +460,12 @@ def main():
             st.plotly_chart(fig_forecast, use_container_width=True)
     
     with tab5:
-        st.header("⚙️ Risk Management Tools")
+        st.header("Risk Management Tools")
         
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("🎯 Risk Treatment Planning")
+            st.subheader("Risk Treatment Planning")
             
             # Risk treatment status
             treatment_status = filtered_df['status'].value_counts()
@@ -477,7 +477,7 @@ def main():
             st.plotly_chart(fig_treatment, use_container_width=True)
             
             # Treatment recommendations
-            st.subheader("📋 Treatment Recommendations")
+            st.subheader("Treatment Recommendations")
             
             open_risks = filtered_df[filtered_df['status'] == 'Open'].sort_values('score', ascending=False)
             
@@ -489,7 +489,7 @@ def main():
                     st.write(f"**Review Date:** {risk['review_date'].strftime('%Y-%m-%d')}")
         
         with col2:
-            st.subheader("📊 Risk Metrics Dashboard")
+            st.subheader("Risk Metrics Dashboard")
             
             # Key Risk Indicators
             st.write("**Key Risk Indicators (KRIs):**")
@@ -499,14 +499,14 @@ def main():
                 'Current': [str(metrics['total_risks']), str(metrics['critical_risks']), str(metrics['high_risks']), 
                            f"{metrics['avg_score']:.1f}", str(metrics['open_risks']), str(metrics['overdue_reviews'])],
                 'Target': ['<30', '0', '<5', '<10', '<5', '0'],
-                'Status': ['✅', '❌', '❌', '❌', '❌', '❌']
+                'Status': ['', '', '', '', '', '']
             }
             
             kri_df = pd.DataFrame(kri_data)
             st.dataframe(kri_df, use_container_width=True, hide_index=True)
             
             # Risk owner accountability
-            st.subheader("👥 Risk Owner Accountability")
+            st.subheader("Risk Owner Accountability")
             owner_counts = filtered_df['owner'].value_counts()
             fig_owner = px.bar(
                 x=owner_counts.index,

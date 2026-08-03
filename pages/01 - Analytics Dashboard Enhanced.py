@@ -162,10 +162,10 @@ def main():
     metrics = calculate_analytics_metrics(data)
     
     # Sidebar
-    st.sidebar.header("📊 Analytics Controls")
+    st.sidebar.header("Analytics Controls")
     
     # Date range selector
-    st.sidebar.subheader("📅 Date Range")
+    st.sidebar.subheader("Date Range")
     date_range = st.sidebar.selectbox(
         "Select Date Range",
         ["Last 30 Days", "Last 90 Days", "Last 6 Months", "Last Year", "All Time"],
@@ -173,7 +173,7 @@ def main():
     )
     
     # Filter options
-    st.sidebar.subheader("🔍 Filters")
+    st.sidebar.subheader("Filters")
     
     # Risk tier filter
     risk_tier_filter = st.sidebar.multiselect(
@@ -194,16 +194,16 @@ def main():
     filtered_incidents = data['incidents'][data['incidents']['severity'].isin(severity_filter)]
     
     # Main content
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Overview", "📈 Trends", "🎯 Performance", "🔍 Deep Dive", "📋 Reports"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Overview", "Trends", "Performance", "Deep Dive", "Reports"])
     
     with tab1:
-        st.header("📊 Analytics Overview")
+        st.header("Analytics Overview")
         
         # Key metrics
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            trend_icon = "↗️" if metrics['risk_trend'] > 0 else "↘️" if metrics['risk_trend'] < 0 else "→"
+            trend_icon = "↗" if metrics['risk_trend'] > 0 else "↘" if metrics['risk_trend'] < 0 else "→"
             trend_color = "trend-negative" if metrics['risk_trend'] > 0 else "trend-positive" if metrics['risk_trend'] < 0 else "trend-neutral"
             st.metric(
                 "Overall Risk Score", 
@@ -212,7 +212,7 @@ def main():
             )
         
         with col2:
-            trend_icon = "↗️" if metrics['compliance_trend'] > 0 else "↘️" if metrics['compliance_trend'] < 0 else "→"
+            trend_icon = "↗" if metrics['compliance_trend'] > 0 else "↘" if metrics['compliance_trend'] < 0 else "→"
             trend_color = "trend-positive" if metrics['compliance_trend'] > 0 else "trend-negative" if metrics['compliance_trend'] < 0 else "trend-neutral"
             st.metric(
                 "Compliance Rate", 
@@ -253,7 +253,7 @@ def main():
             st.plotly_chart(fig_compliance, use_container_width=True)
         
         # Framework compliance
-        st.subheader("🏛️ Framework Compliance")
+        st.subheader("Framework Compliance")
         
         fig_frameworks = px.bar(
             data['frameworks'],
@@ -268,7 +268,7 @@ def main():
         st.plotly_chart(fig_frameworks, use_container_width=True)
         
         # Vendor risk heatmap
-        st.subheader("🏢 Vendor Risk Analysis")
+        st.subheader("Vendor Risk Analysis")
         
         fig_vendor_heatmap = px.scatter(
             filtered_vendors,
@@ -290,7 +290,7 @@ def main():
         st.plotly_chart(fig_vendor_heatmap, use_container_width=True)
     
     with tab2:
-        st.header("📈 Trend Analysis")
+        st.header("Trend Analysis")
         
         col1, col2 = st.columns(2)
         
@@ -319,7 +319,7 @@ def main():
             st.plotly_chart(fig_incident_types, use_container_width=True)
         
         # Incident severity over time
-        st.subheader("⚠️ Incident Severity Trends")
+        st.subheader("Incident Severity Trends")
         
         # Group incidents by month and severity
         monthly_incidents = filtered_incidents.copy()
@@ -338,7 +338,7 @@ def main():
         st.plotly_chart(fig_incident_trend, use_container_width=True)
         
         # Resolution time analysis
-        st.subheader("⏱️ Incident Resolution Analysis")
+        st.subheader("Incident Resolution Analysis")
         
         col1, col2 = st.columns(2)
         
@@ -366,13 +366,13 @@ def main():
             st.plotly_chart(fig_resolution_dist, use_container_width=True)
     
     with tab3:
-        st.header("🎯 Performance Analytics")
+        st.header("Performance Analytics")
         
         col1, col2 = st.columns(2)
         
         with col1:
             # Control effectiveness ranking
-            st.subheader("🏆 Top Performing Controls")
+            st.subheader("Top Performing Controls")
             
             top_controls = data['controls'].nlargest(5, 'effectiveness')
             fig_top_controls = px.bar(
@@ -387,7 +387,7 @@ def main():
         
         with col2:
             # Areas needing improvement
-            st.subheader("⚠️ Controls Needing Improvement")
+            st.subheader("Controls Needing Improvement")
             
             bottom_controls = data['controls'].nsmallest(5, 'effectiveness')
             fig_bottom_controls = px.bar(
@@ -401,7 +401,7 @@ def main():
             st.plotly_chart(fig_bottom_controls, use_container_width=True)
         
         # Performance correlation analysis
-        st.subheader("🔗 Performance Correlations")
+        st.subheader("Performance Correlations")
         
         # Create correlation matrix for numerical data
         correlation_data = data['controls'].copy()
@@ -423,7 +423,7 @@ def main():
         st.plotly_chart(fig_correlation, use_container_width=True)
         
         # Performance benchmarking
-        st.subheader("📊 Performance Benchmarking")
+        st.subheader("Performance Benchmarking")
         
         # Simulate industry benchmarks
         benchmark_data = []
@@ -469,13 +469,13 @@ def main():
         st.plotly_chart(fig_benchmark, use_container_width=True)
     
     with tab4:
-        st.header("🔍 Deep Dive Analytics")
+        st.header("Deep Dive Analytics")
         
         col1, col2 = st.columns(2)
         
         with col1:
             # Predictive analytics simulation
-            st.subheader("🔮 Predictive Analytics")
+            st.subheader("Predictive Analytics")
             
             # Simulate risk prediction
             future_dates = pd.date_range(start='2024-01-16', end='2024-06-30', freq='D')
@@ -512,7 +512,7 @@ def main():
         
         with col2:
             # Anomaly detection
-            st.subheader("🚨 Anomaly Detection")
+            st.subheader("Anomaly Detection")
             
             # Simulate anomaly detection
             risk_values = data['risk_data']['risk_score'].values
@@ -545,7 +545,7 @@ def main():
                 st.success("No anomalies detected in the current dataset!")
         
         # Advanced analytics
-        st.subheader("📊 Advanced Analytics")
+        st.subheader("Advanced Analytics")
         
         col1, col2 = st.columns(2)
         
@@ -590,13 +590,13 @@ def main():
             st.plotly_chart(fig_correlation, use_container_width=True)
     
     with tab5:
-        st.header("📋 Reports & Export")
+        st.header("Reports & Export")
         
         col1, col2 = st.columns(2)
         
         with col1:
             # Report generation
-            st.subheader("📤 Generate Reports")
+            st.subheader("Generate Reports")
             
             report_type = st.selectbox(
                 "Report Type",
@@ -608,23 +608,23 @@ def main():
                 ["PDF", "Excel", "PowerPoint", "JSON"]
             )
             
-            if st.button("📊 Generate Report"):
+            if st.button("Generate Report"):
                 st.success(f"{report_type} report generated in {report_format} format!")
             
             # Scheduled reports
-            st.subheader("📅 Scheduled Reports")
+            st.subheader("Scheduled Reports")
             
             schedule_frequency = st.selectbox(
                 "Frequency",
                 ["Daily", "Weekly", "Monthly", "Quarterly"]
             )
             
-            if st.button("📅 Schedule Report"):
+            if st.button("Schedule Report"):
                 st.success(f"Report scheduled for {schedule_frequency} delivery!")
         
         with col2:
             # Data export
-            st.subheader("📥 Export Data")
+            st.subheader("Export Data")
             
             export_dataset = st.selectbox(
                 "Dataset",
@@ -636,11 +636,11 @@ def main():
                 ["CSV", "Excel", "JSON", "XML"]
             )
             
-            if st.button("📥 Export Data"):
+            if st.button("Export Data"):
                 st.success(f"{export_dataset} exported in {export_format} format!")
         
         # Executive summary
-        st.subheader("👔 Executive Summary")
+        st.subheader("Executive Summary")
         
         # Key insights
         insights = {
@@ -661,10 +661,10 @@ def main():
                 'Comprehensive' if len(data['frameworks']) >= 4 else 'Limited'
             ],
             'Trend': [
-                '↘️ Improving' if metrics['risk_trend'] < 0 else '↗️ Increasing' if metrics['risk_trend'] > 0 else '→ Stable',
-                '↗️ Improving' if metrics['compliance_trend'] > 0 else '↘️ Declining' if metrics['compliance_trend'] < 0 else '→ Stable',
+                '↘Improving' if metrics['risk_trend'] < 0 else '↗Increasing' if metrics['risk_trend'] > 0 else '→ Stable',
+                '↗Improving' if metrics['compliance_trend'] > 0 else '↘Declining' if metrics['compliance_trend'] < 0 else '→ Stable',
                 '→ Stable',
-                '↘️ Decreasing',
+                '↘Decreasing',
                 '→ Stable',
                 '→ Stable'
             ],
@@ -682,15 +682,15 @@ def main():
         st.dataframe(insights_df, use_container_width=True, hide_index=True)
         
         # Action items
-        st.subheader("⚡ Key Action Items")
+        st.subheader("Key Action Items")
         
         action_items = [
-            "🔍 Conduct detailed risk assessment for high-risk areas",
-            "📋 Review and update compliance controls",
-            "🛠️ Implement control effectiveness improvement program",
-            "📊 Enhance incident monitoring and response",
-            "🏢 Perform vendor risk assessments",
-            "📈 Develop framework implementation roadmap"
+            "Conduct detailed risk assessment for high-risk areas",
+            "Review and update compliance controls",
+            "Implement control effectiveness improvement program",
+            "Enhance incident monitoring and response",
+            "Perform vendor risk assessments",
+            "Develop framework implementation roadmap"
         ]
         
         for item in action_items:

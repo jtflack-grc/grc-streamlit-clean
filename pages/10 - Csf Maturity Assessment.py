@@ -276,15 +276,15 @@ def calculate_maturity_score(scores, questions):
 def get_maturity_level(score):
     """Get maturity level based on score"""
     if score >= 80:
-        return "Optimized", "🟢"
+        return "Optimized", ""
     elif score >= 60:
-        return "Advanced", "🟡"
+        return "Advanced", ""
     elif score >= 40:
-        return "Intermediate", "🟠"
+        return "Intermediate", ""
     elif score >= 20:
-        return "Basic", "🔴"
+        return "Basic", ""
     else:
-        return "Initial", "⚫"
+        return "Initial", ""
 
 def generate_recommendations(scores, questions):
     """Generate recommendations based on assessment scores"""
@@ -321,7 +321,7 @@ def main():
     functions, questions = load_csf_framework()
     
     # Sidebar
-    st.sidebar.header("🔧 Assessment Options")
+    st.sidebar.header("Assessment Options")
     
     # Assessment type
     assessment_type = st.sidebar.selectbox(
@@ -336,10 +336,10 @@ def main():
     industry = st.sidebar.selectbox("Industry", ["Technology", "Financial Services", "Healthcare", "Manufacturing", "Government", "Other"])
     
     # Main content
-    tab1, tab2, tab3, tab4 = st.tabs(["📝 Assessment", "📊 Results", "🎯 Recommendations", "📈 Analytics"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Assessment", "Results", "Recommendations", "Analytics"])
     
     with tab1:
-        st.header("📝 CSF Maturity Assessment")
+        st.header("CSF Maturity Assessment")
         
         st.write("""
         This assessment evaluates your organization's cybersecurity maturity across the five NIST Cybersecurity Framework functions: 
@@ -393,7 +393,7 @@ def main():
                 st.success("Assessment completed! View results in the Results tab.")
     
     with tab2:
-        st.header("📊 Assessment Results")
+        st.header("Assessment Results")
         
         if not st.session_state.get('assessment_completed', False):
             st.info("Please complete the assessment in the Assessment tab first.")
@@ -523,7 +523,7 @@ def main():
             )
     
     with tab3:
-        st.header("🎯 Recommendations")
+        st.header("Recommendations")
         
         if not st.session_state.get('assessment_completed', False):
             st.info("Please complete the assessment in the Assessment tab first.")
@@ -552,7 +552,7 @@ def main():
                     st.caption(f"Improvement needed: {improvement_needed} levels")
             
             # Improvement roadmap
-            st.subheader("📋 Improvement Roadmap")
+            st.subheader("Improvement Roadmap")
             
             roadmap_data = []
             for rec in recommendations:
@@ -570,7 +570,7 @@ def main():
             st.dataframe(roadmap_df, use_container_width=True, hide_index=True)
     
     with tab4:
-        st.header("📈 Analytics & Trends")
+        st.header("Analytics & Trends")
         
         if not st.session_state.get('assessment_completed', False):
             st.info("Please complete the assessment in the Assessment tab first.")
@@ -660,20 +660,20 @@ def main():
             st.plotly_chart(fig_trend, use_container_width=True)
             
             # Export options
-            st.subheader("📤 Export Results")
+            st.subheader("Export Results")
             
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                if st.button("📊 Export to PDF"):
+                if st.button("Export to PDF"):
                     st.info("PDF export functionality would be implemented here")
             
             with col2:
-                if st.button("📈 Export to Excel"):
+                if st.button("Export to Excel"):
                     st.info("Excel export functionality would be implemented here")
             
             with col3:
-                if st.button("🔄 Save Assessment"):
+                if st.button("Save Assessment"):
                     st.success("Assessment saved successfully!")
 
 if __name__ == "__main__":

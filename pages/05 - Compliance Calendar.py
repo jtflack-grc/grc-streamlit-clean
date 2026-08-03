@@ -330,7 +330,7 @@ def main():
         show_analytics()
 
 def show_calendar_view():
-    st.header("📅 Calendar View")
+    st.header("Calendar View")
     
     # Calendar controls
     col1, col2, col3 = st.columns(3)
@@ -357,7 +357,7 @@ def show_calendar_view():
         show_daily_calendar(selected_date)
 
 def show_monthly_calendar(selected_date):
-    st.subheader(f"📅 {selected_date.strftime('%B %Y')}")
+    st.subheader(f"{selected_date.strftime('%B %Y')}")
     
     # Create calendar grid
     cal = calendar.monthcalendar(selected_date.year, selected_date.month)
@@ -392,13 +392,13 @@ def show_monthly_calendar(selected_date):
                     event_indicators = []
                     for event in day_events:
                         if event['priority'] == 'Critical':
-                            event_indicators.append("🔴")
+                            event_indicators.append("")
                         elif event['priority'] == 'High':
-                            event_indicators.append("🟠")
+                            event_indicators.append("")
                         elif event['priority'] == 'Medium':
-                            event_indicators.append("🟡")
+                            event_indicators.append("")
                         else:
-                            event_indicators.append("🟢")
+                            event_indicators.append("")
                     
                     day_text += f" {' '.join(event_indicators)}"
                 
@@ -414,7 +414,7 @@ def show_monthly_calendar(selected_date):
                             st.write(f"Assigned: {event['assigned_to']}")
 
 def show_weekly_calendar(selected_date):
-    st.subheader(f"📅 Week of {selected_date.strftime('%B %d, %Y')}")
+    st.subheader(f"Week of {selected_date.strftime('%B %d, %Y')}")
     
     # Get week start (Monday)
     week_start = selected_date - timedelta(days=selected_date.weekday())
@@ -440,19 +440,19 @@ def show_weekly_calendar(selected_date):
                         st.write(f"Location: {event['location']}")
                     with col2:
                         if event['priority'] == 'Critical':
-                            st.write("🔴 Critical")
+                            st.write("Critical")
                         elif event['priority'] == 'High':
-                            st.write("🟠 High")
+                            st.write("High")
                         elif event['priority'] == 'Medium':
-                            st.write("🟡 Medium")
+                            st.write("Medium")
                         else:
-                            st.write("🟢 Low")
+                            st.write("Low")
                     st.divider()
             else:
                 st.write("No events scheduled")
 
 def show_daily_calendar(selected_date):
-    st.subheader(f"📅 {selected_date.strftime('%A, %B %d, %Y')}")
+    st.subheader(f"{selected_date.strftime('%A, %B %d, %Y')}")
     
     # Get events for this day
     day_events = [e for e in st.session_state.compliance_events 
@@ -466,7 +466,7 @@ def show_daily_calendar(selected_date):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("📋 Events")
+        st.subheader("Events")
         if day_events:
             for event in day_events:
                 with st.expander(f"{event['start_date'].strftime('%H:%M')} - {event['title']}"):
@@ -480,7 +480,7 @@ def show_daily_calendar(selected_date):
             st.write("No events scheduled")
     
     with col2:
-        st.subheader("⏰ Deadlines")
+        st.subheader("Deadlines")
         if day_deadlines:
             for deadline in day_deadlines:
                 with st.expander(f"{deadline['title']}"):
@@ -493,7 +493,7 @@ def show_daily_calendar(selected_date):
             st.write("No deadlines today")
 
 def show_compliance_events():
-    st.header("📋 Compliance Events")
+    st.header("Compliance Events")
     
     # Add new event
     with st.expander("Add New Compliance Event"):
@@ -575,7 +575,7 @@ def show_compliance_events():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_regulatory_deadlines():
-    st.header("⏰ Regulatory Deadlines")
+    st.header("Regulatory Deadlines")
     
     # Add new deadline
     with st.expander("Add New Regulatory Deadline"):
@@ -652,7 +652,7 @@ def show_regulatory_deadlines():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_audit_schedules():
-    st.header("🔍 Audit Schedules")
+    st.header("Audit Schedules")
     
     # Add new audit schedule
     with st.expander("Add New Audit Schedule"):
@@ -717,7 +717,7 @@ def show_audit_schedules():
             st.plotly_chart(fig, use_container_width=True)
 
 def show_reminders():
-    st.header("🔔 Reminders")
+    st.header("Reminders")
     
     # Add new reminder
     with st.expander("Add New Reminder"):
@@ -770,7 +770,7 @@ def show_reminders():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_holidays():
-    st.header("🎉 Holidays")
+    st.header("Holidays")
     
     # Add new holiday
     with st.expander("Add New Holiday"):
@@ -822,7 +822,7 @@ def show_holidays():
             st.plotly_chart(fig, use_container_width=True)
 
 def show_reports():
-    st.header("📊 Reports & Analytics")
+    st.header("Reports & Analytics")
     
     # Report options
     report_type = st.selectbox("Select Report Type", [
@@ -895,7 +895,7 @@ def show_reports():
             )
 
 def show_analytics():
-    st.header("📈 Analytics & Insights")
+    st.header("Analytics & Insights")
     
     # Calculate metrics
     total_events = len(st.session_state.compliance_events)

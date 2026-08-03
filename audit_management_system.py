@@ -380,7 +380,7 @@ def main():
         show_analytics()
 
 def show_dashboard():
-    st.header("📊 Audit Management Dashboard")
+    st.header("Audit Management Dashboard")
     
     # Key metrics
     col1, col2, col3, col4 = st.columns(4)
@@ -458,7 +458,7 @@ def show_dashboard():
             st.write(f"• {finding['title']} - {finding['severity']} ({finding['status']})")
 
 def show_audits():
-    st.header("🔍 Audits")
+    st.header("Audits")
     
     # Add new audit
     with st.expander("Add New Audit"):
@@ -546,7 +546,7 @@ def show_audits():
             st.write(audit['scope'])
 
 def show_findings():
-    st.header("⚠️ Findings")
+    st.header("Findings")
     
     # Add new finding
     with st.expander("Add New Finding"):
@@ -636,7 +636,7 @@ def show_findings():
             st.write(finding['evidence_required'])
 
 def show_auditors():
-    st.header("👥 Auditors")
+    st.header("Auditors")
     
     # Add new auditor
     with st.expander("Add New Auditor"):
@@ -689,7 +689,7 @@ def show_auditors():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_audit_plans():
-    st.header("📋 Audit Plans")
+    st.header("Audit Plans")
     
     # Add new audit plan
     with st.expander("Add New Audit Plan"):
@@ -745,7 +745,7 @@ def show_audit_plans():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_evidence():
-    st.header("📄 Evidence")
+    st.header("Evidence")
     
     # Add new evidence
     with st.expander("Add New Evidence"):
@@ -802,7 +802,7 @@ def show_evidence():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_reports():
-    st.header("📊 Reports & Analytics")
+    st.header("Reports & Analytics")
     
     # Report options
     report_type = st.selectbox("Select Report Type", [
@@ -878,7 +878,7 @@ def show_reports():
             )
 
 def show_analytics():
-    st.header("📈 Analytics & Insights")
+    st.header("Analytics & Insights")
     
     # Calculate metrics
     total_audits = len(st.session_state.audits)

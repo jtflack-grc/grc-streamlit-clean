@@ -213,7 +213,7 @@ def main():
     metrics = calculate_gap_metrics(gaps_df)
     
     # Sidebar filters
-    st.sidebar.header("🔍 Filters")
+    st.sidebar.header("Filters")
     
     # Framework filter
     framework_filter = st.sidebar.multiselect(
@@ -271,10 +271,10 @@ def main():
         st.metric("Total Cost", f"${metrics['total_cost']:,.0f}")
     
     # Tabs for different views
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 Gap Register", "📊 Analytics", "🎯 Remediation Plan", "🔗 Framework Mapping", "⚙️ Gap Management"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Gap Register", "Analytics", "Remediation Plan", "Framework Mapping", "Gap Management"])
     
     with tab1:
-        st.header("📋 Gap Register")
+        st.header("Gap Register")
         
         # Gap register table
         st.dataframe(
@@ -284,7 +284,7 @@ def main():
         )
         
         # Gap details expander
-        with st.expander("🔍 Gap Details"):
+        with st.expander("Gap Details"):
             selected_gap = st.selectbox("Select Gap", filtered_df['id'].tolist())
             gap_data = filtered_df[filtered_df['id'] == selected_gap].iloc[0]
             
@@ -309,7 +309,7 @@ def main():
             st.write(f"**Estimated Effort:** {gap_data['estimated_effort']}")
     
     with tab2:
-        st.header("📊 Gap Analytics")
+        st.header("Gap Analytics")
         
         col1, col2 = st.columns(2)
         
@@ -355,7 +355,7 @@ def main():
             st.plotly_chart(fig_risk, use_container_width=True)
         
         # Trend analysis
-        st.subheader("📈 Gap Trends")
+        st.subheader("Gap Trends")
         
         # Simulate trend data
         dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='ME')
@@ -401,7 +401,7 @@ def main():
             st.plotly_chart(fig_score_trend, use_container_width=True)
     
     with tab3:
-        st.header("🎯 Remediation Plan")
+        st.header("Remediation Plan")
         
         # Generate remediation plan
         remediation_plan = generate_remediation_plan(filtered_df)
@@ -430,7 +430,7 @@ def main():
                 st.write(f"**Target State:** {gap['target_state']}")
         
         # Cost analysis
-        st.subheader("💰 Cost Analysis")
+        st.subheader("Cost Analysis")
         
         col1, col2 = st.columns(2)
         
@@ -457,7 +457,7 @@ def main():
             st.plotly_chart(fig_cost_framework, use_container_width=True)
         
         # Resource allocation
-        st.subheader("👥 Resource Allocation")
+        st.subheader("Resource Allocation")
         
         owner_workload = filtered_df.groupby('owner').agg({
             'id': 'count',
@@ -469,7 +469,7 @@ def main():
         st.dataframe(owner_workload, use_container_width=True, hide_index=True)
     
     with tab4:
-        st.header("🔗 Framework Mapping")
+        st.header("Framework Mapping")
         
         # Framework comparison
         st.subheader("Framework Coverage Analysis")
@@ -518,12 +518,12 @@ def main():
         st.plotly_chart(fig_gap_type, use_container_width=True)
     
     with tab5:
-        st.header("⚙️ Gap Management")
+        st.header("Gap Management")
         
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("📝 Add New Gap")
+            st.subheader("Add New Gap")
             
             # Form for adding new gap
             with st.form("new_gap_form"):
@@ -540,7 +540,7 @@ def main():
                     st.success("Gap added successfully!")
         
         with col2:
-            st.subheader("📊 Gap Metrics Dashboard")
+            st.subheader("Gap Metrics Dashboard")
             
             # Key Performance Indicators
             st.write("**Key Performance Indicators (KPIs):**")
@@ -550,14 +550,14 @@ def main():
                 'Current': [str(metrics['total_gaps']), str(metrics['critical_gaps']), str(metrics['high_gaps']), 
                            f"{metrics['remediation_rate']:.1f}%", f"{metrics['avg_risk_score']:.1f}", f"${metrics['total_cost']:,.0f}"],
                 'Target': ['<20', '0', '<5', '>80%', '<50', '<$200K'],
-                'Status': ['❌', '❌', '❌', '❌', '❌', '❌']
+                'Status': ['', '', '', '', '', '']
             }
             
             kpi_df = pd.DataFrame(kpi_data)
             st.dataframe(kpi_df, use_container_width=True, hide_index=True)
             
             # Gap owner accountability
-            st.subheader("👥 Gap Owner Accountability")
+            st.subheader("Gap Owner Accountability")
             owner_counts = filtered_df['owner'].value_counts()
             fig_owner = px.bar(
                 x=owner_counts.index,

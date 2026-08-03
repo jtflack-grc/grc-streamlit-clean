@@ -325,7 +325,7 @@ def main():
         show_analytics()
 
 def show_dashboard():
-    st.header("📊 Training Dashboard")
+    st.header("Training Dashboard")
     
     # Calculate key metrics
     total_employees = len(st.session_state.employees)
@@ -402,13 +402,13 @@ def show_dashboard():
                     st.write(f"Score: {completion['score']}%")
                 with col4:
                     if completion['status'] == 'Passed':
-                        st.write("✅ Passed")
+                        st.write("Passed")
                     else:
-                        st.write("❌ Failed")
+                        st.write("Failed")
                 st.divider()
 
 def show_training_courses():
-    st.header("📚 Training Courses")
+    st.header("Training Courses")
     
     # Add new course
     with st.expander("Add New Training Course"):
@@ -486,7 +486,7 @@ def show_training_courses():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_employees():
-    st.header("👥 Employees")
+    st.header("Employees")
     
     # Add new employee
     with st.expander("Add New Employee"):
@@ -558,7 +558,7 @@ def show_employees():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_training_sessions():
-    st.header("📅 Training Sessions")
+    st.header("Training Sessions")
     
     # Add new session
     with st.expander("Add New Training Session"):
@@ -633,7 +633,7 @@ def show_training_sessions():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_completions():
-    st.header("✅ Training Completions")
+    st.header("Training Completions")
     
     # Add new completion
     with st.expander("Add New Completion"):
@@ -719,7 +719,7 @@ def show_completions():
         st.plotly_chart(fig, use_container_width=True)
 
 def show_campaigns():
-    st.header("📢 Training Campaigns")
+    st.header("Training Campaigns")
     
     # Add new campaign
     with st.expander("Add New Campaign"):
@@ -777,7 +777,7 @@ def show_campaigns():
             st.plotly_chart(fig, use_container_width=True)
 
 def show_reports():
-    st.header("📊 Reports & Analytics")
+    st.header("Reports & Analytics")
     
     # Report options
     report_type = st.selectbox("Select Report Type", [
@@ -834,7 +834,7 @@ def show_reports():
             )
 
 def show_analytics():
-    st.header("📈 Analytics & Insights")
+    st.header("Analytics & Insights")
     
     # Calculate metrics
     total_employees = len(st.session_state.employees)

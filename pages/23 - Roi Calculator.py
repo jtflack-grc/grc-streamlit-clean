@@ -115,13 +115,13 @@ def calculate_roi(benefits, costs):
 def get_roi_category(roi_percentage):
     """Get ROI category and recommendation"""
     if roi_percentage >= 100:
-        return "Excellent", "🟢", "Strong business case - proceed with implementation"
+        return "Excellent", "", "Strong business case - proceed with implementation"
     elif roi_percentage >= 50:
-        return "Good", "🟡", "Positive ROI - consider implementation with monitoring"
+        return "Good", "", "Positive ROI - consider implementation with monitoring"
     elif roi_percentage >= 0:
-        return "Marginal", "🟠", "Break-even scenario - evaluate strategic value"
+        return "Marginal", "", "Break-even scenario - evaluate strategic value"
     else:
-        return "Poor", "🔴", "Negative ROI - reconsider or revise approach"
+        return "Poor", "", "Negative ROI - reconsider or revise approach"
 
 def generate_business_case(roi_data, benefits, costs):
     """Generate business case summary"""
@@ -160,7 +160,7 @@ def main():
     sample_data = load_sample_roi_data()
     
     # Sidebar
-    st.sidebar.header("🔧 Calculator Options")
+    st.sidebar.header("Calculator Options")
     
     # Calculation type
     calc_type = st.sidebar.selectbox(
@@ -175,10 +175,10 @@ def main():
     industry = st.sidebar.selectbox("Industry", ["Technology", "Financial Services", "Healthcare", "Manufacturing", "Government", "Other"])
     
     # Main content
-    tab1, tab2, tab3, tab4 = st.tabs(["💰 ROI Calculator", "📊 Analysis", "📈 Scenarios", "📋 Business Case"])
+    tab1, tab2, tab3, tab4 = st.tabs(["ROI Calculator", "Analysis", "Scenarios", "Business Case"])
     
     with tab1:
-        st.header("💰 ROI Calculator")
+        st.header("ROI Calculator")
         
         st.write("""
         Calculate the return on investment for your GRC program initiatives. Enter your estimated annual benefits and costs to get a comprehensive ROI analysis.
@@ -187,7 +187,7 @@ def main():
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("💡 Benefit Categories")
+            st.subheader("Benefit Categories")
             
             # Benefit inputs
             premium_pricing = st.number_input(
@@ -239,7 +239,7 @@ def main():
             }
         
         with col2:
-            st.subheader("💸 Cost Categories")
+            st.subheader("Cost Categories")
             
             # Cost inputs
             implementation_cost = st.number_input(
@@ -300,7 +300,7 @@ def main():
             st.success("ROI calculation completed! View results in the Analysis tab.")
     
     with tab2:
-        st.header("📊 ROI Analysis")
+        st.header("ROI Analysis")
         
         if not st.session_state.get('calculation_completed', False):
             st.info("Please complete the ROI calculation in the ROI Calculator tab first.")
@@ -430,7 +430,7 @@ def main():
                 st.dataframe(cost_summary_df, use_container_width=True, hide_index=True)
     
     with tab3:
-        st.header("📈 Sample Scenarios")
+        st.header("Sample Scenarios")
         
         st.write("Compare your ROI calculation with sample scenarios for common GRC initiatives.")
         
@@ -491,7 +491,7 @@ def main():
                     st.plotly_chart(fig_comparison, use_container_width=True)
     
     with tab4:
-        st.header("📋 Business Case")
+        st.header("Business Case")
         
         if not st.session_state.get('calculation_completed', False):
             st.info("Please complete the ROI calculation in the ROI Calculator tab first.")
@@ -548,20 +548,20 @@ def main():
             st.plotly_chart(fig_sensitivity, use_container_width=True)
             
             # Export options
-            st.subheader("📤 Export Options")
+            st.subheader("Export Options")
             
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                if st.button("📊 Export to PDF"):
+                if st.button("Export to PDF"):
                     st.info("PDF export functionality would be implemented here")
             
             with col2:
-                if st.button("📈 Export to Excel"):
+                if st.button("Export to Excel"):
                     st.info("Excel export functionality would be implemented here")
             
             with col3:
-                if st.button("🔄 Save Analysis"):
+                if st.button("Save Analysis"):
                     st.success("Analysis saved successfully!")
 
 if __name__ == "__main__":

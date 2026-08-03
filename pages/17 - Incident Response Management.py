@@ -224,7 +224,7 @@ def main():
 
 def show_dashboard():
     """Show main dashboard"""
-    st.header("📊 Incident Response Dashboard")
+    st.header("Incident Response Dashboard")
     
     # Calculate metrics
     metrics = calculate_metrics(st.session_state.incidents)
@@ -282,10 +282,10 @@ def show_dashboard():
 
 def show_incident_management():
     """Show incident management interface"""
-    st.header("📋 Incident Management")
+    st.header("Incident Management")
     
     # Add new incident
-    with st.expander("➕ Add New Incident", expanded=False):
+    with st.expander("Add New Incident", expanded=False):
         with st.form("new_incident"):
             col1, col2 = st.columns(2)
             
@@ -440,10 +440,10 @@ def show_incident_management():
 
 def show_response_teams():
     """Show response teams management"""
-    st.header("👥 Response Teams")
+    st.header("Response Teams")
     
     # Add new team
-    with st.expander("➕ Add New Response Team", expanded=False):
+    with st.expander("Add New Response Team", expanded=False):
         with st.form("new_team"):
             col1, col2 = st.columns(2)
             
@@ -494,10 +494,10 @@ def show_response_teams():
 
 def show_playbooks():
     """Show incident response playbooks"""
-    st.header("📚 Response Playbooks")
+    st.header("Response Playbooks")
     
     # Add new playbook
-    with st.expander("➕ Add New Playbook", expanded=False):
+    with st.expander("Add New Playbook", expanded=False):
         with st.form("new_playbook"):
             name = st.text_input("Playbook Name")
             incident_type = st.selectbox("Incident Type", [
@@ -550,7 +550,7 @@ def show_playbooks():
 
 def show_analytics():
     """Show analytics and insights"""
-    st.header("📈 Analytics & Insights")
+    st.header("Analytics & Insights")
     
     metrics = calculate_metrics(st.session_state.incidents)
     df = pd.DataFrame(st.session_state.incidents)
@@ -619,7 +619,7 @@ def show_analytics():
 
 def show_reports():
     """Show reporting interface"""
-    st.header("📊 Reports")
+    st.header("Reports")
     
     # Report generation
     col1, col2 = st.columns(2)

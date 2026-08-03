@@ -7,7 +7,9 @@ textColor = "#e8f4ec"
 font = "sans serif"
 
 [client]
-showSidebarNavigation = true
+# Keep each Cloud entrypoint standalone — don't surface sibling pages/ links in the sidebar.
+# Apps can still use st.sidebar for their own controls.
+showSidebarNavigation = false
 
 [server]
 headless = true

@@ -389,6 +389,30 @@ section[data-testid="stSidebar"] {
 """
 
 
+def _ensure_plotly_fonts() -> None:
+    """Default Plotly axis/legend/hover text to IBM Plex (charts ignore app CSS)."""
+    try:
+        import plotly.graph_objects as go
+        import plotly.io as pio
+    except ImportError:
+        return
+
+    family = "IBM Plex Sans, Segoe UI, sans-serif"
+    pio.templates["iongrc"] = go.layout.Template(
+        layout=go.Layout(
+            font=dict(family=family, size=13),
+            title_font=dict(family=family),
+            legend=dict(font=dict(family=family)),
+            hoverlabel=dict(font=dict(family=family)),
+            xaxis=dict(title_font=dict(family=family), tickfont=dict(family=family)),
+            yaxis=dict(title_font=dict(family=family), tickfont=dict(family=family)),
+        )
+    )
+    default = str(pio.templates.default or "")
+    if "iongrc" not in default:
+        pio.templates.default = f"{default}+iongrc" if default else "iongrc"
+
+
 def apply(*, hide_sidebar: bool = False) -> None:
     """Inject portfolio CSS. Call once after st.set_page_config.
 
@@ -399,6 +423,8 @@ def apply(*, hide_sidebar: bool = False) -> None:
     import json
 
     import streamlit.components.v1 as components
+
+    _ensure_plotly_fonts()
 
     st.markdown(
         """

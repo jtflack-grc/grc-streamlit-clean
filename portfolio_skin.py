@@ -37,43 +37,34 @@ code, pre, .stCode, [data-testid="stCode"] {
   font-family: var(--font-mono) !important;
 }
 
-/* Preserve Material icon font (global span override was showing icon names as text) */
-[data-testid="stIconMaterial"],
-[data-testid="stIconMaterial"] * {
-  font-family: "Material Symbols Rounded", "Material Icons", sans-serif !important;
-  font-style: normal !important;
-  font-weight: 400 !important;
-  letter-spacing: normal !important;
-  text-transform: none !important;
-  -webkit-font-smoothing: antialiased;
-}
-
+/* Blanket * rules must never beat Material Symbols (ligature names leak as text) */
 section[data-testid="stSidebar"],
-section[data-testid="stSidebar"] *,
+section[data-testid="stSidebar"] *:not([data-testid="stIconMaterial"]):not(svg):not(path),
 [data-testid="stHeader"],
-[data-testid="stHeader"] *,
+[data-testid="stHeader"] *:not([data-testid="stIconMaterial"]):not(svg):not(path),
 [data-testid="stToolbar"],
+[data-testid="stToolbar"] *:not([data-testid="stIconMaterial"]):not(svg):not(path),
 [data-testid="stAppViewContainer"],
-[data-testid="stAppViewContainer"] *,
+[data-testid="stAppViewContainer"] *:not([data-testid="stIconMaterial"]):not(svg):not(path):not(code):not(pre),
 [data-testid="stMarkdownContainer"],
-[data-testid="stMarkdownContainer"] *,
+[data-testid="stMarkdownContainer"] *:not([data-testid="stIconMaterial"]):not(svg):not(path),
 [data-testid="stWidgetLabel"],
-[data-testid="stWidgetLabel"] *,
+[data-testid="stWidgetLabel"] *:not([data-testid="stIconMaterial"]),
 [data-testid="stText"],
 [data-testid="stCaptionContainer"],
 [data-testid="stExpander"],
-[data-testid="stExpander"] *,
+[data-testid="stExpander"] *:not([data-testid="stIconMaterial"]):not(svg):not(path),
 [data-testid="stDataFrame"],
-[data-testid="stDataFrame"] *,
+[data-testid="stDataFrame"] *:not([data-testid="stIconMaterial"]),
 [data-testid="stTable"],
-[data-testid="stTable"] *,
+[data-testid="stTable"] *:not([data-testid="stIconMaterial"]),
 [data-testid="stMetric"],
-[data-testid="stMetric"] *,
+[data-testid="stMetric"] *:not([data-testid="stIconMaterial"]),
 [data-baseweb],
-[data-baseweb] *,
+[data-baseweb] *:not([data-testid="stIconMaterial"]),
 .stSlider, .stNumberInput, .stSelectbox, .stTextInput, .stMultiSelect, .stTextArea,
 .stButton > button, .stDownloadButton > button,
-div[data-testid="stAlert"], div[data-testid="stAlert"] *,
+div[data-testid="stAlert"], div[data-testid="stAlert"] *:not([data-testid="stIconMaterial"]),
 .stTabs [data-baseweb="tab"], .stTabs [data-baseweb="tab-panel"] {
   font-family: var(--font-sans) !important;
 }
@@ -352,14 +343,10 @@ html.stApp, body.stApp, .stApp,
 [data-testid="stHeader"] *:not([data-testid="stIconMaterial"]):not(svg):not(path),
 [class*="st-emotion-cache-"]:not([data-testid="stIconMaterial"]),
 [class*="st-emotion-cache-"] *:not([data-testid="stIconMaterial"]):not(svg):not(path),
-.main, .main *, .block-container, .block-container *,
-section.main, section.main * {
+.main, .main *:not([data-testid="stIconMaterial"]):not(svg):not(path),
+.block-container, .block-container *:not([data-testid="stIconMaterial"]):not(svg):not(path),
+section.main, section.main *:not([data-testid="stIconMaterial"]):not(svg):not(path) {
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif !important;
-}
-
-[data-testid="stIconMaterial"],
-[data-testid="stIconMaterial"] * {
-  font-family: "Material Symbols Rounded", "Material Icons", sans-serif !important;
 }
 
 code, pre, .stCode, [data-testid="stCode"], .brand-wordmark {
@@ -368,6 +355,30 @@ code, pre, .stCode, [data-testid="stCode"], .brand-wordmark {
 
 .brand-wordmark {
   font-family: "IBM Plex Mono", ui-monospace, monospace !important;
+}
+
+/* Last: restore Material Symbols with enough specificity to beat sidebar/header * rules */
+[data-testid="stIconMaterial"],
+[data-testid="stIconMaterial"] *,
+section[data-testid="stSidebar"] [data-testid="stIconMaterial"],
+section[data-testid="stSidebar"] [data-testid="stIconMaterial"] *,
+[data-testid="stHeader"] [data-testid="stIconMaterial"],
+[data-testid="stHeader"] [data-testid="stIconMaterial"] *,
+[data-testid="collapsedControl"] [data-testid="stIconMaterial"],
+[data-testid="stSidebarCollapsedControl"] [data-testid="stIconMaterial"],
+[data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"],
+[data-testid="stSidebarCollapseButton"] [data-testid="stIconMaterial"],
+[class*="st-emotion-cache-"][data-testid="stIconMaterial"],
+[class*="st-emotion-cache-"] [data-testid="stIconMaterial"],
+.material-icons,
+.material-symbols-rounded,
+.material-symbols-outlined {
+  font-family: "Material Symbols Rounded", "Material Symbols Outlined", "Material Icons" !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  -webkit-font-smoothing: antialiased;
 }
 """
 

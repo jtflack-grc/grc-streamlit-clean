@@ -186,6 +186,54 @@ def load_exception_data():
             "business_impact": "Medium",
             "approval_level": "IT Director",
             "review_frequency": "Monthly"
+        },
+        {
+            "exception_id": "EX-011",
+            "system_asset": "IBM i",
+            "description": "*ALLOBJ retained on production ops profiles pending application remediation",
+            "compensating_control": "QAUDJRN monitoring and weekly DSPUSRPRF review",
+            "expiration_date": "2025-08-31",
+            "risk_accepted": True,
+            "status": "Approved",
+            "category": "Technical",
+            "owner": "IBM i Ops",
+            "created_date": "2024-03-12",
+            "risk_score": 92,
+            "business_impact": "Critical",
+            "approval_level": "CISO",
+            "review_frequency": "Weekly"
+        },
+        {
+            "exception_id": "EX-012",
+            "system_asset": "IBM Z",
+            "description": "RACF SPECIAL granted to contractor TSO IDs for migration project beyond policy duration",
+            "compensating_control": "Daily SMF / RACF auditor review of SPECIAL use",
+            "expiration_date": "2025-07-15",
+            "risk_accepted": True,
+            "status": "Open",
+            "category": "Technical",
+            "owner": "Mainframe Security",
+            "created_date": "2024-03-18",
+            "risk_score": 88,
+            "business_impact": "Critical",
+            "approval_level": "CISO",
+            "review_frequency": "Weekly"
+        },
+        {
+            "exception_id": "EX-013",
+            "system_asset": "SAP ECC",
+            "description": "SAP_ALL on dual-control break-glass IDs until Firefighter workflow replaces SU01 grants",
+            "compensating_control": "ST01 session logging and dual approval ticket",
+            "expiration_date": "2025-09-30",
+            "risk_accepted": True,
+            "status": "Under Review",
+            "category": "Operational",
+            "owner": "SAP Basis",
+            "created_date": "2024-03-22",
+            "risk_score": 86,
+            "business_impact": "High",
+            "approval_level": "CISO",
+            "review_frequency": "Weekly"
         }
     ]
     

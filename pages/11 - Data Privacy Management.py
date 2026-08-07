@@ -166,6 +166,28 @@ def generate_sample_data(seed: int = 42):
             'retention_period': '1 year',
             'risk_level': 'High',
             'status': 'Active'
+        },
+        {
+            'id': 'DPA-005',
+            'activity_name': 'IBM i Customer Master Processing',
+            'description': 'Customer master and order data processed on IBM i production LPAR / DB2 for i',
+            'legal_basis': 'Contract',
+            'data_categories': ['Personal', 'Financial', 'Contact'],
+            'retention_period': '7 years',
+            'risk_level': 'High',
+            'status': 'Active',
+            'systems': ['IBM i', 'JD Edwards']
+        },
+        {
+            'id': 'DPA-006',
+            'activity_name': 'z/OS DB2 Customer Data Processing',
+            'description': 'Account and settlement PII stored and batch-processed in DB2 for z/OS on IBM Z',
+            'legal_basis': 'Contract',
+            'data_categories': ['Personal', 'Financial', 'Transactional'],
+            'retention_period': '10 years',
+            'risk_level': 'High',
+            'status': 'Active',
+            'systems': ['IBM Z', 'DB2 for z/OS']
         }
     ]
     

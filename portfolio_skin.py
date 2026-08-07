@@ -21,31 +21,61 @@ _CSS = """
   --line: rgba(105, 255, 164, 0.16);
   --amber: #f2b84b;
   --white: #e8f4ec;
-  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+/* Force IBM Plex across Streamlit chrome (overrides Source Sans “Comic Sans adjacent” default) */
 html, body, .stApp,
-.stApp p, .stApp label, .stApp li, .stApp a,
-.stApp div, .stApp button, .stApp input, .stApp textarea,
-[data-testid="stMarkdownContainer"],
-[data-testid="stWidgetLabel"],
-[data-testid="stText"],
-[data-baseweb],
-.stSlider, .stNumberInput, .stSelectbox, .stTextInput {
+.stApp *:not([data-testid="stIconMaterial"]):not(svg):not(path):not(code):not(pre) {
   font-family: var(--font-sans) !important;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+code, pre, .stCode, [data-testid="stCode"] {
+  font-family: var(--font-mono) !important;
+}
+
 /* Preserve Material icon font (global span override was showing icon names as text) */
-[data-testid="stIconMaterial"] {
+[data-testid="stIconMaterial"],
+[data-testid="stIconMaterial"] * {
   font-family: "Material Symbols Rounded", "Material Icons", sans-serif !important;
   font-style: normal !important;
   font-weight: 400 !important;
   letter-spacing: normal !important;
   text-transform: none !important;
   -webkit-font-smoothing: antialiased;
+}
+
+section[data-testid="stSidebar"],
+section[data-testid="stSidebar"] *,
+[data-testid="stHeader"],
+[data-testid="stHeader"] *,
+[data-testid="stToolbar"],
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"] *,
+[data-testid="stMarkdownContainer"],
+[data-testid="stMarkdownContainer"] *,
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] *,
+[data-testid="stText"],
+[data-testid="stCaptionContainer"],
+[data-testid="stExpander"],
+[data-testid="stExpander"] *,
+[data-testid="stDataFrame"],
+[data-testid="stDataFrame"] *,
+[data-testid="stTable"],
+[data-testid="stTable"] *,
+[data-testid="stMetric"],
+[data-testid="stMetric"] *,
+[data-baseweb],
+[data-baseweb] *,
+.stSlider, .stNumberInput, .stSelectbox, .stTextInput, .stMultiSelect, .stTextArea,
+.stButton > button, .stDownloadButton > button,
+div[data-testid="stAlert"], div[data-testid="stAlert"] *,
+.stTabs [data-baseweb="tab"], .stTabs [data-baseweb="tab-panel"] {
+  font-family: var(--font-sans) !important;
 }
 
 .stApp {

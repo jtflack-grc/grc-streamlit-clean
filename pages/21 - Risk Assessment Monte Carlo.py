@@ -162,6 +162,40 @@ def load_risk_data():
             "owner": "Operations Team",
             "assessment_date": "2024-02-25",
             "next_review": "2024-08-25"
+        },
+        {
+            "risk_id": "R009",
+            "risk_name": "IBM Z RACF SPECIAL concentration",
+            "risk_category": "Technology",
+            "likelihood_min": 2,
+            "likelihood_max": 4,
+            "impact_min": 4,
+            "impact_max": 5,
+            "financial_impact": 650000,
+            "risk_score": 16,
+            "risk_level": "High",
+            "description": "Over-assignment of RACF SPECIAL on IBM Z / z/OS enabling unauthorized CICS and DB2 changes",
+            "mitigation_controls": "RACF recertification, LEAVE automation, SIEM on SPECIAL use",
+            "owner": "Mainframe Security",
+            "assessment_date": "2024-03-01",
+            "next_review": "2024-09-01"
+        },
+        {
+            "risk_id": "R010",
+            "risk_name": "IBM i *ALLOBJ persistence",
+            "risk_category": "Technology",
+            "likelihood_min": 3,
+            "likelihood_max": 4,
+            "impact_min": 4,
+            "impact_max": 5,
+            "financial_impact": 420000,
+            "risk_score": 16,
+            "risk_level": "High",
+            "description": "*ALLOBJ retained on IBM i production profiles without timed revocation",
+            "mitigation_controls": "Break-glass workflow, QAUDJRN monitoring, quarterly access review",
+            "owner": "IBM i Ops",
+            "assessment_date": "2024-03-05",
+            "next_review": "2024-09-05"
         }
     ]
     

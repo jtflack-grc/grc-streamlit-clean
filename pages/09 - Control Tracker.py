@@ -176,6 +176,51 @@ def load_control_data():
             "evidence_count": 1,
             "test_results": "In Progress",
             "implementation_date": "2023-10-01"
+        },
+        {
+            "control_id": "IBMI-QSEC",
+            "control_name": "IBM i QSECURITY & *ALLOBJ Governance",
+            "framework": "NIST CSF",
+            "category": "Identity Management and Access Control",
+            "description": "Govern IBM i system values and special authorities including *ALLOBJ on production LPARs",
+            "status": "In Progress",
+            "owner": "IBM i Ops",
+            "risk_score": 78,
+            "last_review": "2024-03-01",
+            "next_review": "2024-09-01",
+            "evidence_count": 2,
+            "test_results": "In Progress",
+            "implementation_date": "2023-11-01"
+        },
+        {
+            "control_id": "ZOS-RACF",
+            "control_name": "z/OS RACF Privileged Attribute Recertification",
+            "framework": "SOC 2",
+            "category": "Security",
+            "description": "Recertify RACF SPECIAL / OPERATIONS attributes and CICS region IDs on IBM Z",
+            "status": "Implemented",
+            "owner": "Mainframe Security",
+            "risk_score": 72,
+            "last_review": "2024-03-05",
+            "next_review": "2024-09-05",
+            "evidence_count": 3,
+            "test_results": "Passed",
+            "implementation_date": "2023-12-15"
+        },
+        {
+            "control_id": "ERP-SAPALL",
+            "control_name": "SAP ECC / JD Edwards Privileged Access",
+            "framework": "ISO 27001",
+            "category": "Access Control",
+            "description": "Control SAP_ALL, DDIC, and JD Edwards IFS admin roles with monitoring",
+            "status": "Not Implemented",
+            "owner": "ERP Security",
+            "risk_score": 82,
+            "last_review": "2024-03-10",
+            "next_review": "2024-09-10",
+            "evidence_count": 0,
+            "test_results": "Not Started",
+            "implementation_date": None
         }
     ]
     

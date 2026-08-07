@@ -149,7 +149,28 @@ def load_gap_data():
          "description": "No disaster recovery testing schedule", 
          "business_impact": "Recovery procedures not validated", "current_state": "No testing program",
          "target_state": "Quarterly DR testing", "remediation_priority": "Low",
-         "estimated_cost": 8000, "estimated_effort": "2 months", "owner": "Business Continuity", "created_date": "2024-03-10"}
+         "estimated_cost": 8000, "estimated_effort": "2 months", "owner": "Business Continuity", "created_date": "2024-03-10"},
+
+        {"id": "GAP-011", "control_id": "ISO-A.9.1", "control_name": "Access Control Policy", "framework": "ISO27001",
+         "gap_type": "Incomplete", "severity": "Critical", "risk_score": 92, "status": "Open",
+         "description": "IBM i *ALLOBJ and QSECURITY controls not covered by corporate access control policy enforcement",
+         "business_impact": "Privileged midrange access outside IAM standards", "current_state": "Policy covers AD/cloud only",
+         "target_state": "IBM i special authorities in scope of access policy", "remediation_priority": "Immediate",
+         "estimated_cost": 40000, "estimated_effort": "4 months", "owner": "IBM i Ops", "created_date": "2024-03-15"},
+
+        {"id": "GAP-012", "control_id": "SOC-CC6", "control_name": "Logical and Physical Access", "framework": "SOC2",
+         "gap_type": "Incomplete", "severity": "High", "risk_score": 85, "status": "In Progress",
+         "description": "RACF SPECIAL and OPERATIONS attributes on IBM Z not included in quarterly access reviews",
+         "business_impact": "Mainframe privileged access can persist after role change", "current_state": "AD/SaaS reviews only",
+         "target_state": "Unified privileged access review including RACF", "remediation_priority": "High",
+         "estimated_cost": 55000, "estimated_effort": "5 months", "owner": "Mainframe Security", "created_date": "2024-03-18"},
+
+        {"id": "GAP-013", "control_id": "NIST-PR.AC-1", "control_name": "Identity Management", "framework": "NIST",
+         "gap_type": "Ineffective", "severity": "High", "risk_score": 78, "status": "Open",
+         "description": "SAP ECC SAP_ALL / DDIC and JD Edwards IFS admin roles outside central identity lifecycle",
+         "business_impact": "ERP emergency access not provisioned/deprovisioned with HR events", "current_state": "Manual SU01 / World security",
+         "target_state": "ERP privileged IDs in IAM workflow", "remediation_priority": "High",
+         "estimated_cost": 60000, "estimated_effort": "6 months", "owner": "ERP Security", "created_date": "2024-03-20"}
     ]
     
     df = pd.DataFrame(gaps)

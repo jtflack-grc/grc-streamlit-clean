@@ -54,6 +54,37 @@ def generate_sample_data(seed: int) -> list[dict]:
                 "violations": int(rng.integers(0, 10)),
             }
         )
+
+    policies.extend(
+        [
+            {
+                "id": f"POL-{2024:04d}-{len(policies) + 1:03d}",
+                "title": "IBM i Security Standard (QSECURITY / Special Authorities)",
+                "version": "1.2",
+                "category": "Security",
+                "status": "Published",
+                "owner": "IBM i Ops",
+                "created_date": datetime.datetime.now() - timedelta(days=120),
+                "review_date": datetime.datetime.now() + timedelta(days=245),
+                "risk_level": "High",
+                "training_completion": 72,
+                "violations": 2,
+            },
+            {
+                "id": f"POL-{2024:04d}-{len(policies) + 2:03d}",
+                "title": "Mainframe Security Standard (RACF / z/OS)",
+                "version": "2.0",
+                "category": "Security",
+                "status": "Approved",
+                "owner": "Mainframe Security",
+                "created_date": datetime.datetime.now() - timedelta(days=90),
+                "review_date": datetime.datetime.now() + timedelta(days=275),
+                "risk_level": "Critical",
+                "training_completion": 65,
+                "violations": 1,
+            },
+        ]
+    )
     return policies
 
 

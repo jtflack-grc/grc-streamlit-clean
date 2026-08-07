@@ -2,12 +2,62 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
 import pandas as pd
 import streamlit as st
 
 _SEED_KEY = "demo_kit_seed"
+
+# Brownfield flavor — append beside existing greenfield samples, do not replace them
+LEGACY_PLATFORMS = [
+    {
+        "name": "IBM i (AS/400 Power)",
+        "short": "IBM i",
+        "family": "IBM midrange",
+        "examples": "QSYS, *ALLOBJ, QSECURITY, IFS",
+    },
+    {
+        "name": "IBM Z (z/OS)",
+        "short": "IBM Z",
+        "family": "IBM mainframe",
+        "examples": "RACF, CICS, DB2 for z/OS, IMS",
+    },
+    {
+        "name": "AIX LPAR",
+        "short": "AIX",
+        "family": "UNIX",
+        "examples": "LPAR, WPAR, adopted authority",
+    },
+    {
+        "name": "JD Edwards World / EnterpriseOne",
+        "short": "JD Edwards",
+        "family": "ERP",
+        "examples": "World programs, EnterpriseOne CNC, IFS shares",
+    },
+    {
+        "name": "SAP ECC (on-prem)",
+        "short": "SAP ECC",
+        "family": "ERP",
+        "examples": "SAP_ALL, SU01, ST01 traces",
+    },
+    {
+        "name": "Oracle E-Business Suite",
+        "short": "Oracle EBS",
+        "family": "ERP",
+        "examples": "APPS schema, Concurrent Manager",
+    },
+    {
+        "name": "On-prem Active Directory",
+        "short": "Windows AD",
+        "family": "Microsoft estate",
+        "examples": "Domain controllers, GPO, RDP bastion",
+    },
+]
+
+
+def legacy_platform_names():
+    return [p["short"] for p in LEGACY_PLATFORMS]
 
 
 def ensure_seed(default: int = 42) -> int:
@@ -73,7 +123,7 @@ def autoload(key: str, factory) -> None:
         st.session_state[key] = factory()
 
 
-def issue_text(row: dict | pd.Series, *keys: str, default: str = "Review required") -> str:
+def issue_text(row: Any, *keys: str, default: str = "Review required") -> str:
     """Pull a human-readable issue string from common mock-data column names."""
     data = row if isinstance(row, dict) else row.to_dict()
     candidates = keys or (

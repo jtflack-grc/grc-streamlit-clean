@@ -98,6 +98,30 @@ def generate_sample_data(seed: int = 42):
             'recovery_team': 'Marketing Recovery Team',
             'backup_systems': ['CDN', 'Static Site'],
             'status': 'Active'
+        },
+        {
+            'id': 'BP-006',
+            'name': 'Order-to-Cash (JD Edwards / SAP ECC)',
+            'department': 'Finance',
+            'criticality': 'Critical',
+            'rto_hours': 4,
+            'rpo_hours': 1,
+            'dependencies': ['JD Edwards World', 'SAP ECC', 'IBM i Customer Master'],
+            'recovery_team': 'ERP Recovery Team',
+            'backup_systems': ['Warm LPAR failover', 'Batch replay from tape'],
+            'status': 'Active'
+        },
+        {
+            'id': 'BP-007',
+            'name': 'Core Ledger & Settlement (IBM i / IBM Z)',
+            'department': 'Finance',
+            'criticality': 'Critical',
+            'rto_hours': 2,
+            'rpo_hours': 0.5,
+            'dependencies': ['IBM i Production LPAR', 'IBM Z CICS', 'DB2 for z/OS'],
+            'recovery_team': 'Mainframe Recovery Team',
+            'backup_systems': ['GDPS secondary sysplex', 'IBM i HA mirror'],
+            'status': 'Active'
         }
     ]
     
@@ -226,6 +250,50 @@ def generate_sample_data(seed: int = 42):
             'recovery_time': '1 hour',
             'last_assessment': datetime.datetime.now() - timedelta(days=15),
             'next_assessment': datetime.datetime.now() + timedelta(days=45)
+        },
+        {
+            'id': 'CA-004',
+            'name': 'IBM i Production LPAR',
+            'type': 'Infrastructure',
+            'location': 'On-prem Power frame',
+            'criticality': 'Critical',
+            'backup_location': 'HA IASP / secondary Power host',
+            'recovery_time': '2 hours',
+            'last_assessment': datetime.datetime.now() - timedelta(days=45),
+            'next_assessment': datetime.datetime.now() + timedelta(days=45)
+        },
+        {
+            'id': 'CA-005',
+            'name': 'IBM Z / z/OS Sysplex',
+            'type': 'Infrastructure',
+            'location': 'Primary data center raised floor',
+            'criticality': 'Critical',
+            'backup_location': 'GDPS secondary site',
+            'recovery_time': '4 hours',
+            'last_assessment': datetime.datetime.now() - timedelta(days=20),
+            'next_assessment': datetime.datetime.now() + timedelta(days=70)
+        },
+        {
+            'id': 'CA-006',
+            'name': 'JD Edwards World Production',
+            'type': 'Application',
+            'location': 'IBM i LPAR',
+            'criticality': 'Critical',
+            'backup_location': 'Nightly save / alternate LPAR',
+            'recovery_time': '6 hours',
+            'last_assessment': datetime.datetime.now() - timedelta(days=35),
+            'next_assessment': datetime.datetime.now() + timedelta(days=55)
+        },
+        {
+            'id': 'CA-007',
+            'name': 'SAP ECC Production',
+            'type': 'Application',
+            'location': 'On-prem app/DB cluster',
+            'criticality': 'Critical',
+            'backup_location': 'DR landscape (QAS/PRD mirror)',
+            'recovery_time': '8 hours',
+            'last_assessment': datetime.datetime.now() - timedelta(days=25),
+            'next_assessment': datetime.datetime.now() + timedelta(days=65)
         }
     ]
 

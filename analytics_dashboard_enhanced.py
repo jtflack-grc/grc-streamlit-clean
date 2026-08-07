@@ -63,7 +63,10 @@ def load_analytics_data(seed: int = 42):
         {'name': 'Security Awareness', 'effectiveness': 75, 'category': 'Security'},
         {'name': 'Audit Logging', 'effectiveness': 88, 'category': 'Compliance'},
         {'name': 'Patch Management', 'effectiveness': 79, 'category': 'Security'},
-        {'name': 'Business Continuity', 'effectiveness': 83, 'category': 'Operations'}
+        {'name': 'Business Continuity', 'effectiveness': 83, 'category': 'Operations'},
+        {'name': 'IBM i QSECURITY / *ALLOBJ Governance', 'effectiveness': 62, 'category': 'Security'},
+        {'name': 'z/OS RACF Privileged Access', 'effectiveness': 68, 'category': 'Security'},
+        {'name': 'SAP ECC / JD Edwards Access Controls', 'effectiveness': 58, 'category': 'Compliance'}
     ]
     for c in controls:
         c['effectiveness'] = int(np.clip(c['effectiveness'] + int(rng.integers(-5, 6)), 40, 99))
@@ -79,7 +82,11 @@ def load_analytics_data(seed: int = 42):
         f['compliance'] = int(np.clip(f['compliance'] + int(rng.integers(-4, 5)), 50, 99))
 
     vendors = []
-    vendor_names = ['TechCorp', 'DataFlow', 'CloudSecure', 'NetWorks', 'SysTech', 'InfoSafe', 'SecureCloud', 'DataTech']
+    vendor_names = [
+        'TechCorp', 'DataFlow', 'CloudSecure', 'NetWorks', 'SysTech', 'InfoSafe',
+        'SecureCloud', 'DataTech', 'Managed IBM Z colo', 'JD Edwards AMS partner',
+        'Oracle EBS Hosting', 'On-prem AD Managed Service'
+    ]
     for name in vendor_names:
         risk_score = int(rng.integers(20, 81))
         compliance_score = int(rng.integers(60, 96))
@@ -92,7 +99,10 @@ def load_analytics_data(seed: int = 42):
         })
 
     incidents = []
-    incident_types = ['Data Breach', 'System Outage', 'Access Violation', 'Malware', 'Phishing', 'Insider Threat']
+    incident_types = [
+        'Data Breach', 'System Outage', 'Access Violation', 'Malware', 'Phishing', 'Insider Threat',
+        'IBM i LPAR Access Anomaly', 'RACF / z/OS Privilege Misuse', 'JD Edwards IFS Exposure', 'SAP ECC Emergency ID Use'
+    ]
     severities = ['Low', 'Medium', 'High', 'Critical']
     for _ in range(50):
         incident_date = dates[int(rng.integers(0, len(dates)))]
@@ -103,6 +113,43 @@ def load_analytics_data(seed: int = 42):
             'resolution_time': int(rng.integers(1, 73)),
             'cost': int(rng.integers(1000, 100001))
         })
+
+    # Guaranteed legacy platform rows (append; do not rely on random choice alone)
+    legacy_incident_rows = [
+        {
+            'date': dates[int(rng.integers(0, len(dates)))],
+            'type': 'IBM i LPAR Access Anomaly',
+            'severity': 'High',
+            'resolution_time': 18,
+            'cost': 42000,
+            'system': 'IBM i',
+        },
+        {
+            'date': dates[int(rng.integers(0, len(dates)))],
+            'type': 'RACF / z/OS Privilege Misuse',
+            'severity': 'Critical',
+            'resolution_time': 36,
+            'cost': 110000,
+            'system': 'IBM Z',
+        },
+        {
+            'date': dates[int(rng.integers(0, len(dates)))],
+            'type': 'JD Edwards IFS Exposure',
+            'severity': 'High',
+            'resolution_time': 24,
+            'cost': 67000,
+            'system': 'JD Edwards',
+        },
+        {
+            'date': dates[int(rng.integers(0, len(dates)))],
+            'type': 'SAP ECC Emergency ID Use',
+            'severity': 'High',
+            'resolution_time': 12,
+            'cost': 28000,
+            'system': 'SAP ECC',
+        },
+    ]
+    incidents.extend(legacy_incident_rows)
 
     return {
         'risk_data': pd.DataFrame(risk_data),

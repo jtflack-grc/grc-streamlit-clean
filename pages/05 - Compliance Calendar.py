@@ -109,6 +109,34 @@ def generate_sample_data(seed: int = 42):
             'location': 'Legal Department',
             'status': 'Scheduled',
             'reminder_days': 10
+        },
+        {
+            'id': 'CE-2024-006',
+            'title': 'IBM i QSECURITY Review',
+            'event_type': 'Review',
+            'framework': 'Internal Security Standard',
+            'start_date': datetime.datetime.now() + timedelta(days=20),
+            'end_date': datetime.datetime.now() + timedelta(days=20),
+            'priority': 'High',
+            'assigned_to': 'IBM i Ops',
+            'description': 'Quarterly review of IBM i QSECURITY and special authorities on production LPARs',
+            'location': 'Online',
+            'status': 'Scheduled',
+            'reminder_days': 5
+        },
+        {
+            'id': 'CE-2024-007',
+            'title': 'RACF Privileged Attribute Recertification',
+            'event_type': 'Compliance',
+            'framework': 'SOX',
+            'start_date': datetime.datetime.now() + timedelta(days=35),
+            'end_date': datetime.datetime.now() + timedelta(days=37),
+            'priority': 'Critical',
+            'assigned_to': 'Mainframe Security',
+            'description': 'Recertify RACF SPECIAL / OPERATIONS attributes on IBM Z / z/OS',
+            'location': 'Mainframe Ops bridge',
+            'status': 'Pending',
+            'reminder_days': 7
         }
     ]
     
@@ -172,6 +200,30 @@ def generate_sample_data(seed: int = 42):
             'status': 'Scheduled',
             'priority': 'Medium',
             'consequences': 'Certification suspension'
+        },
+        {
+            'id': 'RD-2024-006',
+            'title': 'IBM i QSECURITY Quarterly Review',
+            'regulation': 'Internal / SOX',
+            'deadline': datetime.datetime.now() + timedelta(days=25),
+            'frequency': 'Quarterly',
+            'description': 'Complete QSECURITY and *ALLOBJ review evidence for production IBM i LPARs',
+            'responsible_party': 'IBM i Ops',
+            'status': 'Pending',
+            'priority': 'High',
+            'consequences': 'Audit finding; privileged access risk on midrange'
+        },
+        {
+            'id': 'RD-2024-007',
+            'title': 'RACF Attribute Recertification',
+            'regulation': 'SOX',
+            'deadline': datetime.datetime.now() + timedelta(days=40),
+            'frequency': 'Quarterly',
+            'description': 'Recertify RACF SPECIAL and OPERATIONS attributes across IBM Z sysplex',
+            'responsible_party': 'Mainframe Security',
+            'status': 'In Progress',
+            'priority': 'Critical',
+            'consequences': 'SOX deficiency; uncontrolled mainframe privilege'
         }
     ]
     

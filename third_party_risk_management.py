@@ -88,6 +88,30 @@ def generate_sample_data(seed: int = 42):
             'contract_end': datetime.datetime.now() + timedelta(days=365),
             'status': 'Active',
             'last_assessment': datetime.datetime.now() - timedelta(days=120)
+        },
+        {
+            'id': 'VND-005',
+            'name': 'Managed IBM Z colo',
+            'category': 'Colocation',
+            'description': 'Managed IBM Z / z/OS colocation, HMC access, and LPAR hosting',
+            'risk_level': 'High',
+            'contract_value': 920000,
+            'contract_start': datetime.datetime.now() - timedelta(days=400),
+            'contract_end': datetime.datetime.now() + timedelta(days=330),
+            'status': 'Active',
+            'last_assessment': datetime.datetime.now() - timedelta(days=75)
+        },
+        {
+            'id': 'VND-006',
+            'name': 'JD Edwards AMS partner',
+            'category': 'Application Management',
+            'description': 'JD Edwards World / EnterpriseOne application management and IFS operations',
+            'risk_level': 'High',
+            'contract_value': 380000,
+            'contract_start': datetime.datetime.now() - timedelta(days=220),
+            'contract_end': datetime.datetime.now() + timedelta(days=510),
+            'status': 'Active',
+            'last_assessment': datetime.datetime.now() - timedelta(days=50)
         }
     ]
     
@@ -143,6 +167,32 @@ def generate_sample_data(seed: int = 42):
             'risk_level': 'Low',
             'status': 'Completed',
             'next_assessment': datetime.datetime.now() + timedelta(days=245)
+        },
+        {
+            'id': 'VA-005',
+            'vendor_id': 'VND-005',
+            'assessment_date': datetime.datetime.now() - timedelta(days=75),
+            'security_score': 72,
+            'compliance_score': 80,
+            'financial_score': 86,
+            'operational_score': 78,
+            'overall_score': 79.0,
+            'risk_level': 'High',
+            'status': 'Completed',
+            'next_assessment': datetime.datetime.now() + timedelta(days=290)
+        },
+        {
+            'id': 'VA-006',
+            'vendor_id': 'VND-006',
+            'assessment_date': datetime.datetime.now() - timedelta(days=50),
+            'security_score': 76,
+            'compliance_score': 74,
+            'financial_score': 88,
+            'operational_score': 82,
+            'overall_score': 80.0,
+            'risk_level': 'High',
+            'status': 'In Progress',
+            'next_assessment': datetime.datetime.now() + timedelta(days=315)
         }
     ]
     
@@ -269,6 +319,22 @@ def generate_sample_data(seed: int = 42):
             'risk_weight': 0.6,
             'assessment_frequency': 'Semi-annually',
             'total_vendors': 1
+        },
+        {
+            'id': 'CAT-005',
+            'name': 'Colocation',
+            'description': 'Mainframe and midrange colocation / managed hosting',
+            'risk_weight': 0.95,
+            'assessment_frequency': 'Quarterly',
+            'total_vendors': 1
+        },
+        {
+            'id': 'CAT-006',
+            'name': 'Application Management',
+            'description': 'ERP AMS and application operations partners',
+            'risk_weight': 0.85,
+            'assessment_frequency': 'Quarterly',
+            'total_vendors': 1
         }
     ]
     
@@ -307,6 +373,24 @@ def generate_sample_data(seed: int = 42):
             'title': 'Service Manager',
             'email': 'lisa.wilson@itsupport.com',
             'phone': '+1-555-0104',
+            'primary_contact': True
+        },
+        {
+            'id': 'VCT-005',
+            'vendor_id': 'VND-005',
+            'name': 'Elena Vargas',
+            'title': 'Mainframe Delivery Lead',
+            'email': 'elena.vargas@ibmzcolo.example',
+            'phone': '+1-555-0105',
+            'primary_contact': True
+        },
+        {
+            'id': 'VCT-006',
+            'vendor_id': 'VND-006',
+            'name': 'Tom Briggs',
+            'title': 'JDE AMS Manager',
+            'email': 'tom.briggs@jdeams.example',
+            'phone': '+1-555-0106',
             'primary_contact': True
         }
     ]

@@ -73,11 +73,104 @@ def generate_sample_data(seed: int = 42):
             'financial_impact': int(rng.integers(1000, 100001)),
             'data_compromised': bool(rng.choice([True, False])),
             'pii_involved': bool(rng.choice([True, False])),
-            'regulatory_impact': str(rng.choice(['GDPR', 'HIPAA', 'PCI-DSS', 'None'])),
+            'regulatory_impact': str(rng.choice(['GDPR', 'HIPAA', 'PCI-DSS', 'SOX', 'None'])),
             'lessons_learned': f'Lesson learned from incident {i+1}',
             'prevention_measures': f'Prevention measure for incident {i+1}'
         }
         sample_incidents.append(incident)
+
+    # Brownfield / legacy platform incidents (append; keep generated SaaS/cloud samples)
+    legacy_incidents = [
+        {
+            'id': f'INC-{2024:04d}-{len(sample_incidents)+1:03d}',
+            'title': 'IBM i LPAR privileged sign-on surge',
+            'description': 'Spike in *ALLOBJ profile sign-ons on production IBM i LPAR after after-hours job failure; possible unauthorized use of break-glass ID.',
+            'type': 'System Compromise',
+            'severity': 'High',
+            'status': 'In Progress',
+            'reported_date': datetime.datetime.now() - timedelta(days=12),
+            'resolution_date': None,
+            'resolution_time_days': None,
+            'reporter': 'IBM i Ops',
+            'assigned_to': 'Team 1',
+            'affected_systems': 2,
+            'affected_users': 8,
+            'financial_impact': 45000,
+            'data_compromised': False,
+            'pii_involved': True,
+            'regulatory_impact': 'SOX',
+            'lessons_learned': 'Pending forensics on QAUDJRN entries',
+            'prevention_measures': 'Tighten QSECURITY and *ALLOBJ recert cadence',
+            'affected_platform': 'IBM i',
+        },
+        {
+            'id': f'INC-{2024:04d}-{len(sample_incidents)+2:03d}',
+            'title': 'RACF / z/OS SPECIAL attribute abuse',
+            'description': 'Contractor TSO ID retained RACF SPECIAL after project end; attempted ALTER of CICS region profiles on IBM Z.',
+            'type': 'Insider Threat',
+            'severity': 'Critical',
+            'status': 'Contained',
+            'reported_date': datetime.datetime.now() - timedelta(days=28),
+            'resolution_date': datetime.datetime.now() - timedelta(days=21),
+            'resolution_time_days': 7,
+            'reporter': 'Mainframe Security',
+            'assigned_to': 'Team 2',
+            'affected_systems': 3,
+            'affected_users': 1,
+            'financial_impact': 120000,
+            'data_compromised': False,
+            'pii_involved': False,
+            'regulatory_impact': 'SOX',
+            'lessons_learned': 'Deprovision checklist missed RACF SPECIAL revoke',
+            'prevention_measures': 'Quarterly RACF attribute recertification',
+            'affected_platform': 'IBM Z',
+        },
+        {
+            'id': f'INC-{2024:04d}-{len(sample_incidents)+3:03d}',
+            'title': 'JD Edwards IFS anonymous share exposure',
+            'description': 'Anonymous read access discovered on JD Edwards IFS share containing World data libraries; SOC flagged unusual SMB access from guest WLAN.',
+            'type': 'Data Breach',
+            'severity': 'High',
+            'status': 'Open',
+            'reported_date': datetime.datetime.now() - timedelta(days=5),
+            'resolution_date': None,
+            'resolution_time_days': None,
+            'reporter': 'ERP Security',
+            'assigned_to': 'Team 3',
+            'affected_systems': 1,
+            'affected_users': 0,
+            'financial_impact': 75000,
+            'data_compromised': True,
+            'pii_involved': True,
+            'regulatory_impact': 'GDPR',
+            'lessons_learned': 'Pending scope of IFS path exposure',
+            'prevention_measures': 'Remove anonymous IFS shares; enforce authenticated mounts',
+            'affected_platform': 'JD Edwards',
+        },
+        {
+            'id': f'INC-{2024:04d}-{len(sample_incidents)+4:03d}',
+            'title': 'SAP ECC emergency user misuse',
+            'description': 'SAP_ALL break-glass ID used outside approved change window on SAP ECC; ST01 traces incomplete for session.',
+            'type': 'Insider Threat',
+            'severity': 'High',
+            'status': 'In Progress',
+            'reported_date': datetime.datetime.now() - timedelta(days=9),
+            'resolution_date': None,
+            'resolution_time_days': None,
+            'reporter': 'SAP Basis',
+            'assigned_to': 'Team 1',
+            'affected_systems': 1,
+            'affected_users': 1,
+            'financial_impact': 35000,
+            'data_compromised': False,
+            'pii_involved': False,
+            'regulatory_impact': 'SOX',
+            'lessons_learned': 'Emergency ID monitoring not wired to SIEM',
+            'prevention_measures': 'Bring sap* / DDIC / SAP_ALL into access review',
+            'affected_platform': 'SAP ECC',
+        },
+    ]
+    sample_incidents.extend(legacy_incidents)
 
     return sample_incidents
 
@@ -431,8 +524,13 @@ def show_incident_management():
                         with col2:
                             data_compromised = st.checkbox("Data Compromised", value=incident['data_compromised'])
                             pii_involved = st.checkbox("PII Involved", value=incident['pii_involved'])
-                            regulatory_impact = st.selectbox("Regulatory Impact", ['None', 'GDPR', 'HIPAA', 'PCI-DSS'],
-                                                           index=['None', 'GDPR', 'HIPAA', 'PCI-DSS'].index(incident['regulatory_impact']))
+                            _reg_opts = ['None', 'GDPR', 'HIPAA', 'PCI-DSS', 'SOX']
+                            regulatory_impact = st.selectbox(
+                                "Regulatory Impact",
+                                _reg_opts,
+                                index=_reg_opts.index(incident['regulatory_impact'])
+                                if incident['regulatory_impact'] in _reg_opts else 0,
+                            )
                         
                         lessons_learned = st.text_area("Lessons Learned", value=incident['lessons_learned'])
                         prevention_measures = st.text_area("Prevention Measures", value=incident['prevention_measures'])

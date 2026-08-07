@@ -120,7 +120,21 @@ def load_risk_data():
         
         {"id": "R-010", "asset": "Citrix VDI", "description": "Manual process for deactivating terminated employees' accounts", 
          "impact": 4, "likelihood": 4, "score": 16, "status": "Closed", "category": "Access Control", 
-         "owner": "Citrix Team", "review_date": "2024-02-05", "treatment": "Automated deactivation implemented"}
+         "owner": "Citrix Team", "review_date": "2024-02-05", "treatment": "Automated deactivation implemented"},
+
+        # Additional brownfield / mainframe–midrange flavor
+        {"id": "R-024", "asset": "IBM Z", "description": "RACF SPECIAL attribute retained on contractor TSO IDs after project end",
+         "impact": 5, "likelihood": 3, "score": 15, "status": "Open", "category": "Access Control",
+         "owner": "Mainframe Security", "review_date": "2024-03-18", "treatment": "Contractor offboarding checklist"},
+        {"id": "R-025", "asset": "IBM Z", "description": "DB2 for z/OS audit traces not retained for SOX period",
+         "impact": 4, "likelihood": 3, "score": 12, "status": "Mitigating", "category": "Compliance",
+         "owner": "Mainframe DBA", "review_date": "2024-04-02", "treatment": "Extend SMF retention"},
+        {"id": "R-026", "asset": "SAP ECC", "description": "SAP_ALL assigned to dual-control break-glass IDs without monitoring",
+         "impact": 5, "likelihood": 2, "score": 10, "status": "Open", "category": "Access Control",
+         "owner": "SAP Basis", "review_date": "2024-03-22", "treatment": "Firefighter ID monitoring"},
+        {"id": "R-027", "asset": "Oracle EBS", "description": "APPS schema passwords rotated outside change-control evidence",
+         "impact": 3, "likelihood": 3, "score": 9, "status": "Open", "category": "Change Management",
+         "owner": "EBS Admins", "review_date": "2024-03-28", "treatment": "Password vault + ticket linkage"},
     ]
     
     df = pd.DataFrame(risks)

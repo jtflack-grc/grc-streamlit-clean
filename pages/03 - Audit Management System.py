@@ -128,6 +128,42 @@ def generate_sample_data(seed: int = 42):
             'high_findings': 0,
             'medium_findings': 0,
             'low_findings': 0
+        },
+        {
+            'id': 'AUD-2024-006',
+            'name': 'Mainframe & Midrange Security Audit',
+            'type': 'Internal',
+            'framework': 'SOX / ISO 27001',
+            'scope': 'IBM Z (RACF), IBM i (QSECURITY / *ALLOBJ), AIX hosts',
+            'start_date': datetime.datetime.now() - timedelta(days=20),
+            'end_date': datetime.datetime.now() + timedelta(days=10),
+            'status': 'In Progress',
+            'auditor': 'Internal Audit Team',
+            'lead_auditor': 'Mike Chen',
+            'rating': 'In Progress',
+            'findings_count': 3,
+            'critical_findings': 1,
+            'high_findings': 2,
+            'medium_findings': 0,
+            'low_findings': 0
+        },
+        {
+            'id': 'AUD-2024-007',
+            'name': 'ERP Access Controls Audit (SAP ECC / JD Edwards)',
+            'type': 'External',
+            'framework': 'SOX',
+            'scope': 'SAP ECC SAP_ALL / SU01; JD Edwards IFS and World security',
+            'start_date': datetime.datetime.now() - timedelta(days=40),
+            'end_date': datetime.datetime.now() - timedelta(days=10),
+            'status': 'Completed',
+            'auditor': 'KPMG',
+            'lead_auditor': 'David Wilson',
+            'rating': 'Qualified',
+            'findings_count': 2,
+            'critical_findings': 0,
+            'high_findings': 2,
+            'medium_findings': 0,
+            'low_findings': 0
         }
     ]
     
@@ -201,6 +237,76 @@ def generate_sample_data(seed: int = 42):
             'due_date': datetime.datetime.now() + timedelta(days=60),
             'remediation_plan': 'Schedule and conduct incident response tabletop exercise',
             'evidence_required': 'Exercise documentation, lessons learned report'
+        },
+        {
+            'id': 'FND-2024-006',
+            'audit_id': 'AUD-2024-006',
+            'title': 'IBM i *ALLOBJ granted outside break-glass process',
+            'description': 'Production IBM i profiles retain *ALLOBJ without documented exception or removal date',
+            'severity': 'Critical',
+            'category': 'Access Control',
+            'control_id': 'A.9.2.3',
+            'status': 'Open',
+            'assigned_to': 'IBM i Ops',
+            'due_date': datetime.datetime.now() + timedelta(days=14),
+            'remediation_plan': 'Revoke non-essential *ALLOBJ; require ticketed temporary grants',
+            'evidence_required': 'DSPUSRPRF extracts, exception tickets'
+        },
+        {
+            'id': 'FND-2024-007',
+            'audit_id': 'AUD-2024-006',
+            'title': 'RACF SPECIAL over-assigned on IBM Z',
+            'description': 'RACF SPECIAL attribute present on contractor and CICS region IDs beyond documented need',
+            'severity': 'High',
+            'category': 'Access Control',
+            'control_id': 'A.9.2.5',
+            'status': 'In Progress',
+            'assigned_to': 'Mainframe Security',
+            'due_date': datetime.datetime.now() + timedelta(days=21),
+            'remediation_plan': 'Recertify RACF special attributes; automate LEAVE revoke',
+            'evidence_required': 'RACF LISTUSER reports, recert evidence'
+        },
+        {
+            'id': 'FND-2024-008',
+            'audit_id': 'AUD-2024-006',
+            'title': 'QSECURITY level below corporate standard',
+            'description': 'IBM i production LPAR QSECURITY not meeting minimum level required by security standard',
+            'severity': 'High',
+            'category': 'System Security',
+            'control_id': 'A.8.2.3',
+            'status': 'Open',
+            'assigned_to': 'IBM i Ops',
+            'due_date': datetime.datetime.now() + timedelta(days=30),
+            'remediation_plan': 'Raise QSECURITY with impact assessment and change window',
+            'evidence_required': 'DSPSYSVAL QSECURITY, change record'
+        },
+        {
+            'id': 'FND-2024-009',
+            'audit_id': 'AUD-2024-007',
+            'title': 'SAP ECC SAP_ALL on dual-control IDs unmonitored',
+            'description': 'SAP_ALL assigned to emergency IDs without continuous monitoring or inclusion in access reviews',
+            'severity': 'High',
+            'category': 'Access Control',
+            'control_id': 'CC6.1',
+            'status': 'Open',
+            'assigned_to': 'SAP Basis',
+            'due_date': datetime.datetime.now() + timedelta(days=30),
+            'remediation_plan': 'Wire SAP_ALL usage to SIEM; include in quarterly SOX review',
+            'evidence_required': 'SUIM reports, SIEM alert config'
+        },
+        {
+            'id': 'FND-2024-010',
+            'audit_id': 'AUD-2024-007',
+            'title': 'JD Edwards IFS share permits anonymous read',
+            'description': 'IFS paths hosting World data libraries allow unauthenticated read access',
+            'severity': 'High',
+            'category': 'Data Protection',
+            'control_id': 'CC6.6',
+            'status': 'In Progress',
+            'assigned_to': 'ERP Security',
+            'due_date': datetime.datetime.now() + timedelta(days=25),
+            'remediation_plan': 'Remove anonymous IFS shares; enforce authenticated access',
+            'evidence_required': 'IFS authority listings, remediation CAB'
         }
     ]
     

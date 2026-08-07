@@ -331,6 +331,47 @@ footer { visibility: hidden; }
 """
 
 
+# Extra font hammer — Streamlit loads Source Sans after app styles; Emotion classes need [class*="st-"]
+_FONT_FORCE_CSS = """
+@font-face {
+  font-family: "IBM Plex Sans";
+  font-style: normal;
+  font-weight: 300 600;
+  font-display: swap;
+  src: local("IBM Plex Sans");
+}
+
+html, body {
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif !important;
+}
+
+html.stApp, body.stApp, .stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"] *:not([data-testid="stIconMaterial"]):not(svg):not(path):not(code):not(pre),
+[data-testid="stSidebar"] *:not([data-testid="stIconMaterial"]):not(svg):not(path),
+[data-testid="stHeader"] *:not([data-testid="stIconMaterial"]):not(svg):not(path),
+[class*="st-emotion-cache-"]:not([data-testid="stIconMaterial"]),
+[class*="st-emotion-cache-"] *:not([data-testid="stIconMaterial"]):not(svg):not(path),
+.main, .main *, .block-container, .block-container *,
+section.main, section.main * {
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif !important;
+}
+
+[data-testid="stIconMaterial"],
+[data-testid="stIconMaterial"] * {
+  font-family: "Material Symbols Rounded", "Material Icons", sans-serif !important;
+}
+
+code, pre, .stCode, [data-testid="stCode"], .brand-wordmark {
+  font-family: "IBM Plex Mono", ui-monospace, monospace !important;
+}
+
+.brand-wordmark {
+  font-family: "IBM Plex Mono", ui-monospace, monospace !important;
+}
+"""
+
+
 _HIDE_SIDEBAR_CSS = """
 [data-testid="collapsedControl"],
 [data-testid="stSidebarCollapsedControl"],
@@ -352,7 +393,13 @@ def apply(*, hide_sidebar: bool = False) -> None:
     """Inject portfolio CSS. Call once after st.set_page_config.
 
     hide_sidebar=True for single-pane tools with no sidebar controls (e.g. FAIR).
+    Fonts are also injected into the parent document so Streamlit's Source Sans
+    stylesheet cannot override IBM Plex after the iframe styles load.
     """
+    import json
+
+    import streamlit.components.v1 as components
+
     st.markdown(
         """
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -364,8 +411,42 @@ def apply(*, hide_sidebar: bool = False) -> None:
         """,
         unsafe_allow_html=True,
     )
-    css = _CSS + (_HIDE_SIDEBAR_CSS if hide_sidebar else "")
-    st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+    css = _CSS + _FONT_FORCE_CSS + (_HIDE_SIDEBAR_CSS if hide_sidebar else "")
+    st.markdown(f"<style id='iongrc-skin'>{css}</style>", unsafe_allow_html=True)
+
+    # Parent-document inject beats Cloud's post-load Source Sans Pro rules
+    font_href = (
+        "https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600"
+        "&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap"
+    )
+    payload = json.dumps({"css": css, "fontHref": font_href})
+    components.html(
+        f"""
+        <script>
+        (function () {{
+          const payload = {payload};
+          const doc = window.parent.document;
+          let link = doc.getElementById("iongrc-plex-link");
+          if (!link) {{
+            link = doc.createElement("link");
+            link.id = "iongrc-plex-link";
+            link.rel = "stylesheet";
+            doc.head.appendChild(link);
+          }}
+          link.href = payload.fontHref;
+          let style = doc.getElementById("iongrc-plex-style");
+          if (!style) {{
+            style = doc.createElement("style");
+            style.id = "iongrc-plex-style";
+            doc.head.appendChild(style);
+          }}
+          style.textContent = payload.css;
+        }})();
+        </script>
+        """,
+        height=0,
+        scrolling=False,
+    )
 
 
 def page_header(

@@ -343,51 +343,67 @@ def main():
             st.write(f"Running {simulations:,} simulations...")
         
         with col2:
+            sim_key = f"{simulations}|{seed}|{len(filtered_df)}"
+            if (
+                st.session_state.get("_err_mc_key") != sim_key
+                or "err_mc_scores" not in st.session_state
+            ):
+                scores, pcts = monte_carlo_simulation(filtered_df, simulations, seed=seed)
+                st.session_state.err_mc_scores = scores
+                st.session_state.err_mc_percentiles = pcts
+                st.session_state._err_mc_key = sim_key
+
             if st.button("Run Simulation"):
                 with st.spinner("Running Monte Carlo simulation..."):
-                    risk_scores, percentiles = monte_carlo_simulation(filtered_df, simulations, seed=seed)
-                    
-                    # Display results
-                    st.subheader("Simulation Results")
-                    
-                    col1, col2, col3, col4, col5 = st.columns(5)
-                    with col1:
-                        st.metric("5th Percentile", f"{percentiles[0]:.1f}")
-                    with col2:
-                        st.metric("25th Percentile", f"{percentiles[1]:.1f}")
-                    with col3:
-                        st.metric("Median", f"{percentiles[2]:.1f}")
-                    with col4:
-                        st.metric("75th Percentile", f"{percentiles[3]:.1f}")
-                    with col5:
-                        st.metric("95th Percentile", f"{percentiles[4]:.1f}")
-                    
-                    # Histogram of simulation results
-                    fig_sim = px.histogram(
-                        x=risk_scores,
-                        nbins=50,
-                        title="Monte Carlo Simulation Results",
-                        labels={'x': 'Risk Score', 'y': 'Frequency'}
-                    )
-                    fig_sim.add_vline(x=percentiles[2], line_dash="dash", line_color="red", annotation_text="Median")
-                    st.plotly_chart(fig_sim, use_container_width=True)
-                    
-                    # Risk level analysis
-                    critical_count = np.sum(risk_scores >= 20)
-                    high_count = np.sum((risk_scores >= 12) & (risk_scores < 20))
-                    medium_count = np.sum((risk_scores >= 6) & (risk_scores < 12))
-                    low_count = np.sum(risk_scores < 6)
-                    
-                    st.subheader("Simulated Risk Level Distribution")
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("Critical", f"{critical_count:,}", f"{critical_count/simulations*100:.1f}%")
-                    with col2:
-                        st.metric("High", f"{high_count:,}", f"{high_count/simulations*100:.1f}%")
-                    with col3:
-                        st.metric("Medium", f"{medium_count:,}", f"{medium_count/simulations*100:.1f}%")
-                    with col4:
-                        st.metric("Low", f"{low_count:,}", f"{low_count/simulations*100:.1f}%")
+                    scores, pcts = monte_carlo_simulation(filtered_df, simulations, seed=seed)
+                    st.session_state.err_mc_scores = scores
+                    st.session_state.err_mc_percentiles = pcts
+                    st.session_state._err_mc_key = sim_key
+
+            risk_scores = st.session_state.err_mc_scores
+            percentiles = st.session_state.err_mc_percentiles
+
+            # Display results
+            st.subheader("Simulation Results")
+            
+            col1, col2, col3, col4, col5 = st.columns(5)
+            with col1:
+                st.metric("5th Percentile", f"{percentiles[0]:.1f}")
+            with col2:
+                st.metric("25th Percentile", f"{percentiles[1]:.1f}")
+            with col3:
+                st.metric("Median", f"{percentiles[2]:.1f}")
+            with col4:
+                st.metric("75th Percentile", f"{percentiles[3]:.1f}")
+            with col5:
+                st.metric("95th Percentile", f"{percentiles[4]:.1f}")
+            
+            # Histogram of simulation results
+            fig_sim = px.histogram(
+                x=risk_scores,
+                nbins=50,
+                title="Monte Carlo Simulation Results",
+                labels={'x': 'Risk Score', 'y': 'Frequency'}
+            )
+            fig_sim.add_vline(x=percentiles[2], line_dash="dash", line_color="red", annotation_text="Median")
+            st.plotly_chart(fig_sim, use_container_width=True)
+            
+            # Risk level analysis
+            critical_count = np.sum(risk_scores >= 20)
+            high_count = np.sum((risk_scores >= 12) & (risk_scores < 20))
+            medium_count = np.sum((risk_scores >= 6) & (risk_scores < 12))
+            low_count = np.sum(risk_scores < 6)
+            
+            st.subheader("Simulated Risk Level Distribution")
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Critical", f"{critical_count:,}", f"{critical_count/simulations*100:.1f}%")
+            with col2:
+                st.metric("High", f"{high_count:,}", f"{high_count/simulations*100:.1f}%")
+            with col3:
+                st.metric("Medium", f"{medium_count:,}", f"{medium_count/simulations*100:.1f}%")
+            with col4:
+                st.metric("Low", f"{low_count:,}", f"{low_count/simulations*100:.1f}%")
     
     with tab4:
         st.header("Risk Trends & Forecasting")
@@ -437,44 +453,47 @@ def main():
             )
             st.plotly_chart(fig_score_trend, use_container_width=True)
         
-        # Forecasting
+        # Forecasting — auto-seed 6-month outlook; button refreshes
         st.subheader("Risk Forecasting")
-        
-        # Simple forecasting model
-        if st.button("Generate Forecast"):
-            # Simulate future months
+
+        def _build_forecast():
             future_dates = pd.date_range(start='2025-01-01', end='2025-06-30', freq='ME')
             forecast_data = []
-            
             for date in future_dates:
-                # Extend trend with some uncertainty
                 base_count = 23
                 trend_factor = 1 + (date.month + 11) * 0.05
                 uncertainty = rng.normal(0, 3)
                 risk_count = max(0, int(base_count * trend_factor + uncertainty))
-                
                 forecast_data.append({
                     'date': date,
                     'total_risks': risk_count,
                     'forecast': True
                 })
-            
-            forecast_df = pd.DataFrame(forecast_data)
-            
-            # Combine historical and forecast
-            historical = trend_df[['date', 'total_risks']].copy()
-            historical['forecast'] = False
-            combined_df = pd.concat([historical, forecast_df])
-            
-            fig_forecast = px.line(
-                combined_df,
-                x='date',
-                y='total_risks',
-                color='forecast',
-                title="Risk Count Forecast (Next 6 Months)",
-                labels={'total_risks': 'Number of Risks'}
-            )
-            st.plotly_chart(fig_forecast, use_container_width=True)
+            return pd.DataFrame(forecast_data)
+
+        forecast_key = f"fc|{seed}"
+        if st.session_state.get("_err_forecast_key") != forecast_key:
+            st.session_state.err_forecast_df = _build_forecast()
+            st.session_state._err_forecast_key = forecast_key
+
+        if st.button("Generate Forecast"):
+            st.session_state.err_forecast_df = _build_forecast()
+            st.session_state._err_forecast_key = forecast_key
+
+        forecast_df = st.session_state.err_forecast_df
+        historical = trend_df[['date', 'total_risks']].copy()
+        historical['forecast'] = False
+        combined_df = pd.concat([historical, forecast_df])
+
+        fig_forecast = px.line(
+            combined_df,
+            x='date',
+            y='total_risks',
+            color='forecast',
+            title="Risk Count Forecast (Next 6 Months)",
+            labels={'total_risks': 'Number of Risks'}
+        )
+        st.plotly_chart(fig_forecast, use_container_width=True)
     
     with tab5:
         st.header("Risk Management Tools")

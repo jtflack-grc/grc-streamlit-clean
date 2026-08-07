@@ -339,9 +339,18 @@ def main():
             st.session_state.scores = {
                 q['id']: int(rng.integers(0, 6)) for q in questions
             }
-            st.session_state.assessment_completed = False
+            st.session_state.assessment_completed = True
             st.rerun()
         st.caption("Sample / mock assessment only.")
+
+    # Seed CSF-ID maturity scores so Results / Recommendations / Analytics paint on first open
+    if not st.session_state.get('scores'):
+        rng = np.random.default_rng(seed)
+        st.session_state.scores = {
+            q['id']: int(rng.integers(1, 5)) for q in questions
+        }
+    if not st.session_state.get('assessment_completed'):
+        st.session_state.assessment_completed = True
     
     # Main content
     tab1, tab2, tab3, tab4 = st.tabs(["Assessment", "Results", "Recommendations", "Analytics"])
@@ -352,10 +361,6 @@ def main():
         st.write("""
         Rate each question from 0 (not in place) to 5 (optimized) based on your organization's current capabilities.
         """)
-        
-        # Initialize session state for scores
-        if 'scores' not in st.session_state:
-            st.session_state.scores = {}
         
         # Assessment form
         with st.form("csf_assessment"):

@@ -63,3 +63,35 @@ def csv_download(
         key=key,
         use_container_width=True,
     )
+
+
+def autoload(key: str, factory) -> None:
+    """Populate st.session_state[key] once if missing/empty so demos aren't blank on open."""
+    cur = st.session_state.get(key)
+    empty = cur is None or cur == [] or cur == {}
+    if empty:
+        st.session_state[key] = factory()
+
+
+def issue_text(row: dict | pd.Series, *keys: str, default: str = "Review required") -> str:
+    """Pull a human-readable issue string from common mock-data column names."""
+    data = row if isinstance(row, dict) else row.to_dict()
+    candidates = keys or (
+        "security_issues",
+        "security_issue",
+        "Finding",
+        "finding",
+        "issue",
+        "description",
+        "Issue",
+    )
+    for k in candidates:
+        val = data.get(k)
+        if val is None or (isinstance(val, float) and pd.isna(val)):
+            continue
+        if isinstance(val, (list, tuple)):
+            val = "; ".join(str(x) for x in val if x)
+        text = str(val).strip()
+        if text and text.lower() not in {"none", "nan", "[]"}:
+            return text
+    return default

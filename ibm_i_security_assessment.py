@@ -113,10 +113,17 @@ initialize_session_security()
 check_session_timeout()
 
 # Initialize session state
-if 'ibm_i_auditor' not in st.session_state:
+if "ibm_i_auditor" not in st.session_state:
     st.session_state.ibm_i_auditor = IBMiSecurityAuditor()
     st.session_state.audit_results = None
     st.session_state.audit_summary = None
+
+# Auto-load synthetic audit so the dashboard isn't blank on first paint
+if st.session_state.audit_results is None:
+    st.session_state.audit_results = st.session_state.ibm_i_auditor.run_full_audit()
+    st.session_state.audit_summary = st.session_state.ibm_i_auditor.get_audit_summary(
+        st.session_state.audit_results
+    )
 
 def main():
     """Main application function"""
@@ -408,29 +415,83 @@ def show_dashboard():
         fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True)
     
-    # Recent security issues
-    st.subheader("Recent Security Issues")
-    
-    # Get high and medium risk issues from all analyses
-    high_risk_issues = []
-    
+    # Recent security issues — use real IBM i mock columns (not generic placeholders)
+    st.subheader("IBM i security issues")
+
+    issue_rows = []
     for analysis_name, df in st.session_state.audit_results.items():
-        if 'risk_level' in df.columns:
-            high_risk = df[df['risk_level'].isin(['High', 'Medium'])]
-            for _, row in high_risk.iterrows():
-                issue = {
-                    'analysis': analysis_name.replace('_', ' ').title(),
-                    'issue': row.get('security_issue', 'Security issue detected'),
-                    'risk_level': row['risk_level'],
-                    'recommendation': row.get('recommendation', 'Review and remediate')
+        if not isinstance(df, pd.DataFrame) or df.empty or "risk_level" not in df.columns:
+            continue
+        focus = df[df["risk_level"].astype(str).str.title().isin(["High", "Medium", "Critical"])]
+        if focus.empty:
+            # Still surface a few Low samples so the register isn't empty on soft scores
+            focus = df.head(3)
+        for _, row in focus.iterrows():
+            subject = (
+                row.get("system_value")
+                or row.get("user_id")
+                or row.get("object")
+                or row.get("name")
+                or analysis_name
+            )
+            issue_rows.append(
+                {
+                    "Area": analysis_name.replace("_", " ").title(),
+                    "Subject": subject,
+                    "Issue": demo_kit.issue_text(row),
+                    "Risk": row.get("risk_level", ""),
+                    "Current": row.get("current_value", row.get("status", "")),
+                    "Recommended": row.get("recommended_value", ""),
                 }
-                high_risk_issues.append(issue)
-    
-    if high_risk_issues:
-        df_issues = pd.DataFrame(high_risk_issues)
-        st.dataframe(df_issues, use_container_width=True)
+            )
+
+    if issue_rows:
+        st.dataframe(pd.DataFrame(issue_rows), use_container_width=True, hide_index=True)
     else:
-        st.success("No high or medium risk issues detected!")
+        st.success("No security issues in the current synthetic sample.")
+
+    st.subheader("Quick IBM i sample slices")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.caption("User profiles")
+        st.dataframe(
+            st.session_state.audit_results["user_profiles"][
+                ["user_id", "name", "status", "special_authorities", "security_issues", "risk_level"]
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
+    with c2:
+        st.caption("Object authorities")
+        st.dataframe(
+            st.session_state.audit_results["object_authorities"][
+                ["object", "user", "object_type", "security_issues", "risk_level"]
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
+    with c3:
+        st.caption("Non-default system values")
+        sv = st.session_state.audit_results["system_values"]
+        interesting = sv[
+            (sv["current_value"].astype(str) != sv["recommended_value"].astype(str))
+            | (sv["risk_level"].astype(str).str.title() == "High")
+        ]
+        if interesting.empty:
+            interesting = sv.head(8)
+        st.dataframe(
+            interesting[
+                [
+                    "system_value",
+                    "current_value",
+                    "recommended_value",
+                    "description",
+                    "risk_level",
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
 
 def show_compliance_frameworks():
     """Display compliance framework analysis"""

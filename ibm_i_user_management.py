@@ -998,11 +998,14 @@ def show_access_control():
     auditor = IBMiSecurityAuditor()
     auditor.data_manager = st.session_state.ibm_i_data
     
-    # Run access control analysis
+    # Auto-populate on first open; button re-runs
+    demo_kit.autoload(
+        "access_results",
+        lambda: auditor.run_full_audit(),
+    )
     if st.button("Run Access Control Analysis"):
         with st.spinner("Analyzing access controls..."):
-            results = auditor.run_full_audit()
-            st.session_state.access_results = results
+            st.session_state.access_results = auditor.run_full_audit()
     
     if 'access_results' in st.session_state:
         # Display access control results

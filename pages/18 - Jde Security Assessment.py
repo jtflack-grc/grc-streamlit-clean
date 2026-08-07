@@ -90,10 +90,16 @@ initialize_session_security()
 check_session_timeout()
 
 # Initialize session state
-if 'jde_auditor' not in st.session_state:
+if "jde_auditor" not in st.session_state:
     st.session_state.jde_auditor = JDESecurityAuditor()
     st.session_state.audit_results = None
     st.session_state.audit_summary = None
+
+if st.session_state.audit_results is None:
+    st.session_state.audit_results = st.session_state.jde_auditor.run_full_audit()
+    st.session_state.audit_summary = st.session_state.jde_auditor.get_audit_summary(
+        st.session_state.audit_results
+    )
 
 def main():
     """Main application function"""
@@ -403,6 +409,49 @@ def show_dashboard():
         
         fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True)
+
+    # Concrete JDE synthetic findings (not just gauges)
+    st.subheader("JD Edwards security findings")
+    finding_rows = []
+    user_analysis = st.session_state.audit_results.get("user_analysis", {}) or {}
+    for user_id, info in (user_analysis.get("users") or {}).items():
+        issues = info.get("security_issues") or []
+        for issue in issues:
+            finding_rows.append(
+                {
+                    "Area": "User Access",
+                    "Subject": f"{user_id} ({info.get('user_name', '')})".strip(),
+                    "Issue": issue,
+                    "Detail": f"Group {info.get('group_id', '')} / {info.get('location', '')} / {info.get('access_level', '')}",
+                }
+            )
+    program_analysis = st.session_state.audit_results.get("program_analysis", {}) or {}
+    for prog_id, info in (program_analysis.get("programs") or {}).items():
+        crit = str(info.get("critical_level", ""))
+        if "High" in crit or "Critical" in crit:
+            finding_rows.append(
+                {
+                    "Area": "Critical Program",
+                    "Subject": f"{prog_id} — {info.get('program_name', '')}",
+                    "Issue": f"Critical financial program requires {info.get('access_required', 'elevated')} access",
+                    "Detail": f"Users: {', '.join(info.get('users_with_access') or [])}",
+                }
+            )
+    for issue in user_analysis.get("security_issues") or []:
+        if not any(r["Issue"] == issue for r in finding_rows):
+            finding_rows.append(
+                {
+                    "Area": "User Access",
+                    "Subject": "Environment",
+                    "Issue": issue,
+                    "Detail": "",
+                }
+            )
+    if finding_rows:
+        st.dataframe(pd.DataFrame(finding_rows), use_container_width=True, hide_index=True)
+    else:
+        st.info("No itemized findings in the current synthetic sample.")
+
 
 def show_user_analysis():
     """Display user account analysis"""

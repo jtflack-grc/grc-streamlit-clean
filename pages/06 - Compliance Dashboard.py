@@ -74,57 +74,178 @@ def _sample_controls() -> pd.DataFrame:
 
 def _sample_findings(seed: int) -> pd.DataFrame:
     rng = np.random.default_rng(seed + 7)
-    frames = ["ISO 27001", "NIST CSF", "SOC 2", "SOC 2", "PCI DSS", "GDPR"]
-    findings = [
-        "Weak password policy",
-        "Missing backup testing",
-        "Incomplete vendor assessment",
-        "Access review backlog",
-        "Encryption gap on secondary storage",
-        "Retention schedule not enforced",
+    rows = [
+        {
+            "Finding": "Password minimum length below ISO 27001 A.5.17 guidance",
+            "Framework": "ISO 27001",
+            "Control Ref": "A.5.17",
+            "Severity": "Medium",
+            "Status": "Open",
+            "Owner": "IAM",
+            "Due Date": (datetime.now() + timedelta(days=21)).strftime("%Y-%m-%d"),
+        },
+        {
+            "Finding": "Quarterly backup restore test not evidenced (NIST PR.DS)",
+            "Framework": "NIST CSF",
+            "Control Ref": "PR.DS-04",
+            "Severity": "High",
+            "Status": "In Progress",
+            "Owner": "IT Ops",
+            "Due Date": (datetime.now() + timedelta(days=14)).strftime("%Y-%m-%d"),
+        },
+        {
+            "Finding": "SOC 2 vendor due-diligence incomplete for Tier-1 SaaS",
+            "Framework": "SOC 2",
+            "Control Ref": "CC9.2",
+            "Severity": "Low",
+            "Status": "Closed",
+            "Owner": "Procurement",
+            "Due Date": (datetime.now() - timedelta(days=5)).strftime("%Y-%m-%d"),
+        },
+        {
+            "Finding": "User access review backlog exceeds SOC 2 CC6 cadence",
+            "Framework": "SOC 2",
+            "Control Ref": "CC6.2",
+            "Severity": "Medium",
+            "Status": "Open",
+            "Owner": "IAM",
+            "Due Date": (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d"),
+        },
+        {
+            "Finding": "Cardholder secondary storage missing disk encryption (PCI 3.4)",
+            "Framework": "PCI DSS",
+            "Control Ref": "3.4",
+            "Severity": "High",
+            "Status": "In Progress",
+            "Owner": "Security",
+            "Due Date": (datetime.now() + timedelta(days=10)).strftime("%Y-%m-%d"),
+        },
+        {
+            "Finding": "GDPR Article 30 RoPA retention schedule not enforced in DLP",
+            "Framework": "GDPR",
+            "Control Ref": "Art. 30",
+            "Severity": "Medium",
+            "Status": "Open",
+            "Owner": "Privacy",
+            "Due Date": (datetime.now() + timedelta(days=45)).strftime("%Y-%m-%d"),
+        },
+        {
+            "Finding": "Incident tabletop exercise older than 12 months (NIST RS.IM)",
+            "Framework": "NIST CSF",
+            "Control Ref": "RS.IM-01",
+            "Severity": "Medium",
+            "Status": "Open",
+            "Owner": "SIRT",
+            "Due Date": (datetime.now() + timedelta(days=35)).strftime("%Y-%m-%d"),
+        },
+        {
+            "Finding": "Privileged break-glass accounts lack dual control evidence",
+            "Framework": "ISO 27001",
+            "Control Ref": "A.8.2",
+            "Severity": "High",
+            "Status": "Open",
+            "Owner": "Security",
+            "Due Date": (datetime.now() + timedelta(days=18)).strftime("%Y-%m-%d"),
+        },
     ]
-    severities = ["Medium", "High", "Low", "Medium", "High", "Medium"]
-    statuses = ["Open", "In Progress", "Closed", "Open", "In Progress", "Open"]
-    # shuffle status lightly with seed
-    order = rng.permutation(len(findings))
-    rows = []
-    for i in order:
-        rows.append(
-            {
-                "Finding": findings[i],
-                "Framework": frames[i],
-                "Severity": severities[i],
-                "Status": statuses[i],
-                "Due Date": (datetime.now() + timedelta(days=int(rng.integers(7, 60)))).strftime(
-                    "%Y-%m-%d"
-                ),
-            }
-        )
-    return pd.DataFrame(rows)
+    # Stable shuffle for Resample feel without wiping content quality
+    order = rng.permutation(len(rows))
+    return pd.DataFrame([rows[i] for i in order])
 
 
 def _sample_actions() -> pd.DataFrame:
     return pd.DataFrame(
         {
             "Action": [
-                "Implement multi-factor authentication for all critical systems",
-                "Establish quarterly backup testing procedures",
-                "Complete vendor risk assessment for new suppliers",
-                "Update incident response playbook",
-                "Conduct security awareness training",
-                "Align retention controls with published schedule",
+                "Raise password minimum length and enforce MFA on admin paths",
+                "Schedule and document the next backup restore test",
+                "Complete Tier-1 SaaS vendor risk questionnaire package",
+                "Close access-review backlog for finance systems",
+                "Enable encryption on PCI secondary storage volumes",
+                "Wire retention tags into DLP policy for RoPA systems",
+                "Run an incident tabletop and file attendance/evidence",
+                "Add dual approval workflow for break-glass activation",
             ],
             "Related Finding": [
-                "Weak password policy",
-                "Missing backup testing",
-                "Incomplete vendor assessment",
-                "Access review backlog",
-                "Encryption gap on secondary storage",
-                "Retention schedule not enforced",
+                "Password minimum length below ISO 27001 A.5.17 guidance",
+                "Quarterly backup restore test not evidenced (NIST PR.DS)",
+                "SOC 2 vendor due-diligence incomplete for Tier-1 SaaS",
+                "User access review backlog exceeds SOC 2 CC6 cadence",
+                "Cardholder secondary storage missing disk encryption (PCI 3.4)",
+                "GDPR Article 30 RoPA retention schedule not enforced in DLP",
+                "Incident tabletop exercise older than 12 months (NIST RS.IM)",
+                "Privileged break-glass accounts lack dual control evidence",
             ],
-            "Priority": ["High", "High", "Medium", "Medium", "Low", "Medium"],
+            "Priority": ["High", "High", "Medium", "Medium", "High", "Medium", "Medium", "High"],
         }
     )
+
+
+def _build_issue_register(
+    view_fw: pd.DataFrame,
+    view_controls: pd.DataFrame,
+    view_findings: pd.DataFrame,
+    threshold: float,
+) -> pd.DataFrame:
+    """Synthetic issue register: score gaps + weak controls + audit findings."""
+    rows: list[dict] = []
+    for _, row in view_fw.iterrows():
+        score = float(row["Compliance Score"])
+        if score < threshold:
+            rows.append(
+                {
+                    "Issue Type": "Framework gap",
+                    "Issue": f"{row['Framework']} below threshold ({score:.0f}% < {threshold:.0f}%)",
+                    "Framework": row["Framework"],
+                    "Ref": "—",
+                    "Severity": "High" if score < threshold - 10 else "Medium",
+                    "Status": "Open",
+                    "Owner": row.get("Owner", ""),
+                    "Due Date": "",
+                }
+            )
+    for _, row in view_controls.iterrows():
+        eff = float(row["Effectiveness"])
+        if eff < threshold:
+            rows.append(
+                {
+                    "Issue Type": "Control effectiveness",
+                    "Issue": f"{row['Control Category']} effectiveness {eff:.0f}%",
+                    "Framework": row["Frameworks"],
+                    "Ref": row["Control Category"],
+                    "Severity": "High" if eff < threshold - 10 else "Medium",
+                    "Status": "Open",
+                    "Owner": "Control owner",
+                    "Due Date": "",
+                }
+            )
+    for _, row in view_findings.iterrows():
+        rows.append(
+            {
+                "Issue Type": "Audit finding",
+                "Issue": row["Finding"],
+                "Framework": row["Framework"],
+                "Ref": row.get("Control Ref", ""),
+                "Severity": row["Severity"],
+                "Status": row["Status"],
+                "Owner": row.get("Owner", ""),
+                "Due Date": row.get("Due Date", ""),
+            }
+        )
+    if not rows:
+        return pd.DataFrame(
+            columns=[
+                "Issue Type",
+                "Issue",
+                "Framework",
+                "Ref",
+                "Severity",
+                "Status",
+                "Owner",
+                "Due Date",
+            ]
+        )
+    return pd.DataFrame(rows)
 
 
 def compliance_dashboard():
@@ -169,7 +290,7 @@ def compliance_dashboard():
         status_opts = st.multiselect(
             "Finding status",
             options=["Open", "In Progress", "Closed"],
-            default=["Open", "In Progress"],
+            default=["Open", "In Progress", "Closed"],
         )
         st.markdown("---")
         st.caption("Sample / mock data only.")
@@ -203,6 +324,7 @@ def compliance_dashboard():
 
     related_findings = set(view_findings["Finding"])
     view_actions = actions_df[actions_df["Related Finding"].isin(related_findings)].copy()
+    issue_register = _build_issue_register(view_fw, view_controls, view_findings, threshold)
 
     overall_score = float(view_fw["Compliance Score"].mean()) if not view_fw.empty else 0.0
     compliant_count = int((view_fw["Compliance Score"] >= threshold).sum())
@@ -214,8 +336,7 @@ def compliance_dashboard():
     with col2:
         st.metric("Compliant Frameworks", f"{compliant_count}/{len(view_fw)}")
     with col3:
-        next_assessment = view_fw["Last Assessment"].min() + timedelta(days=90)
-        st.metric("Oldest cycle + 90d", next_assessment.strftime("%Y-%m-%d"))
+        st.metric("Issues in register", len(issue_register))
     with col4:
         st.metric("Open findings", len(openish))
 
@@ -224,6 +345,12 @@ def compliance_dashboard():
     )
 
     with tab_overview:
+        st.subheader("Compliance issue register")
+        if issue_register.empty:
+            st.success("No issues for the current filters / threshold.")
+        else:
+            st.dataframe(issue_register, use_container_width=True, hide_index=True)
+
         st.subheader("Framework Compliance Scores")
         fig = px.bar(
             view_fw,
@@ -262,11 +389,18 @@ def compliance_dashboard():
             st.info("No findings match the current severity / status filters.")
         else:
             st.dataframe(
-                view_findings[["Finding", "Framework", "Severity", "Status", "Due Date"]],
+                view_findings[
+                    ["Finding", "Framework", "Control Ref", "Severity", "Status", "Owner", "Due Date"]
+                ],
                 use_container_width=True,
                 hide_index=True,
             )
-            sev = view_findings["Severity"].value_counts().rename_axis("Severity").reset_index(name="Count")
+            sev = (
+                view_findings["Severity"]
+                .value_counts()
+                .rename_axis("Severity")
+                .reset_index(name="Count")
+            )
             st.plotly_chart(
                 px.bar(sev, x="Severity", y="Count", title="Findings by severity"),
                 use_container_width=True,
@@ -282,27 +416,22 @@ def compliance_dashboard():
 
     with tab_export:
         st.caption("Export the currently filtered sample views.")
-        c1, c2, c3 = st.columns(3)
+        c1, c2, c3, c4 = st.columns(4)
         with c1:
             demo_kit.csv_download(
-                view_fw,
-                "compliance_frameworks.csv",
-                label="Frameworks CSV",
-                key="exp_fw",
+                view_fw, "compliance_frameworks.csv", label="Frameworks CSV", key="exp_fw"
             )
         with c2:
             demo_kit.csv_download(
-                view_findings,
-                "compliance_findings.csv",
-                label="Findings CSV",
-                key="exp_find",
+                view_findings, "compliance_findings.csv", label="Findings CSV", key="exp_find"
             )
         with c3:
             demo_kit.csv_download(
-                view_actions,
-                "compliance_actions.csv",
-                label="Actions CSV",
-                key="exp_act",
+                issue_register, "compliance_issues.csv", label="Issue register CSV", key="exp_iss"
+            )
+        with c4:
+            demo_kit.csv_download(
+                view_actions, "compliance_actions.csv", label="Actions CSV", key="exp_act"
             )
 
 

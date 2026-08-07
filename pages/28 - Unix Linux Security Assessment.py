@@ -90,10 +90,16 @@ initialize_session_security()
 check_session_timeout()
 
 # Initialize session state
-if 'unix_linux_auditor' not in st.session_state:
+if "unix_linux_auditor" not in st.session_state:
     st.session_state.unix_linux_auditor = UnixLinuxSecurityAuditor()
     st.session_state.audit_results = None
     st.session_state.audit_summary = None
+
+if st.session_state.audit_results is None:
+    st.session_state.audit_results = generate_mock_unix_linux_data()
+    st.session_state.audit_summary = st.session_state.unix_linux_auditor.get_audit_summary(
+        st.session_state.audit_results
+    )
 
 def main():
     """Main application function"""
@@ -386,6 +392,86 @@ def show_dashboard():
         
         fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("Unix/Linux security findings")
+    finding_rows = []
+    for item in st.session_state.audit_results.get("file_analysis") or []:
+        if isinstance(item, dict):
+            for issue in item.get("security_issues") or []:
+                finding_rows.append(
+                    {
+                        "Area": "File system",
+                        "Subject": item.get("file_path", ""),
+                        "Issue": issue,
+                        "Risk": item.get("risk_level", ""),
+                        "Detail": f"mode {item.get('permissions', '')}",
+                    }
+                )
+    user_analysis = st.session_state.audit_results.get("user_analysis") or {}
+    for username, info in (user_analysis.get("users") or {}).items():
+        if isinstance(info, dict):
+            for issue in info.get("security_issues") or []:
+                finding_rows.append(
+                    {
+                        "Area": "User accounts",
+                        "Subject": username,
+                        "Issue": issue,
+                        "Risk": "High" if "password" in str(issue).lower() or "UID 0" in str(issue) else "Medium",
+                        "Detail": f"uid={info.get('uid', '')} shell={info.get('shell', '')}",
+                    }
+                )
+    for issue in user_analysis.get("security_issues") or []:
+        finding_rows.append(
+            {
+                "Area": "User accounts",
+                "Subject": "Environment",
+                "Issue": issue,
+                "Risk": "Medium",
+                "Detail": "",
+            }
+        )
+    network = st.session_state.audit_results.get("network_analysis") or {}
+    for port in network.get("listening_ports") or []:
+        finding_rows.append(
+            {
+                "Area": "Network",
+                "Subject": port.get("local_address", ""),
+                "Issue": f"Listening {port.get('protocol', '')} via {port.get('program', 'unknown')}",
+                "Risk": "Medium",
+                "Detail": "",
+            }
+        )
+    for issue in network.get("security_issues") or []:
+        finding_rows.append(
+            {
+                "Area": "Network",
+                "Subject": "Service",
+                "Issue": issue,
+                "Risk": "High",
+                "Detail": "",
+            }
+        )
+    stig = st.session_state.audit_results.get("stig_analysis") or {}
+    for control_id, result in stig.items():
+        if isinstance(result, dict) and str(result.get("status", "")).lower() not in {
+            "compliant",
+            "pass",
+        }:
+            finding_rows.append(
+                {
+                    "Area": "STIG",
+                    "Subject": control_id,
+                    "Issue": result.get("title", "Non-compliant STIG control"),
+                    "Risk": result.get("severity", "medium"),
+                    "Detail": result.get("fix", result.get("evidence", "")),
+                }
+            )
+
+    if finding_rows:
+        st.dataframe(pd.DataFrame(finding_rows), use_container_width=True, hide_index=True)
+    else:
+        st.info("No itemized findings in the current synthetic sample.")
+
 
 def show_compliance_frameworks():
     """Display compliance framework analysis"""

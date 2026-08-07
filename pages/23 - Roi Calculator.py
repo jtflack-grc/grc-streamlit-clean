@@ -124,6 +124,22 @@ def get_roi_category(roi_percentage):
     else:
         return "Poor", "", "Negative ROI - reconsider or revise approach"
 
+def _store_roi_session(benefits, costs):
+    """Persist a full ROI calc into session_state (used by Calculate + first-load seed)."""
+    roi_data = calculate_roi(benefits, costs)
+    category, icon, recommendation = get_roi_category(roi_data['roi_percentage'])
+    business_case = generate_business_case(roi_data, benefits, costs)
+    st.session_state.roi_data = roi_data
+    st.session_state.benefits = benefits
+    st.session_state.costs = costs
+    st.session_state.category = category
+    st.session_state.icon = icon
+    st.session_state.recommendation = recommendation
+    st.session_state.business_case = business_case
+    st.session_state.calculation_completed = True
+    return roi_data
+
+
 def generate_business_case(roi_data, benefits, costs):
     """Generate business case summary"""
     total_benefits = sum(benefits.values())
@@ -159,6 +175,11 @@ def main():
     
     # Load sample data
     sample_data = load_sample_roi_data()
+
+    # Seed Analysis / Business Case tabs with SOC 2 sample on first open
+    if not st.session_state.get('calculation_completed'):
+        soc2 = sample_data['scenarios'][0]
+        _store_roi_session(soc2['benefits'], soc2['costs'])
     
     # Sidebar
     st.sidebar.header("Controls")
@@ -322,20 +343,7 @@ def main():
         
         # Calculate ROI
         if st.button("Calculate ROI", type="primary"):
-            roi_data = calculate_roi(benefits, costs)
-            category, icon, recommendation = get_roi_category(roi_data['roi_percentage'])
-            business_case = generate_business_case(roi_data, benefits, costs)
-            
-            # Store in session state
-            st.session_state.roi_data = roi_data
-            st.session_state.benefits = benefits
-            st.session_state.costs = costs
-            st.session_state.category = category
-            st.session_state.icon = icon
-            st.session_state.recommendation = recommendation
-            st.session_state.business_case = business_case
-            st.session_state.calculation_completed = True
-            
+            _store_roi_session(benefits, costs)
             st.success("ROI calculation completed! View results in the Analysis tab.")
     
     with tab2:

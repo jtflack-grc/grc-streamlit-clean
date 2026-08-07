@@ -413,68 +413,81 @@ def main():
             with col2:
                 st.subheader("Simulation Parameters")
                 num_simulations = st.selectbox("Number of Simulations", [1000, 5000, 10000, 50000], index=1)
-                
+
+                def _run_mc():
+                    return run_monte_carlo_simulation(
+                        risk_data['likelihood_min'],
+                        risk_data['likelihood_max'],
+                        risk_data['impact_min'],
+                        risk_data['impact_max'],
+                        risk_data['financial_impact'],
+                        num_simulations,
+                        seed=seed,
+                    )
+
+                mc_key = f"{selected_risk}|{num_simulations}|{seed}"
+                if (
+                    st.session_state.get("_mc_sim_key") != mc_key
+                    or "mc_simulation_results" not in st.session_state
+                ):
+                    st.session_state.mc_simulation_results = _run_mc()
+                    st.session_state._mc_sim_key = mc_key
+
                 if st.button("Run Monte Carlo Simulation"):
                     with st.spinner("Running Monte Carlo simulation..."):
-                        # Run simulation
-                        simulation_results = run_monte_carlo_simulation(
-                            risk_data['likelihood_min'],
-                            risk_data['likelihood_max'],
-                            risk_data['impact_min'],
-                            risk_data['impact_max'],
-                            risk_data['financial_impact'],
-                            num_simulations,
-                            seed=seed,
-                        )
-                        
-                        # Display results
-                        st.subheader("Simulation Results")
-                        
-                        col1, col2, col3, col4 = st.columns(4)
-                        
-                        with col1:
-                            st.metric("Expected Loss", f"${simulation_results['expected_loss']:,.0f}")
-                        
-                        with col2:
-                            st.metric("25th Percentile", f"${simulation_results['percentiles']['25th']:,.0f}")
-                        
-                        with col3:
-                            st.metric("75th Percentile", f"${simulation_results['percentiles']['75th']:,.0f}")
-                        
-                        with col4:
-                            st.metric("95th Percentile", f"${simulation_results['percentiles']['95th']:,.0f}")
-                        
-                        # Charts
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            # Risk score distribution
-                            fig_risk_dist = px.histogram(
-                                x=simulation_results['risk_scores'],
-                                title="Risk Score Distribution",
-                                labels={'x': 'Risk Score', 'y': 'Frequency'}
-                            )
-                            st.plotly_chart(fig_risk_dist, use_container_width=True)
-                        
-                        with col2:
-                            # Financial impact distribution
-                            fig_financial_dist = px.histogram(
-                                x=simulation_results['financial_impacts'],
-                                title="Financial Impact Distribution",
-                                labels={'x': 'Financial Impact ($)', 'y': 'Frequency'}
-                            )
-                            st.plotly_chart(fig_financial_dist, use_container_width=True)
-                        
-                        # Risk matrix
-                        fig_matrix = px.scatter(
-                            x=simulation_results['likelihood_samples'],
-                            y=simulation_results['impact_samples'],
-                            title="Risk Matrix (Likelihood vs Impact)",
-                            labels={'x': 'Likelihood', 'y': 'Impact'}
-                        )
-                        fig_matrix.add_hline(y=4, line_dash="dash", line_color="red", annotation_text="High Impact")
-                        fig_matrix.add_vline(x=4, line_dash="dash", line_color="red", annotation_text="High Likelihood")
-                        st.plotly_chart(fig_matrix, use_container_width=True)
+                        st.session_state.mc_simulation_results = _run_mc()
+                        st.session_state._mc_sim_key = mc_key
+
+                simulation_results = st.session_state.mc_simulation_results
+
+                # Display results
+                st.subheader("Simulation Results")
+                
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("Expected Loss", f"${simulation_results['expected_loss']:,.0f}")
+                
+                with col2:
+                    st.metric("25th Percentile", f"${simulation_results['percentiles']['25th']:,.0f}")
+                
+                with col3:
+                    st.metric("75th Percentile", f"${simulation_results['percentiles']['75th']:,.0f}")
+                
+                with col4:
+                    st.metric("95th Percentile", f"${simulation_results['percentiles']['95th']:,.0f}")
+                
+                # Charts
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Risk score distribution
+                    fig_risk_dist = px.histogram(
+                        x=simulation_results['risk_scores'],
+                        title="Risk Score Distribution",
+                        labels={'x': 'Risk Score', 'y': 'Frequency'}
+                    )
+                    st.plotly_chart(fig_risk_dist, use_container_width=True)
+                
+                with col2:
+                    # Financial impact distribution
+                    fig_financial_dist = px.histogram(
+                        x=simulation_results['financial_impacts'],
+                        title="Financial Impact Distribution",
+                        labels={'x': 'Financial Impact ($)', 'y': 'Frequency'}
+                    )
+                    st.plotly_chart(fig_financial_dist, use_container_width=True)
+                
+                # Risk matrix
+                fig_matrix = px.scatter(
+                    x=simulation_results['likelihood_samples'],
+                    y=simulation_results['impact_samples'],
+                    title="Risk Matrix (Likelihood vs Impact)",
+                    labels={'x': 'Likelihood', 'y': 'Impact'}
+                )
+                fig_matrix.add_hline(y=4, line_dash="dash", line_color="red", annotation_text="High Impact")
+                fig_matrix.add_vline(x=4, line_dash="dash", line_color="red", annotation_text="High Likelihood")
+                st.plotly_chart(fig_matrix, use_container_width=True)
         else:
             st.warning("No risks available for simulation. Please add risks or adjust filters.")
     

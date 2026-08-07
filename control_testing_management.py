@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -223,7 +224,10 @@ def main():
     metrics = calculate_testing_metrics(df)
     
     # Sidebar
-    st.sidebar.header("Control Testing")
+    st.sidebar.header("Controls")
+    seed = demo_kit.seed_controls()
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Control Testing")
     
     # Add new test form
     with st.sidebar.expander("Add New Test", expanded=False):
@@ -493,8 +497,9 @@ def main():
         
         # Simulate risk scores
         risk_data = []
+        rng = np.random.default_rng(seed)
         for _, test in filtered_df.iterrows():
-            risk_score = random.randint(1, 100)
+            risk_score = int(rng.integers(1, 101))
             risk_data.append({
                 'Test': test['test_name'],
                 'Risk Score': risk_score,
@@ -521,17 +526,20 @@ def main():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Export options
             st.subheader("Export Options")
-            
-            if st.button("Export to Excel"):
-                st.success("Control testing report exported to Excel successfully!")
-            
-            if st.button("Generate Executive Summary"):
-                st.success("Executive summary generated!")
-            
-            if st.button("Export Test Results"):
-                st.success("Test results exported!")
+            export_df = filtered_df.copy()
+            for col in ("test_date", "due_date"):
+                if col in export_df.columns:
+                    export_df[col] = export_df[col].astype(str)
+            if "framework_mappings" in export_df.columns:
+                export_df["framework_mappings"] = export_df["framework_mappings"].apply(
+                    lambda v: "; ".join(v) if isinstance(v, (list, tuple)) else v
+                )
+            demo_kit.csv_download(
+                export_df,
+                "control_tests_filtered.csv",
+                label="Download filtered tests",
+            )
         
         with col2:
             # Management actions

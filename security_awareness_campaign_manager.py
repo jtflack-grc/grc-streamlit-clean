@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -36,8 +37,9 @@ if 'target_audiences' not in st.session_state:
 if 'campaign_schedules' not in st.session_state:
     st.session_state.campaign_schedules = []
 
-def generate_sample_data():
+def generate_sample_data(seed: int = 42):
     """Generate sample security awareness campaign data"""
+    rng = np.random.default_rng(seed)
     campaigns = [
         {
             'id': 'CAM-001',
@@ -311,8 +313,42 @@ def generate_sample_data():
             'status': 'Scheduled'
         }
     ]
-    
+
+    campaign_statuses = ['Planning', 'Active', 'Completed', 'Paused']
+    for campaign in campaigns:
+        campaign['budget'] = int(max(1000, campaign['budget'] + int(rng.integers(-2000, 2001))))
+        if int(rng.integers(0, 4)) == 0:
+            campaign['status'] = str(rng.choice(campaign_statuses))
+    for delivery in campaign_deliveries:
+        jitter = int(rng.integers(-10, 11))
+        delivery['opened_count'] = max(0, min(delivery['delivered_count'], delivery['opened_count'] + jitter))
+        delivery['completed_count'] = max(0, min(delivery['opened_count'], delivery['completed_count'] + int(rng.integers(-5, 6))))
+    for metric in campaign_metrics:
+        metric['value'] = round(float(np.clip(metric['value'] + float(rng.uniform(-5, 5)), 10, 100)), 1)
+
     return campaigns, campaign_content, campaign_deliveries, campaign_metrics, target_audiences, campaign_schedules
+
+
+_CAMPAIGN_STATUS_ORDER = ['Planning', 'Active', 'Completed']
+
+
+def _advance_campaign_status(status: str) -> str:
+    if status not in _CAMPAIGN_STATUS_ORDER or status == _CAMPAIGN_STATUS_ORDER[-1]:
+        return status
+    return _CAMPAIGN_STATUS_ORDER[_CAMPAIGN_STATUS_ORDER.index(status) + 1]
+
+
+def _sync_campaigns(seed: int) -> None:
+    if st.session_state.get('_campaign_seed') != seed or not st.session_state.get('campaigns'):
+        campaigns, content, deliveries, metrics, audiences, schedules = generate_sample_data(seed)
+        st.session_state.campaigns = campaigns
+        st.session_state.campaign_content = content
+        st.session_state.campaign_deliveries = deliveries
+        st.session_state.campaign_metrics = metrics
+        st.session_state.target_audiences = audiences
+        st.session_state.campaign_schedules = schedules
+        st.session_state._campaign_seed = seed
+
 
 def main():
     portfolio_skin.page_header(
@@ -321,24 +357,27 @@ def main():
         kicker="Awareness",
     )
     st.markdown("Comprehensive platform for managing security awareness campaigns, content creation, delivery tracking, and effectiveness measurement")
-    
-    # Initialize sample data
-    if not st.session_state.campaigns:
-        campaigns, content, deliveries, metrics, audiences, schedules = generate_sample_data()
-        st.session_state.campaigns = campaigns
-        st.session_state.campaign_content = content
-        st.session_state.campaign_deliveries = deliveries
-        st.session_state.campaign_metrics = metrics
-        st.session_state.target_audiences = audiences
-        st.session_state.campaign_schedules = schedules
-    
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox(
-        "Select Module",
-        ["Dashboard", "Campaign Management", "Content Management", "Delivery Tracking", "Audience Management", "Metrics & Analytics", "Scheduling", "Reports"]
-    )
-    
+
+    with st.sidebar:
+        st.title("Navigation")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        page = st.selectbox(
+            "Select Module",
+            ["Dashboard", "Campaign Management", "Content Management", "Delivery Tracking", "Audience Management", "Metrics & Analytics", "Scheduling", "Reports"]
+        )
+        engagement_floor = st.slider(
+            "What-if engagement floor (%)",
+            min_value=40,
+            max_value=90,
+            value=70,
+            step=5,
+            help="Highlight campaigns below this engagement rate.",
+        )
+        st.session_state._campaign_engagement_floor = engagement_floor
+        st.caption("Sample / mock data only.")
+    _sync_campaigns(seed)
+
     if page == "Dashboard":
         show_dashboard()
     elif page == "Campaign Management":
@@ -386,6 +425,13 @@ def show_dashboard():
         scheduled_deliveries = len([s for s in st.session_state.campaign_schedules if s['status'] == 'Scheduled'])
         st.metric("Scheduled Deliveries", scheduled_deliveries)
         st.metric("Target Audiences", len(st.session_state.target_audiences))
+
+    floor = st.session_state.get('_campaign_engagement_floor', 70)
+    below_floor = [
+        m for m in st.session_state.campaign_metrics
+        if m['metric_name'] == 'Engagement Rate' and m['value'] < floor
+    ]
+    st.caption(f"Engagement metrics below floor ({floor}%): {len(below_floor)}")
     
     # Campaign overview charts
     st.subheader("Campaign Overview")
@@ -490,6 +536,16 @@ def show_campaign_management():
         filtered_df = filtered_df[filtered_df['priority'] == priority_filter]
     
     st.dataframe(filtered_df, use_container_width=True)
+
+    st.subheader("Advance campaign")
+    for campaign in st.session_state.campaigns:
+        if campaign['status'] not in _CAMPAIGN_STATUS_ORDER or campaign['status'] == 'Completed':
+            continue
+        cols = st.columns([3, 1])
+        cols[0].write(f"{campaign['id']} — {campaign['name']} ({campaign['status']})")
+        if cols[1].button("Advance status", key=f"adv_cam_{campaign['id']}"):
+            campaign['status'] = _advance_campaign_status(campaign['status'])
+            st.rerun()
     
     # Campaign analytics
     col1, col2 = st.columns(2)
@@ -922,19 +978,12 @@ def show_reports():
             st.write(f"• Total Deliveries: {len(st.session_state.campaign_deliveries)}")
     
     # Export functionality
-    st.subheader("Export Data")
-    export_format = st.selectbox("Export Format", ["CSV", "JSON", "Excel"])
-    
-    if st.button("Export Campaign Data"):
-        if export_format == "CSV":
-            df_campaigns = pd.DataFrame(st.session_state.campaigns)
-            csv = df_campaigns.to_csv(index=False)
-            st.download_button(
-                label="Download CSV",
-                data=csv,
-                file_name="security_awareness_campaigns.csv",
-                mime="text/csv"
-            )
+    with st.expander("Export"):
+        export_df = pd.DataFrame(st.session_state.campaigns).copy()
+        for col in ('start_date', 'end_date'):
+            if col in export_df.columns:
+                export_df[col] = export_df[col].astype(str)
+        demo_kit.csv_download(export_df, "security_awareness_campaigns.csv", label="Download campaigns CSV")
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -23,7 +24,7 @@ portfolio_skin.apply(hide_sidebar=False)
 
 # Sample KPI data
 @st.cache_data
-def load_kpi_data():
+def load_kpi_data(seed: int = 42):
     """Load sample KPI data"""
     kpis = [
         {
@@ -177,8 +178,29 @@ def load_kpi_data():
             "historical_data": [22.0, 21.2, 20.1, 19.3, 18.5]
         }
     ]
-    
+
     df = pd.DataFrame(kpis)
+    rng = np.random.default_rng(seed)
+    jitter = rng.uniform(-4, 4, size=len(df))
+    df['current_value'] = (df['current_value'] + jitter).clip(lower=0).round(1)
+
+    def _status_for(row):
+        # Lower-is-better KPIs (response time / frequency)
+        lower_better = row['unit'] in ('hours', 'incidents')
+        ratio = row['current_value'] / row['target_value'] if row['target_value'] else 1
+        if lower_better:
+            if ratio <= 1.0:
+                return 'On Track'
+            if ratio <= 1.25:
+                return 'At Risk'
+            return 'Off Track'
+        if ratio >= 1.0:
+            return 'On Track'
+        if ratio >= 0.85:
+            return 'At Risk'
+        return 'Off Track'
+
+    df['status'] = df.apply(_status_for, axis=1)
     df['last_updated'] = pd.to_datetime(df['last_updated'])
     return df
 
@@ -223,60 +245,85 @@ def main():
         kicker="Analytics",
     )
     
-    # Load data
-    df = load_kpi_data()
+    with st.sidebar:
+        st.header("KPI Management")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        with st.expander("Add New KPI", expanded=False):
+            with st.form("add_kpi"):
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    kpi_id = st.text_input("KPI ID", placeholder="e.g., KPI-001")
+                    name = st.text_input("KPI Name", placeholder="e.g., Overall Compliance Rate")
+                    category = st.selectbox("Category", ["Security", "Compliance", "Risk", "Operations"])
+                    target_value = st.number_input("Target Value", min_value=0.0, value=80.0)
+
+                with col2:
+                    current_value = st.number_input("Current Value", min_value=0.0, value=75.0)
+                    unit = st.text_input("Unit", placeholder="e.g., %")
+                    frequency = st.selectbox("Frequency", ["Daily", "Weekly", "Monthly", "Quarterly", "Annually"])
+                    owner = st.text_input("Owner", placeholder="e.g., CISO")
+
+                status = st.selectbox("Status", ["On Track", "At Risk", "Off Track"])
+                trend = st.selectbox("Trend", ["Improving", "Stable", "Declining"])
+                description = st.text_area("Description", placeholder="Describe the KPI...")
+
+                submitted = st.form_submit_button("Add KPI")
+                if submitted:
+                    st.success("KPI added successfully!")
+
+        st.subheader("Filters")
+
+    df = load_kpi_data(seed)
+
+    with st.sidebar:
+        category_filter = st.multiselect(
+            "Category",
+            list(df['category'].unique()),
+            default=list(df['category'].unique()),
+        )
+        status_filter = st.multiselect(
+            "Status",
+            list(df['status'].unique()),
+            default=list(df['status'].unique()),
+        )
+        trend_filter = st.multiselect(
+            "Trend",
+            list(df['trend'].unique()),
+            default=list(df['trend'].unique()),
+        )
+        value_adjust = st.slider(
+            "What-if value adjust (%)",
+            min_value=-20,
+            max_value=20,
+            value=0,
+            step=1,
+            help="Shift current values relative to target to explore status impact.",
+        )
+        st.caption("Sample / mock data only.")
+
+    df = df.copy()
+    df['current_value'] = (df['current_value'] * (1 + value_adjust / 100.0)).clip(lower=0).round(1)
+
+    def _status_for(row):
+        lower_better = row['unit'] in ('hours', 'incidents')
+        ratio = row['current_value'] / row['target_value'] if row['target_value'] else 1
+        if lower_better:
+            if ratio <= 1.0:
+                return 'On Track'
+            if ratio <= 1.25:
+                return 'At Risk'
+            return 'Off Track'
+        if ratio >= 1.0:
+            return 'On Track'
+        if ratio >= 0.85:
+            return 'At Risk'
+        return 'Off Track'
+
+    df['status'] = df.apply(_status_for, axis=1)
     metrics = calculate_kpi_metrics(df)
-    
-    # Sidebar
-    st.sidebar.header("KPI Management")
-    
-    # Add new KPI form
-    with st.sidebar.expander("Add New KPI", expanded=False):
-        with st.form("add_kpi"):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                kpi_id = st.text_input("KPI ID", placeholder="e.g., KPI-001")
-                name = st.text_input("KPI Name", placeholder="e.g., Overall Compliance Rate")
-                category = st.selectbox("Category", ["Security", "Compliance", "Risk", "Operations"])
-                target_value = st.number_input("Target Value", min_value=0.0, value=80.0)
-            
-            with col2:
-                current_value = st.number_input("Current Value", min_value=0.0, value=75.0)
-                unit = st.text_input("Unit", placeholder="e.g., %")
-                frequency = st.selectbox("Frequency", ["Daily", "Weekly", "Monthly", "Quarterly", "Annually"])
-                owner = st.text_input("Owner", placeholder="e.g., CISO")
-            
-            status = st.selectbox("Status", ["On Track", "At Risk", "Off Track"])
-            trend = st.selectbox("Trend", ["Improving", "Stable", "Declining"])
-            description = st.text_area("Description", placeholder="Describe the KPI...")
-            
-            submitted = st.form_submit_button("Add KPI")
-            if submitted:
-                st.success("KPI added successfully!")
-    
-    # Filters
-    st.sidebar.subheader("Filters")
-    
-    category_filter = st.sidebar.multiselect(
-        "Category",
-        df['category'].unique(),
-        default=df['category'].unique()
-    )
-    
-    status_filter = st.sidebar.multiselect(
-        "Status",
-        df['status'].unique(),
-        default=df['status'].unique()
-    )
-    
-    trend_filter = st.sidebar.multiselect(
-        "Trend",
-        df['trend'].unique(),
-        default=df['trend'].unique()
-    )
-    
-    # Apply filters
+
     filtered_df = df[
         (df['category'].isin(category_filter)) &
         (df['status'].isin(status_filter)) &
@@ -637,18 +684,18 @@ def main():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Export options
             st.subheader("Export Options")
-            
-            if st.button("Export to Excel"):
-                st.success("KPI report exported to Excel successfully!")
-            
+            export_df = filtered_df.drop(columns=['historical_data'], errors='ignore').copy()
+            if 'last_updated' in export_df.columns:
+                export_df['last_updated'] = export_df['last_updated'].astype(str)
+            demo_kit.csv_download(export_df, "kpis_filtered.csv", label="Download filtered KPIs")
+
             if st.button("Generate Executive Summary"):
                 st.success("Executive summary generated!")
-            
+
             if st.button("Export Performance Report"):
                 st.success("Performance report exported!")
-            
+
             if st.button("Generate Dashboard PDF"):
                 st.success("Dashboard PDF generated!")
         

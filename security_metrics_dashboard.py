@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -36,8 +37,9 @@ if 'compliance_metrics' not in st.session_state:
 if 'incident_metrics' not in st.session_state:
     st.session_state.incident_metrics = []
 
-def generate_sample_data():
+def generate_sample_data(seed: int = 42):
     """Generate sample security metrics data"""
+    rng = np.random.default_rng(seed)
     security_metrics = [
         {
             'id': 'MET-001',
@@ -283,8 +285,44 @@ def generate_sample_data():
             'date': datetime.datetime.now() - timedelta(days=10)
         }
     ]
-    
+
+    metric_statuses = ['Exceeding', 'On Track', 'Needs Attention']
+    for metric in security_metrics:
+        metric['value'] = round(float(metric['value']) * float(rng.uniform(0.9, 1.1)), 2)
+        if int(rng.integers(0, 3)) == 0:
+            metric['status'] = str(rng.choice(metric_statuses))
+    for kpi in kpi_targets:
+        kpi['current_value'] = round(float(kpi['current_value']) * float(rng.uniform(0.9, 1.1)), 2)
+    for event in security_events:
+        event['count'] = max(1, int(event['count']) + int(rng.integers(-5, 6)))
+    for vuln in vulnerabilities:
+        vuln['cvss_score'] = round(float(np.clip(vuln['cvss_score'] + float(rng.uniform(-0.5, 0.5)), 0.1, 10.0)), 1)
+    for comp in compliance_metrics:
+        comp['compliance_score'] = round(float(np.clip(comp['compliance_score'] + float(rng.uniform(-3, 3)), 50, 100)), 1)
+
     return security_metrics, kpi_targets, security_events, vulnerabilities, compliance_metrics, incident_metrics
+
+
+_VULN_STATUS_ORDER = ['Open', 'In Progress', 'Resolved']
+
+
+def _advance_vuln_status(status: str) -> str:
+    if status not in _VULN_STATUS_ORDER or status == _VULN_STATUS_ORDER[-1]:
+        return status
+    return _VULN_STATUS_ORDER[_VULN_STATUS_ORDER.index(status) + 1]
+
+
+def _sync_security_metrics(seed: int) -> None:
+    if st.session_state.get('_security_metrics_seed') != seed or not st.session_state.get('security_metrics'):
+        metrics, kpis, events, vulns, compliance, incidents = generate_sample_data(seed)
+        st.session_state.security_metrics = metrics
+        st.session_state.kpi_targets = kpis
+        st.session_state.security_events = events
+        st.session_state.vulnerabilities = vulns
+        st.session_state.compliance_metrics = compliance
+        st.session_state.incident_metrics = incidents
+        st.session_state._security_metrics_seed = seed
+
 
 def main():
     portfolio_skin.page_header(
@@ -293,24 +331,31 @@ def main():
         kicker="Analytics",
     )
     st.markdown("Comprehensive platform for tracking security KPIs, metrics, and performance indicators across the organization")
-    
-    # Initialize sample data
-    if not st.session_state.security_metrics:
-        metrics, kpis, events, vulns, compliance, incidents = generate_sample_data()
-        st.session_state.security_metrics = metrics
-        st.session_state.kpi_targets = kpis
-        st.session_state.security_events = events
-        st.session_state.vulnerabilities = vulns
-        st.session_state.compliance_metrics = compliance
-        st.session_state.incident_metrics = incidents
-    
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox(
-        "Select Module",
-        ["Dashboard", "KPI Tracking", "Security Events", "Vulnerability Metrics", "Compliance Metrics", "Incident Analytics", "Trends", "Reports"]
-    )
-    
+
+    with st.sidebar:
+        st.title("Navigation")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        page = st.selectbox(
+            "Select Module",
+            ["Dashboard", "KPI Tracking", "Security Events", "Vulnerability Metrics", "Compliance Metrics", "Incident Analytics", "Trends", "Reports"]
+        )
+        target_shock = st.slider(
+            "What-if target tighten (%)",
+            min_value=0,
+            max_value=20,
+            value=0,
+            step=5,
+            help="Temporarily raise percentage KPI targets.",
+        )
+        st.caption("Sample / mock data only.")
+    _sync_security_metrics(seed)
+    for metric in st.session_state.security_metrics:
+        base_target = metric.get('_base_target', metric['target'])
+        metric['_base_target'] = base_target
+        if metric.get('unit') == '%':
+            metric['target'] = round(float(base_target) * (1 + target_shock / 100.0), 2)
+
     if page == "Dashboard":
         show_dashboard()
     elif page == "KPI Tracking":
@@ -597,6 +642,16 @@ def show_vulnerability_metrics():
     filtered_df = filtered_df[(filtered_df['cvss_score'] >= cvss_filter[0]) & (filtered_df['cvss_score'] <= cvss_filter[1])]
     
     st.dataframe(filtered_df, use_container_width=True)
+
+    st.subheader("Advance remediation")
+    for vuln in st.session_state.vulnerabilities:
+        if vuln['status'] in ('Resolved', 'False Positive'):
+            continue
+        cols = st.columns([3, 1])
+        cols[0].write(f"{vuln['id']} — {vuln['title']} ({vuln['status']})")
+        if cols[1].button("Advance status", key=f"adv_vuln_{vuln['id']}"):
+            vuln['status'] = _advance_vuln_status(vuln['status'])
+            st.rerun()
     
     # Vulnerability analytics
     col1, col2 = st.columns(2)
@@ -835,19 +890,11 @@ def show_reports():
             st.write(f"• Risk Level: Low")
     
     # Export functionality
-    st.subheader("Export Data")
-    export_format = st.selectbox("Export Format", ["CSV", "JSON", "Excel"])
-    
-    if st.button("Export Security Metrics"):
-        if export_format == "CSV":
-            df_metrics = pd.DataFrame(st.session_state.security_metrics)
-            csv = df_metrics.to_csv(index=False)
-            st.download_button(
-                label="Download CSV",
-                data=csv,
-                file_name="security_metrics.csv",
-                mime="text/csv"
-            )
+    with st.expander("Export"):
+        export_df = pd.DataFrame(st.session_state.security_metrics).copy()
+        if 'date' in export_df.columns:
+            export_df['date'] = export_df['date'].astype(str)
+        demo_kit.csv_download(export_df, "security_metrics.csv", label="Download metrics CSV")
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -221,7 +222,10 @@ def main():
     df = load_control_data()
     
     # Sidebar
-    st.sidebar.header("Control Management")
+    st.sidebar.header("Controls")
+    seed = demo_kit.seed_controls()
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Control Management")
     
     # Add new control form
     with st.sidebar.expander("Add New Control", expanded=False):
@@ -471,11 +475,12 @@ def main():
         # Simulate historical data
         dates = pd.date_range(start='2023-01-01', end='2024-12-31', freq='ME')
         trend_data = []
+        rng = np.random.default_rng(seed)
         
         for date in dates:
             # Simulate realistic implementation trend
             base_implementation = 30 + (date.year - 2023) * 20 + (date.month - 1) * 1.5
-            variation = np.random.normal(0, 2)
+            variation = rng.normal(0, 2)
             implementation_rate = max(0, min(100, base_implementation + variation))
             
             trend_data.append({
@@ -562,17 +567,12 @@ def main():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Export options
             st.subheader("Export Options")
-            
-            if st.button("Export to Excel"):
-                st.success("Control inventory exported to Excel successfully!")
-            
-            if st.button("Generate Report"):
-                st.success("Comprehensive control report generated!")
-            
-            if st.button("Export Compliance Summary"):
-                st.success("Compliance summary exported!")
+            demo_kit.csv_download(
+                filtered_df.copy(),
+                "controls_filtered.csv",
+                label="Download filtered controls",
+            )
         
         with col2:
             # Management actions

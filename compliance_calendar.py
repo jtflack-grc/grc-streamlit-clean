@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -35,8 +36,9 @@ if 'reminders' not in st.session_state:
 if 'holidays' not in st.session_state:
     st.session_state.holidays = []
 
-def generate_sample_data():
+def generate_sample_data(seed: int = 42):
     """Generate sample compliance calendar data"""
+    rng = np.random.default_rng(seed)
     compliance_events = [
         {
             'id': 'CE-2024-001',
@@ -285,8 +287,38 @@ def generate_sample_data():
             'description': 'Office closed'
         }
     ]
-    
+
+    event_statuses = ['Scheduled', 'Pending', 'In Progress', 'Completed', 'Cancelled']
+    for event in compliance_events:
+        if int(rng.integers(0, 3)) == 0:
+            event['status'] = str(rng.choice(event_statuses))
+        event['reminder_days'] = max(1, int(event.get('reminder_days', 7)) + int(rng.integers(-2, 3)))
+    for deadline in regulatory_deadlines:
+        if int(rng.integers(0, 3)) == 0 and 'status' in deadline:
+            deadline['status'] = str(rng.choice(['Pending', 'In Progress', 'Completed']))
+
     return compliance_events, regulatory_deadlines, audit_schedules, reminders, holidays
+
+
+_EVENT_STATUS_ORDER = ['Pending', 'Scheduled', 'In Progress', 'Completed']
+
+
+def _advance_event_status(status: str) -> str:
+    if status not in _EVENT_STATUS_ORDER or status == _EVENT_STATUS_ORDER[-1]:
+        return status
+    return _EVENT_STATUS_ORDER[_EVENT_STATUS_ORDER.index(status) + 1]
+
+
+def _sync_calendar(seed: int) -> None:
+    if st.session_state.get('_calendar_seed') != seed or not st.session_state.get('compliance_events'):
+        events, deadlines, schedules, reminders, holidays = generate_sample_data(seed)
+        st.session_state.compliance_events = events
+        st.session_state.regulatory_deadlines = deadlines
+        st.session_state.audit_schedules = schedules
+        st.session_state.reminders = reminders
+        st.session_state.holidays = holidays
+        st.session_state._calendar_seed = seed
+
 
 def main():
     portfolio_skin.page_header(
@@ -295,22 +327,25 @@ def main():
         kicker="Compliance",
     )
     st.markdown("Comprehensive calendar system for managing compliance deadlines, audit schedules, and regulatory requirements")
-    
-    # Initialize sample data
-    if not st.session_state.compliance_events:
-        events, deadlines, schedules, reminders, holidays = generate_sample_data()
-        st.session_state.compliance_events = events
-        st.session_state.regulatory_deadlines = deadlines
-        st.session_state.audit_schedules = schedules
-        st.session_state.reminders = reminders
-        st.session_state.holidays = holidays
-    
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox(
-        "Select Module",
-        ["Calendar View", "Compliance Events", "Regulatory Deadlines", "Audit Schedules", "Reminders", "Holidays", "Reports", "Analytics"]
-    )
+
+    with st.sidebar:
+        st.title("Navigation")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        page = st.selectbox(
+            "Select Module",
+            ["Calendar View", "Compliance Events", "Regulatory Deadlines", "Audit Schedules", "Reminders", "Holidays", "Reports", "Analytics"]
+        )
+        horizon_days = st.slider(
+            "What-if look-ahead (days)",
+            min_value=7,
+            max_value=180,
+            value=60,
+            step=7,
+        )
+        st.session_state._calendar_horizon = horizon_days
+        st.caption("Sample / mock data only.")
+    _sync_calendar(seed)
     
     if page == "Calendar View":
         show_calendar_view()
@@ -331,7 +366,19 @@ def main():
 
 def show_calendar_view():
     st.header("Calendar View")
-    
+
+    horizon = int(st.session_state.get('_calendar_horizon', 60))
+    cutoff = datetime.datetime.now() + timedelta(days=horizon)
+    upcoming = [
+        e for e in st.session_state.compliance_events
+        if e['start_date'] <= cutoff and e['start_date'] >= datetime.datetime.now() - timedelta(days=1)
+    ]
+    st.caption(f"Look-ahead window: {horizon} days · {len(upcoming)} upcoming events")
+    if upcoming:
+        peek = pd.DataFrame(upcoming)[['title', 'start_date', 'priority', 'status']].copy()
+        peek['start_date'] = peek['start_date'].astype(str)
+        st.dataframe(peek, use_container_width=True, hide_index=True)
+
     # Calendar controls
     col1, col2, col3 = st.columns(3)
     
@@ -554,7 +601,18 @@ def show_compliance_events():
         filtered_df = filtered_df[filtered_df['framework'] == framework_filter]
     
     st.dataframe(filtered_df, use_container_width=True)
-    
+
+    if not filtered_df.empty:
+        pick = st.selectbox("Advance event status for", filtered_df['id'].tolist())
+        if st.button("Advance selected event status"):
+            for i, event in enumerate(st.session_state.compliance_events):
+                if event['id'] == pick:
+                    st.session_state.compliance_events[i]['status'] = _advance_event_status(
+                        event['status']
+                    )
+                    break
+            st.rerun()
+
     # Event overview
     col1, col2 = st.columns(2)
     
@@ -871,6 +929,12 @@ def show_reports():
     
     # Export functionality
     st.subheader("Export Data")
+    export_df = pd.DataFrame(st.session_state.compliance_events).copy()
+    for col in ('start_date', 'end_date'):
+        if col in export_df.columns:
+            export_df[col] = export_df[col].astype(str)
+    demo_kit.csv_download(export_df, "compliance_events.csv", label="Download events CSV")
+
     export_format = st.selectbox("Export Format", ["CSV", "JSON", "Excel"])
     
     if st.button("Export Data"):

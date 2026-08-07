@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -224,7 +225,10 @@ def main():
     metrics = calculate_exception_metrics(df)
     
     # Sidebar
-    st.sidebar.header("Exception Management")
+    st.sidebar.header("Controls")
+    seed = demo_kit.seed_controls()
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Exception Management")
     
     # Add new exception form
     with st.sidebar.expander("Add New Exception", expanded=False):
@@ -483,17 +487,16 @@ def main():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Export options
             st.subheader("Export Options")
-            
-            if st.button("Export to Excel"):
-                st.success("Exception report exported to Excel successfully!")
-            
-            if st.button("Generate Risk Report"):
-                st.success("Risk analysis report generated!")
-            
-            if st.button("Export Expiration Report"):
-                st.success("Expiration tracking report exported!")
+            export_df = filtered_df.copy()
+            for col in ("expiration_date", "created_date"):
+                if col in export_df.columns:
+                    export_df[col] = export_df[col].astype(str)
+            demo_kit.csv_download(
+                export_df,
+                "exceptions_filtered.csv",
+                label="Download filtered exceptions",
+            )
         
         with col2:
             # Management actions

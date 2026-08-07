@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -7,7 +8,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import datetime
 from datetime import timedelta
-import random
 import json
 
 # Page configuration
@@ -24,39 +24,35 @@ portfolio_skin.apply(hide_sidebar=False)
 
 # Sample analytics data
 @st.cache_data
-def load_analytics_data():
+def load_analytics_data(seed: int = 42):
     """Load sample analytics data"""
-    # Generate time series data
+    rng = np.random.default_rng(seed)
     dates = pd.date_range(start='2023-01-01', end='2024-01-15', freq='D')
-    
-    # Risk scores over time
+
     risk_data = []
     base_risk = 45
     for date in dates:
-        # Add some randomness and trend
         trend = np.sin((date - pd.Timestamp('2023-01-01')).days / 30) * 5
-        noise = random.uniform(-3, 3)
+        noise = float(rng.uniform(-3, 3))
         risk_score = max(0, min(100, base_risk + trend + noise))
         risk_data.append({
             'date': date,
             'risk_score': risk_score,
             'category': 'Overall Risk'
         })
-    
-    # Compliance rates over time
+
     compliance_data = []
     base_compliance = 75
     for date in dates:
         trend = np.sin((date - pd.Timestamp('2023-01-01')).days / 45) * 3
-        noise = random.uniform(-2, 2)
+        noise = float(rng.uniform(-2, 2))
         compliance_rate = max(0, min(100, base_compliance + trend + noise))
         compliance_data.append({
             'date': date,
             'compliance_rate': compliance_rate,
             'category': 'Overall Compliance'
         })
-    
-    # Control effectiveness data
+
     controls = [
         {'name': 'Access Control', 'effectiveness': 85, 'category': 'Security'},
         {'name': 'Data Protection', 'effectiveness': 78, 'category': 'Privacy'},
@@ -69,8 +65,9 @@ def load_analytics_data():
         {'name': 'Patch Management', 'effectiveness': 79, 'category': 'Security'},
         {'name': 'Business Continuity', 'effectiveness': 83, 'category': 'Operations'}
     ]
-    
-    # Framework compliance data
+    for c in controls:
+        c['effectiveness'] = int(np.clip(c['effectiveness'] + int(rng.integers(-5, 6)), 40, 99))
+
     frameworks = [
         {'framework': 'ISO 27001', 'compliance': 82, 'controls': 114, 'implemented': 94},
         {'framework': 'SOC 2', 'compliance': 78, 'controls': 67, 'implemented': 52},
@@ -78,37 +75,35 @@ def load_analytics_data():
         {'framework': 'PCI DSS', 'compliance': 85, 'controls': 78, 'implemented': 66},
         {'framework': 'HIPAA', 'compliance': 88, 'controls': 45, 'implemented': 40}
     ]
-    
-    # Vendor risk data
+    for f in frameworks:
+        f['compliance'] = int(np.clip(f['compliance'] + int(rng.integers(-4, 5)), 50, 99))
+
     vendors = []
     vendor_names = ['TechCorp', 'DataFlow', 'CloudSecure', 'NetWorks', 'SysTech', 'InfoSafe', 'SecureCloud', 'DataTech']
-    for i, name in enumerate(vendor_names):
-        risk_score = random.randint(20, 80)
-        compliance_score = random.randint(60, 95)
+    for name in vendor_names:
+        risk_score = int(rng.integers(20, 81))
+        compliance_score = int(rng.integers(60, 96))
         vendors.append({
             'vendor_name': name,
             'risk_score': risk_score,
             'compliance_score': compliance_score,
-            'contract_value': random.randint(50000, 500000),
+            'contract_value': int(rng.integers(50000, 500001)),
             'risk_tier': 'High' if risk_score > 60 else 'Medium' if risk_score > 30 else 'Low'
         })
-    
-    # Incident data
+
     incidents = []
     incident_types = ['Data Breach', 'System Outage', 'Access Violation', 'Malware', 'Phishing', 'Insider Threat']
-    for i in range(50):
-        incident_date = random.choice(dates)
-        incident_type = random.choice(incident_types)
-        severity = random.choice(['Low', 'Medium', 'High', 'Critical'])
-        resolution_time = random.randint(1, 72)
+    severities = ['Low', 'Medium', 'High', 'Critical']
+    for _ in range(50):
+        incident_date = dates[int(rng.integers(0, len(dates)))]
         incidents.append({
             'date': incident_date,
-            'type': incident_type,
-            'severity': severity,
-            'resolution_time': resolution_time,
-            'cost': random.randint(1000, 100000)
+            'type': str(rng.choice(incident_types)),
+            'severity': str(rng.choice(severities)),
+            'resolution_time': int(rng.integers(1, 73)),
+            'cost': int(rng.integers(1000, 100001))
         })
-    
+
     return {
         'risk_data': pd.DataFrame(risk_data),
         'compliance_data': pd.DataFrame(compliance_data),
@@ -157,39 +152,47 @@ def main():
         kicker="Analytics",
     )
     
-    # Load data
-    data = load_analytics_data()
+    with st.sidebar:
+        st.header("Analytics Controls")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        date_range = st.selectbox(
+            "Select Date Range",
+            ["Last 30 Days", "Last 90 Days", "Last 6 Months", "Last Year", "All Time"],
+            index=1,
+        )
+        st.subheader("Filters")
+
+    data = load_analytics_data(seed)
+
+    with st.sidebar:
+        risk_tier_filter = st.multiselect(
+            "Risk Tier",
+            list(data['vendors']['risk_tier'].unique()),
+            default=list(data['vendors']['risk_tier'].unique()),
+        )
+        severity_filter = st.multiselect(
+            "Incident Severity",
+            list(data['incidents']['severity'].unique()),
+            default=list(data['incidents']['severity'].unique()),
+        )
+        risk_adjust = st.slider(
+            "What-if risk adjust",
+            min_value=-15,
+            max_value=15,
+            value=0,
+            step=1,
+            help="Shift vendor risk scores to explore tier impact.",
+        )
+        st.caption("Sample / mock data only.")
+
+    data['vendors'] = data['vendors'].copy()
+    data['vendors']['risk_score'] = (data['vendors']['risk_score'] + risk_adjust).clip(0, 100)
+    data['vendors']['risk_tier'] = data['vendors']['risk_score'].apply(
+        lambda s: 'High' if s > 60 else 'Medium' if s > 30 else 'Low'
+    )
     metrics = calculate_analytics_metrics(data)
-    
-    # Sidebar
-    st.sidebar.header("Analytics Controls")
-    
-    # Date range selector
-    st.sidebar.subheader("Date Range")
-    date_range = st.sidebar.selectbox(
-        "Select Date Range",
-        ["Last 30 Days", "Last 90 Days", "Last 6 Months", "Last Year", "All Time"],
-        index=1
-    )
-    
-    # Filter options
-    st.sidebar.subheader("Filters")
-    
-    # Risk tier filter
-    risk_tier_filter = st.sidebar.multiselect(
-        "Risk Tier",
-        data['vendors']['risk_tier'].unique(),
-        default=data['vendors']['risk_tier'].unique()
-    )
-    
-    # Incident severity filter
-    severity_filter = st.sidebar.multiselect(
-        "Incident Severity",
-        data['incidents']['severity'].unique(),
-        default=data['incidents']['severity'].unique()
-    )
-    
-    # Apply filters
+
     filtered_vendors = data['vendors'][data['vendors']['risk_tier'].isin(risk_tier_filter)]
     filtered_incidents = data['incidents'][data['incidents']['severity'].isin(severity_filter)]
     
@@ -623,22 +626,17 @@ def main():
                 st.success(f"Report scheduled for {schedule_frequency} delivery!")
         
         with col2:
-            # Data export
             st.subheader("Export Data")
-            
-            export_dataset = st.selectbox(
-                "Dataset",
-                ["Risk Data", "Compliance Data", "Control Data", "Vendor Data", "Incident Data", "All Data"]
+            export_df = filtered_incidents.copy()
+            if 'date' in export_df.columns:
+                export_df['date'] = export_df['date'].astype(str)
+            demo_kit.csv_download(
+                export_df, "analytics_incidents_filtered.csv", label="Download filtered incidents"
             )
-            
-            export_format = st.selectbox(
-                "Export Format",
-                ["CSV", "Excel", "JSON", "XML"]
+            demo_kit.csv_download(
+                filtered_vendors, "analytics_vendors_filtered.csv", label="Download filtered vendors", key="analytics_vendors_csv"
             )
-            
-            if st.button("Export Data"):
-                st.success(f"{export_dataset} exported in {export_format} format!")
-        
+
         # Executive summary
         st.subheader("Executive Summary")
         

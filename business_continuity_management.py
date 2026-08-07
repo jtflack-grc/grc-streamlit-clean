@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -34,8 +35,9 @@ if 'recovery_tests' not in st.session_state:
 if 'critical_assets' not in st.session_state:
     st.session_state.critical_assets = []
 
-def generate_sample_data():
+def generate_sample_data(seed: int = 42):
     """Generate sample business continuity data"""
+    rng = np.random.default_rng(seed)
     business_processes = [
         {
             'id': 'BP-001',
@@ -173,19 +175,19 @@ def generate_sample_data():
     results = ['Passed', 'Failed', 'Partially Passed', 'Scheduled']
     
     for i in range(15):
-        test_date = datetime.datetime.now() - timedelta(days=random.randint(30, 365))
-        next_test = test_date + timedelta(days=random.randint(90, 365))
-        
+        test_date = datetime.datetime.now() - timedelta(days=int(rng.integers(30, 366)))
+        next_test = test_date + timedelta(days=int(rng.integers(90, 366)))
+
         test = {
             'id': f'RT-{2024:04d}-{i+1:03d}',
             'name': f'Recovery Test {i+1}',
-            'type': random.choice(test_types),
+            'type': str(rng.choice(test_types)),
             'test_date': test_date,
             'next_test_date': next_test,
-            'result': random.choice(results),
-            'participants': random.randint(5, 25),
-            'duration_hours': random.randint(2, 8),
-            'cost': random.randint(1000, 10000),
+            'result': str(rng.choice(results)),
+            'participants': int(rng.integers(5, 26)),
+            'duration_hours': int(rng.integers(2, 9)),
+            'cost': int(rng.integers(1000, 10001)),
             'lessons_learned': f'Key lesson from test {i+1}',
             'improvements': f'Improvement identified in test {i+1}'
         }
@@ -226,8 +228,27 @@ def generate_sample_data():
             'next_assessment': datetime.datetime.now() + timedelta(days=45)
         }
     ]
-    
+
+    for bp in business_processes:
+        bp['rto_hours'] = max(1, int(bp['rto_hours']) + int(rng.integers(-2, 3)))
+        bp['rpo_hours'] = max(0.5, float(bp['rpo_hours']) + float(rng.choice([-0.5, 0, 0.5, 1])))
+    for plan in recovery_plans:
+        if 'test_score' in plan:
+            plan['test_score'] = int(np.clip(plan['test_score'] + int(rng.integers(-5, 6)), 50, 100))
+
     return business_processes, recovery_plans, disaster_scenarios, recovery_tests, critical_assets
+
+
+def _sync_bcm(seed: int) -> None:
+    if st.session_state.get('_bcm_seed') != seed or not st.session_state.get('business_processes'):
+        bp, rp, ds, rt, ca = generate_sample_data(seed)
+        st.session_state.business_processes = bp
+        st.session_state.recovery_plans = rp
+        st.session_state.disaster_scenarios = ds
+        st.session_state.recovery_tests = rt
+        st.session_state.critical_assets = ca
+        st.session_state._bcm_seed = seed
+
 
 def main():
     portfolio_skin.page_header(
@@ -236,23 +257,29 @@ def main():
         kicker="Resilience",
     )
     st.markdown("Comprehensive business continuity planning, testing, and management platform")
-    
-    # Initialize sample data
-    if not st.session_state.business_processes:
-        bp, rp, ds, rt, ca = generate_sample_data()
-        st.session_state.business_processes = bp
-        st.session_state.recovery_plans = rp
-        st.session_state.disaster_scenarios = ds
-        st.session_state.recovery_tests = rt
-        st.session_state.critical_assets = ca
-    
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox(
-        "Select Module",
-        ["Dashboard", "Business Processes", "Recovery Plans", "Disaster Scenarios", 
-         "Recovery Testing", "Critical Assets", "BCM Metrics", "Reports"]
-    )
+
+    with st.sidebar:
+        st.title("Navigation")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        page = st.selectbox(
+            "Select Module",
+            ["Dashboard", "Business Processes", "Recovery Plans", "Disaster Scenarios",
+             "Recovery Testing", "Critical Assets", "BCM Metrics", "Reports"]
+        )
+        rto_adjust = st.slider(
+            "What-if RTO adjust (hours)",
+            min_value=-8,
+            max_value=8,
+            value=0,
+            step=1,
+        )
+        st.caption("Sample / mock data only.")
+    _sync_bcm(seed)
+    for bp in st.session_state.business_processes:
+        base = bp.get('_base_rto', bp['rto_hours'])
+        bp['_base_rto'] = base
+        bp['rto_hours'] = max(1, int(base) + int(rto_adjust))
     
     if page == "Dashboard":
         show_dashboard()
@@ -748,6 +775,12 @@ def show_reports():
     
     # Export functionality
     st.subheader("Export Data")
+    export_df = pd.DataFrame(st.session_state.business_processes).copy()
+    for col in export_df.columns:
+        if export_df[col].dtype == object:
+            export_df[col] = export_df[col].astype(str)
+    demo_kit.csv_download(export_df, "business_processes.csv", label="Download processes CSV")
+
     export_format = st.selectbox("Export Format", ["CSV", "JSON", "Excel"])
     
     if st.button("Export Data"):

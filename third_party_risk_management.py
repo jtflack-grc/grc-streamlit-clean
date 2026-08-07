@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -36,8 +37,9 @@ if 'vendor_categories' not in st.session_state:
 if 'vendor_contacts' not in st.session_state:
     st.session_state.vendor_contacts = []
 
-def generate_sample_data():
+def generate_sample_data(seed: int = 42):
     """Generate sample third-party risk management data"""
+    rng = np.random.default_rng(seed)
     vendors = [
         {
             'id': 'VND-001',
@@ -308,8 +310,49 @@ def generate_sample_data():
             'primary_contact': True
         }
     ]
-    
+
+    risk_levels = ['Low', 'Medium', 'High', 'Critical']
+    for vendor in vendors:
+        vendor['contract_value'] = int(max(10000, vendor['contract_value'] * float(rng.uniform(0.9, 1.1))))
+        if int(rng.integers(0, 4)) == 0:
+            vendor['risk_level'] = str(rng.choice(risk_levels))
+    for assessment in vendor_assessments:
+        for score_key in ('security_score', 'compliance_score', 'financial_score', 'operational_score'):
+            assessment[score_key] = int(np.clip(assessment[score_key] + int(rng.integers(-5, 6)), 50, 100))
+        assessment['overall_score'] = round(
+            (
+                assessment['security_score']
+                + assessment['compliance_score']
+                + assessment['financial_score']
+                + assessment['operational_score']
+            )
+            / 4.0,
+            1,
+        )
+
     return vendors, vendor_assessments, vendor_contracts, vendor_incidents, vendor_categories, vendor_contacts
+
+
+_INCIDENT_STATUS_ORDER = ['Under Investigation', 'Contained', 'Resolved']
+
+
+def _advance_incident_status(status: str) -> str:
+    if status not in _INCIDENT_STATUS_ORDER or status == _INCIDENT_STATUS_ORDER[-1]:
+        return status
+    return _INCIDENT_STATUS_ORDER[_INCIDENT_STATUS_ORDER.index(status) + 1]
+
+
+def _sync_vendors(seed: int) -> None:
+    if st.session_state.get('_tprm_seed') != seed or not st.session_state.get('vendors'):
+        vendors, assessments, contracts, incidents, categories, contacts = generate_sample_data(seed)
+        st.session_state.vendors = vendors
+        st.session_state.vendor_assessments = assessments
+        st.session_state.vendor_contracts = contracts
+        st.session_state.vendor_incidents = incidents
+        st.session_state.vendor_categories = categories
+        st.session_state.vendor_contacts = contacts
+        st.session_state._tprm_seed = seed
+
 
 def main():
     portfolio_skin.page_header(
@@ -318,24 +361,30 @@ def main():
         kicker="Third-party risk",
     )
     st.markdown("Comprehensive platform for managing vendor relationships, assessing third-party risks, and ensuring compliance with vendor management requirements")
-    
-    # Initialize sample data
-    if not st.session_state.vendors:
-        vendors, assessments, contracts, incidents, categories, contacts = generate_sample_data()
-        st.session_state.vendors = vendors
-        st.session_state.vendor_assessments = assessments
-        st.session_state.vendor_contracts = contracts
-        st.session_state.vendor_incidents = incidents
-        st.session_state.vendor_categories = categories
-        st.session_state.vendor_contacts = contacts
-    
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox(
-        "Select Module",
-        ["Dashboard", "Vendor Management", "Risk Assessments", "Contract Management", "Incident Tracking", "Category Management", "Contact Management", "Reports"]
-    )
-    
+
+    with st.sidebar:
+        st.title("Navigation")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        page = st.selectbox(
+            "Select Module",
+            ["Dashboard", "Vendor Management", "Risk Assessments", "Contract Management", "Incident Tracking", "Category Management", "Contact Management", "Reports"]
+        )
+        score_adjust = st.slider(
+            "What-if score adjust",
+            min_value=-10,
+            max_value=10,
+            value=0,
+            step=1,
+            help="Temporary adjustment to assessment overall scores.",
+        )
+        st.caption("Sample / mock data only.")
+    _sync_vendors(seed)
+    for assessment in st.session_state.vendor_assessments:
+        base = assessment.get('_base_overall', assessment['overall_score'])
+        assessment['_base_overall'] = base
+        assessment['overall_score'] = round(float(np.clip(base + score_adjust, 0, 100)), 1)
+
     if page == "Dashboard":
         show_dashboard()
     elif page == "Vendor Management":
@@ -726,6 +775,16 @@ def show_incident_tracking():
         filtered_df = filtered_df[filtered_df['status'] == status_filter]
     
     st.dataframe(filtered_df, use_container_width=True)
+
+    st.subheader("Advance incident")
+    for incident in st.session_state.vendor_incidents:
+        if incident['status'] not in _INCIDENT_STATUS_ORDER or incident['status'] == 'Resolved':
+            continue
+        cols = st.columns([3, 1])
+        cols[0].write(f"{incident['id']} — {incident['incident_type']} ({incident['status']})")
+        if cols[1].button("Advance status", key=f"adv_vi_{incident['id']}"):
+            incident['status'] = _advance_incident_status(incident['status'])
+            st.rerun()
     
     # Incident analytics
     col1, col2 = st.columns(2)
@@ -916,19 +975,12 @@ def show_reports():
             st.write(f"• Overall Risk Posture: Moderate")
     
     # Export functionality
-    st.subheader("Export Data")
-    export_format = st.selectbox("Export Format", ["CSV", "JSON", "Excel"])
-    
-    if st.button("Export Vendor Data"):
-        if export_format == "CSV":
-            df_vendors = pd.DataFrame(st.session_state.vendors)
-            csv = df_vendors.to_csv(index=False)
-            st.download_button(
-                label="Download CSV",
-                data=csv,
-                file_name="vendor_risk_data.csv",
-                mime="text/csv"
-            )
+    with st.expander("Export"):
+        export_df = pd.DataFrame(st.session_state.vendors).copy()
+        for col in ('contract_start', 'contract_end', 'last_assessment'):
+            if col in export_df.columns:
+                export_df[col] = export_df[col].astype(str)
+        demo_kit.csv_download(export_df, "vendor_risk_data.csv", label="Download vendors CSV")
 
 if __name__ == "__main__":
     main()

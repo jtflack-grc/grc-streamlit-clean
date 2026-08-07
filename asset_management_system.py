@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -34,8 +35,9 @@ if 'asset_maintenance' not in st.session_state:
 if 'asset_licenses' not in st.session_state:
     st.session_state.asset_licenses = []
 
-def generate_sample_data():
+def generate_sample_data(seed: int = 42):
     """Generate sample asset management data"""
+    rng = np.random.default_rng(seed)
     asset_categories = [
         {'id': 'CAT-001', 'name': 'Laptops', 'description': 'Portable computers and laptops'},
         {'id': 'CAT-002', 'name': 'Desktops', 'description': 'Desktop computers and workstations'},
@@ -232,8 +234,41 @@ def generate_sample_data():
             'seats': 1
         }
     ]
-    
+
+    # Light seed jitter so Resample changes the inventory view
+    statuses = ['In Use', 'In Storage', 'Under Maintenance', 'Retired', 'Disposed']
+    for asset in assets:
+        asset['current_value'] = round(
+            max(0.0, float(asset['current_value']) * float(rng.uniform(0.85, 1.15))), 2
+        )
+        if int(rng.integers(0, 3)) == 0:
+            asset['status'] = str(rng.choice(statuses))
+        asset['criticality'] = str(
+            rng.choice(['Low', 'Medium', 'High', 'Critical'])
+        ) if int(rng.integers(0, 4)) == 0 else asset['criticality']
+
     return assets, asset_categories, asset_locations, asset_maintenance, asset_licenses
+
+
+_ASSET_STATUS_ORDER = ['In Use', 'Under Maintenance', 'In Storage', 'Retired', 'Disposed']
+
+
+def _advance_asset_status(status: str) -> str:
+    if status not in _ASSET_STATUS_ORDER or status == _ASSET_STATUS_ORDER[-1]:
+        return status
+    return _ASSET_STATUS_ORDER[_ASSET_STATUS_ORDER.index(status) + 1]
+
+
+def _sync_assets(seed: int) -> None:
+    if st.session_state.get('_asset_seed') != seed or not st.session_state.get('assets'):
+        assets, categories, locations, maintenance, licenses = generate_sample_data(seed)
+        st.session_state.assets = assets
+        st.session_state.asset_categories = categories
+        st.session_state.asset_locations = locations
+        st.session_state.asset_maintenance = maintenance
+        st.session_state.asset_licenses = licenses
+        st.session_state._asset_seed = seed
+
 
 def main():
     portfolio_skin.page_header(
@@ -242,22 +277,28 @@ def main():
         kicker="Asset management",
     )
     st.markdown("Comprehensive platform for managing IT assets, tracking lifecycle, and ensuring proper security controls")
-    
-    # Initialize sample data
-    if not st.session_state.assets:
-        assets, categories, locations, maintenance, licenses = generate_sample_data()
-        st.session_state.assets = assets
-        st.session_state.asset_categories = categories
-        st.session_state.asset_locations = locations
-        st.session_state.asset_maintenance = maintenance
-        st.session_state.asset_licenses = licenses
-    
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox(
-        "Select Module",
-        ["Dashboard", "Assets", "Categories", "Locations", "Maintenance", "Licenses", "Reports", "Analytics"]
-    )
+
+    with st.sidebar:
+        st.title("Navigation")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        page = st.selectbox(
+            "Select Module",
+            ["Dashboard", "Assets", "Categories", "Locations", "Maintenance", "Licenses", "Reports", "Analytics"]
+        )
+        value_adjust = st.slider(
+            "What-if value adjust (%)",
+            min_value=-25,
+            max_value=25,
+            value=0,
+            step=5,
+        )
+        st.caption("Sample / mock data only.")
+    _sync_assets(seed)
+    for asset in st.session_state.assets:
+        base = asset.get('_base_value', asset['current_value'])
+        asset['_base_value'] = base
+        asset['current_value'] = round(max(0.0, base * (1 + value_adjust / 100.0)), 2)
     
     if page == "Dashboard":
         show_dashboard()
@@ -444,7 +485,16 @@ def show_assets():
         filtered_df = filtered_df[filtered_df['department'] == department_filter]
     
     st.dataframe(filtered_df, use_container_width=True)
-    
+
+    if not filtered_df.empty:
+        pick = st.selectbox("Advance status for", filtered_df['id'].tolist())
+        if st.button("Advance selected asset status"):
+            for i, asset in enumerate(st.session_state.assets):
+                if asset['id'] == pick:
+                    st.session_state.assets[i]['status'] = _advance_asset_status(asset['status'])
+                    break
+            st.rerun()
+
     # Asset overview
     col1, col2 = st.columns(2)
     
@@ -737,6 +787,12 @@ def show_reports():
     
     # Export functionality
     st.subheader("Export Data")
+    export_df = pd.DataFrame(st.session_state.assets).copy()
+    for col in ('purchase_date', 'warranty_expiry', 'last_updated'):
+        if col in export_df.columns:
+            export_df[col] = export_df[col].astype(str)
+    demo_kit.csv_download(export_df, "asset_inventory.csv", label="Download assets CSV")
+
     export_format = st.selectbox("Export Format", ["CSV", "JSON", "Excel"])
     
     if st.button("Export Asset Data"):

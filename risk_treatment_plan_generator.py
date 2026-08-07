@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -260,7 +261,10 @@ def main():
     metrics = calculate_plan_metrics(df)
     
     # Sidebar filters
-    st.sidebar.header("Filters")
+    st.sidebar.header("Controls")
+    seed = demo_kit.seed_controls()
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Filters")
     
     # Status filter
     status_filter = st.sidebar.multiselect(
@@ -318,7 +322,7 @@ def main():
         st.metric("Risk Reduction", f"{metrics['avg_inherent_risk'] - metrics['avg_residual_risk']:.1f} pts")
     
     # Tabs for different views
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Treatment Plans", "Analytics", "Plan Generator", "Progress Tracking", "Management"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Treatment Plans", "Analytics", "Plan Generator", "Progress Tracking", "Management", "Export"])
     
     with tab1:
         st.header("Risk Treatment Plans")
@@ -568,12 +572,13 @@ def main():
         # Simulate timeline data
         dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='ME')
         timeline_data = []
+        rng = np.random.default_rng(seed)
         
         for date in dates:
             # Simulate monthly progress
             base_completed = 2
             progress_factor = 1 + (date.month - 1) * 0.1
-            completed = min(metrics['total_plans'], int(base_completed * progress_factor))
+            completed = min(metrics['total_plans'], int(base_completed * progress_factor + rng.integers(0, 2)))
             
             timeline_data.append({
                 'date': date,
@@ -690,6 +695,18 @@ def main():
             
             for item in action_items:
                 st.write(item)
+
+    with tab6:
+        export_df = filtered_df.copy()
+        for col in ("target_date", "created_date", "last_updated"):
+            if col in export_df.columns:
+                export_df[col] = export_df[col].astype(str)
+        for col in ("existing_controls", "framework_alignment", "evidence"):
+            if col in export_df.columns:
+                export_df[col] = export_df[col].apply(
+                    lambda v: "; ".join(v) if isinstance(v, (list, tuple)) else v
+                )
+        demo_kit.csv_download(export_df, "treatment_plans_filtered.csv", label="Download filtered plans")
 
 if __name__ == "__main__":
     main()

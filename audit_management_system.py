@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -34,8 +35,9 @@ if 'audit_plans' not in st.session_state:
 if 'evidence' not in st.session_state:
     st.session_state.evidence = []
 
-def generate_sample_data():
+def generate_sample_data(seed: int = 42):
     """Generate sample audit management data"""
+    rng = np.random.default_rng(seed)
     audits = [
         {
             'id': 'AUD-2024-001',
@@ -335,8 +337,39 @@ def generate_sample_data():
             'file_size': '0.5 MB'
         }
     ]
-    
+
+    audit_statuses = ['Planned', 'In Progress', 'Completed', 'On Hold']
+    finding_statuses = ['Open', 'In Progress', 'Closed', 'Deferred']
+    for audit in audits:
+        audit['findings_count'] = max(0, int(audit['findings_count']) + int(rng.integers(-2, 3)))
+        if int(rng.integers(0, 3)) == 0:
+            audit['status'] = str(rng.choice(audit_statuses))
+    for finding in findings:
+        if int(rng.integers(0, 2)) == 0:
+            finding['status'] = str(rng.choice(finding_statuses))
+
     return audits, findings, auditors, audit_plans, evidence
+
+
+_FINDING_STATUS_ORDER = ['Open', 'In Progress', 'Closed']
+
+
+def _advance_finding_status(status: str) -> str:
+    if status not in _FINDING_STATUS_ORDER or status == _FINDING_STATUS_ORDER[-1]:
+        return status
+    return _FINDING_STATUS_ORDER[_FINDING_STATUS_ORDER.index(status) + 1]
+
+
+def _sync_audits(seed: int) -> None:
+    if st.session_state.get('_audit_seed') != seed or not st.session_state.get('audits'):
+        audits, findings, auditors, audit_plans, evidence = generate_sample_data(seed)
+        st.session_state.audits = audits
+        st.session_state.findings = findings
+        st.session_state.auditors = auditors
+        st.session_state.audit_plans = audit_plans
+        st.session_state.evidence = evidence
+        st.session_state._audit_seed = seed
+
 
 def main():
     portfolio_skin.page_header(
@@ -345,22 +378,17 @@ def main():
         kicker="Audit",
     )
     st.markdown("Comprehensive audit planning, execution, and findings management platform")
-    
-    # Initialize sample data
-    if not st.session_state.audits:
-        audits, findings, auditors, audit_plans, evidence = generate_sample_data()
-        st.session_state.audits = audits
-        st.session_state.findings = findings
-        st.session_state.auditors = auditors
-        st.session_state.audit_plans = audit_plans
-        st.session_state.evidence = evidence
-    
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox(
-        "Select Module",
-        ["Dashboard", "Audits", "Findings", "Auditors", "Audit Plans", "Evidence", "Reports", "Analytics"]
-    )
+
+    with st.sidebar:
+        st.title("Navigation")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        page = st.selectbox(
+            "Select Module",
+            ["Dashboard", "Audits", "Findings", "Auditors", "Audit Plans", "Evidence", "Reports", "Analytics"]
+        )
+        st.caption("Sample / mock data only.")
+    _sync_audits(seed)
     
     if page == "Dashboard":
         show_dashboard()
@@ -608,7 +636,18 @@ def show_findings():
         filtered_df = filtered_df[filtered_df['category'] == category_filter]
     
     st.dataframe(filtered_df, use_container_width=True)
-    
+
+    if not filtered_df.empty:
+        pick = st.selectbox("Advance finding status for", filtered_df['id'].tolist())
+        if st.button("Advance selected finding status"):
+            for i, finding in enumerate(st.session_state.findings):
+                if finding['id'] == pick:
+                    st.session_state.findings[i]['status'] = _advance_finding_status(
+                        finding['status']
+                    )
+                    break
+            st.rerun()
+
     # Finding details
     if st.checkbox("Show Finding Details"):
         selected_finding = st.selectbox("Select Finding", df['title'].tolist())
@@ -854,6 +893,18 @@ def show_reports():
     
     # Export functionality
     st.subheader("Export Data")
+    export_audits = pd.DataFrame(st.session_state.audits).copy()
+    for col in ('start_date', 'end_date'):
+        if col in export_audits.columns:
+            export_audits[col] = export_audits[col].astype(str)
+    demo_kit.csv_download(export_audits, "audits.csv", label="Download audits CSV")
+    export_findings = pd.DataFrame(st.session_state.findings).copy()
+    if 'due_date' in export_findings.columns:
+        export_findings['due_date'] = export_findings['due_date'].astype(str)
+    demo_kit.csv_download(
+        export_findings, "audit_findings.csv", label="Download findings CSV", key="audit_findings_csv"
+    )
+
     export_format = st.selectbox("Export Format", ["CSV", "JSON", "Excel"])
     
     if st.button("Export Data"):

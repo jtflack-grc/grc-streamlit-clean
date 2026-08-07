@@ -24,6 +24,7 @@ from unix_linux_audit_core import (
     UnixLinuxSecurityAuditor, SecurityLevel, ComplianceStatus, generate_mock_unix_linux_data
 )
 from demo_safety import allow_disk_persistence
+import demo_kit
 
 # Security configuration
 SESSION_TIMEOUT_MINUTES = 30
@@ -122,6 +123,13 @@ def main():
                 st.error(f"Audit failed: {str(e)}")
                 st.info("Please try again or check your configuration.")
                 log_security_event("AUDIT_FAILED", f"Audit failed: {str(e)}")
+
+        st.session_state.unix_score_adjust = st.slider(
+            "What-if compliance adjust",
+            -20,
+            20,
+            int(st.session_state.get("unix_score_adjust", 0)),
+        )
         
         # Data persistence controls
         st.header("Data Management")
@@ -149,6 +157,13 @@ def main():
         st.header("Export Reports")
         if st.session_state.audit_results is not None:
             st.markdown("**Available Reports:**")
+            if st.session_state.audit_summary:
+                demo_kit.csv_download(
+                    pd.DataFrame([st.session_state.audit_summary]),
+                    "unix_linux_audit_summary.csv",
+                    label="Summary CSV",
+                    key="unix_summary_csv",
+                )
             
             # JSON Export
             if st.button("Export to JSON", key="json_export", use_container_width=True):
@@ -253,12 +268,14 @@ def show_dashboard():
     
     # Key metrics
     col1, col2, col3, col4 = st.columns(4)
+    adjust = int(st.session_state.get("unix_score_adjust", 0))
+    shown = max(0, min(100, float(st.session_state.audit_summary["compliance_score"]) + adjust))
     
     with col1:
         st.metric(
             label="Compliance Score",
-            value=f"{st.session_state.audit_summary['compliance_score']}%",
-            delta=None
+            value=f"{shown:.0f}%",
+            delta=f"{adjust:+d} what-if" if adjust else None,
         )
     
     with col2:

@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -156,11 +157,12 @@ def calculate_risk_metrics(df):
         'overdue_reviews': overdue_reviews
     }
 
-def monte_carlo_simulation(df, simulations=10000):
+def monte_carlo_simulation(df, simulations=10000, seed=None):
     """Perform Monte Carlo simulation on risk scores"""
+    rng = np.random.default_rng(seed if seed is not None else demo_kit.ensure_seed())
     # Create probability distributions for impact and likelihood
-    impact_samples = np.random.choice([1, 2, 3, 4, 5], size=simulations, p=[0.1, 0.2, 0.3, 0.25, 0.15])
-    likelihood_samples = np.random.choice([1, 2, 3, 4, 5], size=simulations, p=[0.15, 0.25, 0.3, 0.2, 0.1])
+    impact_samples = rng.choice([1, 2, 3, 4, 5], size=simulations, p=[0.1, 0.2, 0.3, 0.25, 0.15])
+    likelihood_samples = rng.choice([1, 2, 3, 4, 5], size=simulations, p=[0.15, 0.25, 0.3, 0.2, 0.1])
     
     # Calculate risk scores
     risk_scores = impact_samples * likelihood_samples
@@ -179,10 +181,12 @@ def main():
     
     # Load data
     df = load_risk_data()
-    metrics = calculate_risk_metrics(df)
     
     # Sidebar filters
-    st.sidebar.header("Filters")
+    st.sidebar.header("Controls")
+    seed = demo_kit.seed_controls()
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Filters")
     
     # Status filter
     status_filter = st.sidebar.multiselect(
@@ -212,60 +216,72 @@ def main():
         (df['category'].isin(category_filter)) &
         (df['score'] >= score_range[0]) &
         (df['score'] <= score_range[1])
-    ]
+    ].copy()
+    if len(filtered_df):
+        metrics = calculate_risk_metrics(filtered_df)
+    else:
+        metrics = {
+            'total_risks': 0, 'critical_risks': 0, 'high_risks': 0, 'medium_risks': 0, 'low_risks': 0,
+            'open_risks': 0, 'closed_risks': 0, 'accepted_risks': 0, 'mitigating_risks': 0,
+            'avg_score': 0.0, 'overdue_reviews': 0
+        }
     
     # Main dashboard
     col1, col2, col3, col4 = st.columns(4)
+    total = max(metrics['total_risks'], 1)
     
     with col1:
         st.metric("Total Risks", metrics['total_risks'])
-        st.metric("Critical Risks", metrics['critical_risks'], delta=f"{metrics['critical_risks'] - 0}")
+        st.metric("Critical Risks", metrics['critical_risks'])
     
     with col2:
         st.metric("High Risks", metrics['high_risks'])
-        st.metric("Open Risks", metrics['open_risks'], delta=f"{metrics['open_risks'] - 5}")
+        st.metric("Open Risks", metrics['open_risks'])
     
     with col3:
         st.metric("Average Score", f"{metrics['avg_score']:.1f}")
-        st.metric("Overdue Reviews", metrics['overdue_reviews'], delta=f"{metrics['overdue_reviews'] - 0}")
+        st.metric("Overdue Reviews", metrics['overdue_reviews'])
     
     with col4:
         st.metric("Closed Risks", metrics['closed_risks'])
-        st.metric("Risk Coverage", f"{(metrics['closed_risks'] + metrics['accepted_risks']) / metrics['total_risks'] * 100:.1f}%")
+        st.metric("Risk Coverage", f"{(metrics['closed_risks'] + metrics['accepted_risks']) / total * 100:.1f}%")
     
     # Tabs for different views
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Risk Register", "Analytics", "Monte Carlo", "Trends", "Risk Management"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Risk Register", "Analytics", "Monte Carlo", "Trends", "Risk Management", "Export"])
     
     with tab1:
         st.header("Risk Register")
         
-        # Risk register table
-        st.dataframe(
-            filtered_df[['id', 'asset', 'description', 'impact', 'likelihood', 'score', 'status', 'category', 'owner', 'review_date']],
-            use_container_width=True,
-            hide_index=True
-        )
+        if filtered_df.empty:
+            st.info("No risks match the current filters.")
+        else:
+            # Risk register table
+            st.dataframe(
+                filtered_df[['id', 'asset', 'description', 'impact', 'likelihood', 'score', 'status', 'category', 'owner', 'review_date']],
+                use_container_width=True,
+                hide_index=True
+            )
         
-        # Risk details expander
-        with st.expander("Risk Details"):
-            selected_risk = st.selectbox("Select Risk", filtered_df['id'].tolist())
-            risk_data = filtered_df[filtered_df['id'] == selected_risk].iloc[0]
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write(f"**Asset:** {risk_data['asset']}")
-                st.write(f"**Category:** {risk_data['category']}")
-                st.write(f"**Owner:** {risk_data['owner']}")
-                st.write(f"**Review Date:** {risk_data['review_date'].strftime('%Y-%m-%d')}")
-            
-            with col2:
-                st.write(f"**Impact:** {risk_data['impact']}/5")
-                st.write(f"**Likelihood:** {risk_data['likelihood']}/5")
-                st.write(f"**Risk Score:** {risk_data['score']}")
-                st.write(f"**Status:** {risk_data['status']}")
-            
-            st.write(f"**Description:** {risk_data['description']}")
-            st.write(f"**Treatment:** {risk_data['treatment']}")
+            # Risk details expander
+            with st.expander("Risk Details"):
+                selected_risk = st.selectbox("Select Risk", filtered_df['id'].tolist())
+                risk_data = filtered_df[filtered_df['id'] == selected_risk].iloc[0]
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"**Asset:** {risk_data['asset']}")
+                    st.write(f"**Category:** {risk_data['category']}")
+                    st.write(f"**Owner:** {risk_data['owner']}")
+                    st.write(f"**Review Date:** {risk_data['review_date'].strftime('%Y-%m-%d')}")
+                
+                with col2:
+                    st.write(f"**Impact:** {risk_data['impact']}/5")
+                    st.write(f"**Likelihood:** {risk_data['likelihood']}/5")
+                    st.write(f"**Risk Score:** {risk_data['score']}")
+                    st.write(f"**Status:** {risk_data['status']}")
+                
+                st.write(f"**Description:** {risk_data['description']}")
+                st.write(f"**Treatment:** {risk_data['treatment']}")
     
     with tab2:
         st.header("Risk Analytics")
@@ -329,7 +345,7 @@ def main():
         with col2:
             if st.button("Run Simulation"):
                 with st.spinner("Running Monte Carlo simulation..."):
-                    risk_scores, percentiles = monte_carlo_simulation(filtered_df, simulations)
+                    risk_scores, percentiles = monte_carlo_simulation(filtered_df, simulations, seed=seed)
                     
                     # Display results
                     st.subheader("Simulation Results")
@@ -379,12 +395,13 @@ def main():
         # Simulate trend data
         dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='ME')
         trend_data = []
+        rng = np.random.default_rng(seed)
         
         for date in dates:
             # Simulate monthly risk counts with some trend
             base_count = 23
             trend_factor = 1 + (date.month - 1) * 0.05  # Slight upward trend
-            noise = np.random.normal(0, 2)
+            noise = rng.normal(0, 2)
             risk_count = max(0, int(base_count * trend_factor + noise))
             
             trend_data.append({
@@ -392,7 +409,7 @@ def main():
                 'total_risks': risk_count,
                 'open_risks': int(risk_count * 0.4),
                 'closed_risks': int(risk_count * 0.35),
-                'avg_score': 13.8 + np.random.normal(0, 1)
+                'avg_score': 13.8 + rng.normal(0, 1)
             })
         
         trend_df = pd.DataFrame(trend_data)
@@ -433,7 +450,7 @@ def main():
                 # Extend trend with some uncertainty
                 base_count = 23
                 trend_factor = 1 + (date.month + 11) * 0.05
-                uncertainty = np.random.normal(0, 3)
+                uncertainty = rng.normal(0, 3)
                 risk_count = max(0, int(base_count * trend_factor + uncertainty))
                 
                 forecast_data.append({
@@ -516,6 +533,12 @@ def main():
             )
             fig_owner.update_xaxes(tickangle=45)
             st.plotly_chart(fig_owner, use_container_width=True)
+
+    with tab6:
+        export_df = filtered_df.copy()
+        if 'review_date' in export_df.columns:
+            export_df['review_date'] = export_df['review_date'].astype(str)
+        demo_kit.csv_download(export_df, "enterprise_risks_filtered.csv", label="Download filtered risks")
 
 if __name__ == "__main__":
     main()

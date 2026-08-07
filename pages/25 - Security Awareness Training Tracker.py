@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -34,8 +35,9 @@ if 'completions' not in st.session_state:
 if 'campaigns' not in st.session_state:
     st.session_state.campaigns = []
 
-def generate_sample_data():
+def generate_sample_data(seed: int = 42):
     """Generate sample security awareness training data"""
+    rng = np.random.default_rng(seed)
     training_courses = [
         {
             'id': 'TC-2024-001',
@@ -280,8 +282,36 @@ def generate_sample_data():
             'budget': 3000
         }
     ]
-    
+
+    for completion in completions:
+        completion['score'] = int(np.clip(completion['score'] + int(rng.integers(-8, 9)), 50, 100))
+    for session in training_sessions:
+        session['completion_rate'] = round(float(np.clip(session['completion_rate'] + float(rng.uniform(-0.1, 0.1)), 0.05, 1.0)), 2)
+    for campaign in campaigns:
+        campaign['completion_rate'] = round(float(np.clip(campaign['completion_rate'] + float(rng.uniform(-0.1, 0.1)), 0.05, 1.0)), 2)
+
     return training_courses, employees, training_sessions, completions, campaigns
+
+
+_SESSION_STATUS_ORDER = ['Scheduled', 'In Progress', 'Completed']
+
+
+def _advance_session_status(status: str) -> str:
+    if status not in _SESSION_STATUS_ORDER or status == _SESSION_STATUS_ORDER[-1]:
+        return status
+    return _SESSION_STATUS_ORDER[_SESSION_STATUS_ORDER.index(status) + 1]
+
+
+def _sync_training(seed: int) -> None:
+    if st.session_state.get('_training_seed') != seed or not st.session_state.get('training_courses'):
+        courses, employees, sessions, completions, campaigns = generate_sample_data(seed)
+        st.session_state.training_courses = courses
+        st.session_state.employees = employees
+        st.session_state.training_sessions = sessions
+        st.session_state.completions = completions
+        st.session_state.campaigns = campaigns
+        st.session_state._training_seed = seed
+
 
 def main():
     portfolio_skin.page_header(
@@ -290,23 +320,27 @@ def main():
         kicker="Awareness",
     )
     st.markdown("Comprehensive platform for managing security training programs, tracking employee completion, and ensuring compliance")
-    
-    # Initialize sample data
-    if not st.session_state.training_courses:
-        courses, employees, sessions, completions, campaigns = generate_sample_data()
-        st.session_state.training_courses = courses
-        st.session_state.employees = employees
-        st.session_state.training_sessions = sessions
-        st.session_state.completions = completions
-        st.session_state.campaigns = campaigns
-    
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox(
-        "Select Module",
-        ["Dashboard", "Training Courses", "Employees", "Training Sessions", "Completions", "Campaigns", "Reports", "Analytics"]
-    )
-    
+
+    with st.sidebar:
+        st.title("Navigation")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        page = st.selectbox(
+            "Select Module",
+            ["Dashboard", "Training Courses", "Employees", "Training Sessions", "Completions", "Campaigns", "Reports", "Analytics"]
+        )
+        pass_threshold = st.slider(
+            "What-if pass score",
+            min_value=60,
+            max_value=95,
+            value=80,
+            step=5,
+            help="Scores below this threshold count as At Risk.",
+        )
+        st.session_state._training_pass_threshold = pass_threshold
+        st.caption("Sample / mock data only.")
+    _sync_training(seed)
+
     if page == "Dashboard":
         show_dashboard()
     elif page == "Training Courses":
@@ -355,6 +389,10 @@ def show_dashboard():
     with col4:
         st.metric("Active Campaigns", len([c for c in st.session_state.campaigns if c['status'] == 'In Progress']))
         st.metric("Certificates Issued", len([c for c in st.session_state.completions if c['certificate_issued']]))
+
+    threshold = st.session_state.get('_training_pass_threshold', 80)
+    at_risk = len([c for c in st.session_state.completions if c['score'] < threshold])
+    st.caption(f"Completions below pass score ({threshold}): {at_risk}")
     
     # Training progress overview
     st.subheader("Training Progress Overview")
@@ -614,6 +652,16 @@ def show_training_sessions():
         filtered_df = filtered_df[filtered_df['instructor'] == instructor_filter]
     
     st.dataframe(filtered_df, use_container_width=True)
+
+    st.subheader("Advance session")
+    for session in st.session_state.training_sessions:
+        if session['status'] == 'Completed':
+            continue
+        cols = st.columns([3, 1])
+        cols[0].write(f"{session['id']} — {session['session_name']} ({session['status']})")
+        if cols[1].button("Advance status", key=f"adv_sess_{session['id']}"):
+            session['status'] = _advance_session_status(session['status'])
+            st.rerun()
     
     # Session overview
     col1, col2 = st.columns(2)
@@ -818,20 +866,12 @@ def show_reports():
                 st.dataframe(dept_stats)
     
     # Export functionality
-    st.subheader("Export Data")
-    export_format = st.selectbox("Export Format", ["CSV", "JSON", "Excel"])
-    
-    if st.button("Export Training Data"):
-        if export_format == "CSV":
-            # Export completions to CSV
-            df_completions = pd.DataFrame(st.session_state.completions)
-            csv = df_completions.to_csv(index=False)
-            st.download_button(
-                label="Download CSV",
-                data=csv,
-                file_name="training_completions.csv",
-                mime="text/csv"
-            )
+    with st.expander("Export"):
+        export_df = pd.DataFrame(st.session_state.completions).copy()
+        for col in ('completion_date', 'next_due_date'):
+            if col in export_df.columns:
+                export_df[col] = export_df[col].astype(str)
+        demo_kit.csv_download(export_df, "training_completions.csv", label="Download completions CSV")
 
 def show_analytics():
     st.header("Analytics & Insights")

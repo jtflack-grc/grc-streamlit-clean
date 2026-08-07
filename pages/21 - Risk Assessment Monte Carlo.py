@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -183,17 +184,18 @@ def get_risk_level(risk_score):
     else:
         return "Low"
 
-def run_monte_carlo_simulation(likelihood_min, likelihood_max, impact_min, impact_max, financial_impact, num_simulations=5000):
+def run_monte_carlo_simulation(likelihood_min, likelihood_max, impact_min, impact_max, financial_impact, num_simulations=5000, seed=None):
     """Run Monte Carlo simulation for risk assessment"""
+    rng = np.random.default_rng(seed if seed is not None else demo_kit.ensure_seed())
     # Generate random samples for likelihood and impact
-    likelihood_samples = np.random.uniform(likelihood_min, likelihood_max, num_simulations)
-    impact_samples = np.random.uniform(impact_min, impact_max, num_simulations)
+    likelihood_samples = rng.uniform(likelihood_min, likelihood_max, num_simulations)
+    impact_samples = rng.uniform(impact_min, impact_max, num_simulations)
     
     # Calculate risk scores
     risk_scores = likelihood_samples * impact_samples
     
     # Calculate financial impact with some variability
-    financial_variability = np.random.normal(1.0, 0.2, num_simulations)  # 20% standard deviation
+    financial_variability = rng.normal(1.0, 0.2, num_simulations)  # 20% standard deviation
     financial_impacts = financial_impact * financial_variability
     
     # Calculate expected loss
@@ -243,7 +245,10 @@ def main():
     df = load_risk_data()
     
     # Sidebar
-    st.sidebar.header("Risk Assessment")
+    st.sidebar.header("Controls")
+    seed = demo_kit.seed_controls()
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Risk Assessment")
     
     # Add new risk form
     with st.sidebar.expander("Add New Risk", expanded=False):
@@ -418,7 +423,8 @@ def main():
                             risk_data['impact_min'],
                             risk_data['impact_max'],
                             risk_data['financial_impact'],
-                            num_simulations
+                            num_simulations,
+                            seed=seed,
                         )
                         
                         # Display results
@@ -506,11 +512,12 @@ def main():
         # Simulate historical data
         dates = pd.date_range(start='2023-01-01', end='2024-12-31', freq='ME')
         trend_data = []
+        rng = np.random.default_rng(seed)
         
         for date in dates:
             # Simulate realistic risk trend
             base_risks = 5 + (date.year - 2023) * 1 + (date.month - 1) * 0.2
-            variation = np.random.normal(0, 0.5)
+            variation = rng.normal(0, 0.5)
             risk_count = max(0, int(base_risks + variation))
             
             trend_data.append({
@@ -580,17 +587,12 @@ def main():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Export options
             st.subheader("Export Options")
-            
-            if st.button("Export to Excel"):
-                st.success("Risk assessment exported to Excel successfully!")
-            
-            if st.button("Generate Report"):
-                st.success("Comprehensive risk assessment report generated!")
-            
-            if st.button("Export Risk Summary"):
-                st.success("Risk summary exported!")
+            demo_kit.csv_download(
+                filtered_df.copy(),
+                "risk_assessment_filtered.csv",
+                label="Download filtered risks",
+            )
         
         with col2:
             # Management actions

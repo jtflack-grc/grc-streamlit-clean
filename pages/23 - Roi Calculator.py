@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -160,7 +161,10 @@ def main():
     sample_data = load_sample_roi_data()
     
     # Sidebar
-    st.sidebar.header("Calculator Options")
+    st.sidebar.header("Controls")
+    seed = demo_kit.seed_controls()
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Calculator Options")
     
     # Calculation type
     calc_type = st.sidebar.selectbox(
@@ -174,8 +178,43 @@ def main():
     org_size = st.sidebar.selectbox("Organization Size", ["Small (<100)", "Medium (100-1000)", "Large (1000-10000)", "Enterprise (>10000)"])
     industry = st.sidebar.selectbox("Industry", ["Technology", "Financial Services", "Healthcare", "Manufacturing", "Government", "Other"])
     
+    # Scenario size scalar — previously unused calc_type companion
+    benefit_scale = st.sidebar.slider(
+        "Benefit scale",
+        0.5,
+        1.5,
+        1.0,
+        0.05,
+        help="Scales sample-scenario benefits for what-if comparison.",
+    )
+    
     # Main content
-    tab1, tab2, tab3, tab4 = st.tabs(["ROI Calculator", "Analysis", "Scenarios", "Business Case"])
+    if calc_type == "Sample Scenarios":
+        st.info("Sample Scenarios mode — compare curated GRC initiative cases in the Scenarios tab.")
+    elif calc_type == "Comparison Analysis":
+        st.info("Comparison Analysis mode — ROI of all sample scenarios is summarized below and in Export.")
+        rows = []
+        for scenario in sample_data["scenarios"]:
+            scaled_benefits = {k: v * benefit_scale for k, v in scenario["benefits"].items()}
+            roi = calculate_roi(scaled_benefits, scenario["costs"])
+            rows.append(
+                {
+                    "Scenario": scenario["name"],
+                    "ROI %": round(roi["roi_percentage"], 1),
+                    "Net Benefit": round(roi["net_benefit"], 0),
+                    "Payback Years": round(roi["payback_period"], 2),
+                    "Benefit Scale": benefit_scale,
+                    "Org": org_name,
+                    "Industry": industry,
+                    "Size": org_size,
+                }
+            )
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.session_state["_roi_compare_df"] = pd.DataFrame(rows)
+    else:
+        st.caption(f"Custom ROI for {org_name} ({org_size}, {industry}). Seed={seed}")
+
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["ROI Calculator", "Analysis", "Scenarios", "Business Case", "Export"])
     
     with tab1:
         st.header("ROI Calculator")
@@ -444,7 +483,8 @@ def main():
                     st.write(f"**Risk Level:** {scenario['risk_level']}")
                     
                     # Calculate scenario ROI
-                    scenario_roi = calculate_roi(scenario['benefits'], scenario['costs'])
+                    scaled_benefits = {k: v * benefit_scale for k, v in scenario['benefits'].items()}
+                    scenario_roi = calculate_roi(scaled_benefits, scenario['costs'])
                     scenario_category, scenario_icon, _ = get_roi_category(scenario_roi['roi_percentage'])
                     
                     st.metric(
@@ -547,22 +587,55 @@ def main():
                                     annotation_text=f"Base ROI: {base_roi:.1f}%")
             st.plotly_chart(fig_sensitivity, use_container_width=True)
             
-            # Export options
-            st.subheader("Export Options")
-            
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                if st.button("Export to PDF"):
-                    st.info("PDF export functionality would be implemented here")
-            
-            with col2:
-                if st.button("Export to Excel"):
-                    st.info("Excel export functionality would be implemented here")
-            
-            with col3:
-                if st.button("Save Analysis"):
-                    st.success("Analysis saved successfully!")
+    with tab5:
+        st.subheader("Export")
+        if st.session_state.get("calculation_completed", False):
+            export_rows = []
+            for label, mapping in (
+                ("Benefit", st.session_state.benefits),
+                ("Cost", st.session_state.costs),
+            ):
+                for name, value in mapping.items():
+                    export_rows.append({"Type": label, "Category": name, "Amount": value})
+            roi = st.session_state.roi_data
+            export_rows.append({"Type": "Metric", "Category": "ROI %", "Amount": roi["roi_percentage"]})
+            export_rows.append({"Type": "Metric", "Category": "Net Benefit", "Amount": roi["net_benefit"]})
+            export_rows.append({"Type": "Metric", "Category": "Payback Years", "Amount": roi["payback_period"]})
+            demo_kit.csv_download(
+                pd.DataFrame(export_rows),
+                "roi_calculation.csv",
+                label="Download ROI calculation",
+                key="roi_calc_export",
+            )
+        elif st.session_state.get("_roi_compare_df") is not None:
+            demo_kit.csv_download(
+                st.session_state["_roi_compare_df"],
+                "roi_scenario_comparison.csv",
+                label="Download scenario comparison",
+                key="roi_compare_export",
+            )
+        else:
+            # Always offer sample scenarios export
+            sample_rows = []
+            for scenario in sample_data["scenarios"]:
+                scaled_benefits = {k: v * benefit_scale for k, v in scenario["benefits"].items()}
+                roi = calculate_roi(scaled_benefits, scenario["costs"])
+                sample_rows.append(
+                    {
+                        "Scenario": scenario["name"],
+                        "ROI %": round(roi["roi_percentage"], 1),
+                        "Net Benefit": round(roi["net_benefit"], 0),
+                        "Total Benefits": sum(scaled_benefits.values()),
+                        "Total Costs": sum(scenario["costs"].values()),
+                        "Benefit Scale": benefit_scale,
+                    }
+                )
+            demo_kit.csv_download(
+                pd.DataFrame(sample_rows),
+                "roi_sample_scenarios.csv",
+                label="Download sample scenarios",
+                key="roi_sample_export",
+            )
 
 if __name__ == "__main__":
     main()

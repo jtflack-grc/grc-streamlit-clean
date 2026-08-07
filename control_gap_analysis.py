@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -213,7 +214,10 @@ def main():
     metrics = calculate_gap_metrics(gaps_df)
     
     # Sidebar filters
-    st.sidebar.header("Filters")
+    st.sidebar.header("Controls")
+    seed = demo_kit.seed_controls()
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Filters")
     
     # Framework filter
     framework_filter = st.sidebar.multiselect(
@@ -271,7 +275,7 @@ def main():
         st.metric("Total Cost", f"${metrics['total_cost']:,.0f}")
     
     # Tabs for different views
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Gap Register", "Analytics", "Remediation Plan", "Framework Mapping", "Gap Management"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Gap Register", "Analytics", "Remediation Plan", "Framework Mapping", "Gap Management", "Export"])
     
     with tab1:
         st.header("Gap Register")
@@ -360,12 +364,13 @@ def main():
         # Simulate trend data
         dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='ME')
         trend_data = []
+        rng = np.random.default_rng(seed)
         
         for date in dates:
             # Simulate monthly gap counts with some trend
             base_count = 10
             trend_factor = 1 + (date.month - 1) * 0.02  # Slight upward trend
-            noise = np.random.normal(0, 1)
+            noise = rng.normal(0, 1)
             gap_count = max(0, int(base_count * trend_factor + noise))
             
             trend_data.append({
@@ -373,7 +378,7 @@ def main():
                 'total_gaps': gap_count,
                 'open_gaps': int(gap_count * 0.6),
                 'remediated_gaps': int(gap_count * 0.2),
-                'avg_risk_score': 65 + np.random.normal(0, 5)
+                'avg_risk_score': 65 + rng.normal(0, 5)
             })
         
         trend_df = pd.DataFrame(trend_data)
@@ -567,6 +572,12 @@ def main():
             )
             fig_owner.update_xaxes(tickangle=45)
             st.plotly_chart(fig_owner, use_container_width=True)
+
+    with tab6:
+        export_df = filtered_df.copy()
+        if "created_date" in export_df.columns:
+            export_df["created_date"] = export_df["created_date"].astype(str)
+        demo_kit.csv_download(export_df, "control_gaps_filtered.csv", label="Download filtered gaps")
 
 if __name__ == "__main__":
     main()

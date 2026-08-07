@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -321,19 +322,26 @@ def main():
     functions, questions = load_csf_framework()
     
     # Sidebar
-    st.sidebar.header("Assessment Options")
-    
-    # Assessment type
-    assessment_type = st.sidebar.selectbox(
-        "Assessment Type",
-        ["Quick Assessment (12 questions)", "Detailed Assessment (60 questions)", "Custom Assessment"]
-    )
-    
-    # Organization info
-    st.sidebar.subheader("Organization Information")
-    org_name = st.sidebar.text_input("Organization Name", "Sample Organization")
-    org_size = st.sidebar.selectbox("Organization Size", ["Small (<100)", "Medium (100-1000)", "Large (1000-10000)", "Enterprise (>10000)"])
-    industry = st.sidebar.selectbox("Industry", ["Technology", "Financial Services", "Healthcare", "Manufacturing", "Government", "Other"])
+    with st.sidebar:
+        st.header("Assessment Options")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        assessment_type = st.selectbox(
+            "Assessment Type",
+            ["Quick Assessment (12 questions)", "Detailed Assessment (60 questions)", "Custom Assessment"]
+        )
+        st.subheader("Organization Information")
+        org_name = st.text_input("Organization Name", "Sample Organization")
+        org_size = st.selectbox("Organization Size", ["Small (<100)", "Medium (100-1000)", "Large (1000-10000)", "Enterprise (>10000)"])
+        industry = st.selectbox("Industry", ["Technology", "Financial Services", "Healthcare", "Manufacturing", "Government", "Other"])
+        if st.button("Prefill random scores", use_container_width=True):
+            rng = np.random.default_rng(seed)
+            st.session_state.scores = {
+                q['id']: int(rng.integers(0, 6)) for q in questions
+            }
+            st.session_state.assessment_completed = False
+            st.rerun()
+        st.caption("Sample / mock assessment only.")
     
     # Main content
     tab1, tab2, tab3, tab4 = st.tabs(["Assessment", "Results", "Recommendations", "Analytics"])
@@ -342,9 +350,6 @@ def main():
         st.header("CSF Maturity Assessment")
         
         st.write("""
-        This assessment evaluates your organization's cybersecurity maturity across the five NIST Cybersecurity Framework functions: 
-        **Identify**, **Protect**, **Detect**, **Respond**, and **Recover**.
-        
         Rate each question from 0 (not in place) to 5 (optimized) based on your organization's current capabilities.
         """)
         
@@ -637,7 +642,7 @@ def main():
             for date in dates:
                 # Simulate realistic trend with some variation
                 base_score = 45 + (date.year - 2023) * 8 + (date.quarter - 1) * 2
-                variation = np.random.normal(0, 3)
+                variation = np.random.default_rng(seed + date.quarter).normal(0, 3)
                 score = max(0, min(100, base_score + variation))
                 
                 trend_data.append({
@@ -661,7 +666,24 @@ def main():
             
             # Export options
             st.subheader("Export Results")
-            
+            export_rows = []
+            for qid, score in st.session_state.scores.items():
+                q = next((x for x in questions if x['id'] == qid), None)
+                export_rows.append({
+                    'question_id': qid,
+                    'function': q['function'] if q else '',
+                    'category': q['category'] if q else '',
+                    'score': score,
+                    'org_name': org_name,
+                    'industry': industry,
+                    'overall_maturity': round(overall_maturity, 1),
+                })
+            demo_kit.csv_download(
+                pd.DataFrame(export_rows),
+                "csf_maturity_scores.csv",
+                label="Download assessment scores",
+            )
+
             col1, col2, col3 = st.columns(3)
             
             with col1:

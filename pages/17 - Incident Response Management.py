@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -30,54 +31,74 @@ if 'response_teams' not in st.session_state:
 if 'playbooks' not in st.session_state:
     st.session_state.playbooks = []
 
-def generate_sample_data():
+def generate_sample_data(seed: int = 42):
     """Generate sample incident data"""
+    rng = np.random.default_rng(seed)
     incident_types = [
         'Data Breach', 'Malware Infection', 'Phishing Attack', 'DDoS Attack',
         'Insider Threat', 'Physical Security Breach', 'System Compromise',
         'Social Engineering', 'Ransomware', 'Supply Chain Attack'
     ]
-    
+
     severity_levels = ['Critical', 'High', 'Medium', 'Low']
     statuses = ['Open', 'In Progress', 'Contained', 'Resolved', 'Closed']
-    
+
     sample_incidents = []
     for i in range(20):
-        incident_date = datetime.datetime.now() - timedelta(days=random.randint(1, 365))
-        status = random.choice(statuses)
-        
-        # Calculate resolution time based on status
+        incident_date = datetime.datetime.now() - timedelta(days=int(rng.integers(1, 366)))
+        status = str(rng.choice(statuses))
+
         if status in ['Resolved', 'Closed']:
-            resolution_date = incident_date + timedelta(days=random.randint(1, 30))
+            resolution_date = incident_date + timedelta(days=int(rng.integers(1, 31)))
             resolution_time = (resolution_date - incident_date).days
         else:
             resolution_date = None
             resolution_time = None
-        
+
+        itype = str(rng.choice(incident_types))
         incident = {
             'id': f'INC-{2024:04d}-{i+1:03d}',
-            'title': f'{random.choice(incident_types)} Incident',
+            'title': f'{itype} Incident',
             'description': f'Sample incident description for incident {i+1}',
-            'type': random.choice(incident_types),
-            'severity': random.choice(severity_levels),
+            'type': itype,
+            'severity': str(rng.choice(severity_levels)),
             'status': status,
             'reported_date': incident_date,
             'resolution_date': resolution_date,
             'resolution_time_days': resolution_time,
-            'reporter': f'User {random.randint(1, 50)}',
-            'assigned_to': f'Team {random.randint(1, 5)}',
-            'affected_systems': random.randint(1, 10),
-            'affected_users': random.randint(1, 1000),
-            'financial_impact': random.randint(1000, 100000),
-            'data_compromised': random.choice([True, False]),
-            'pii_involved': random.choice([True, False]),
-            'regulatory_impact': random.choice(['GDPR', 'HIPAA', 'PCI-DSS', 'None']),
+            'reporter': f'User {int(rng.integers(1, 51))}',
+            'assigned_to': f'Team {int(rng.integers(1, 6))}',
+            'affected_systems': int(rng.integers(1, 11)),
+            'affected_users': int(rng.integers(1, 1001)),
+            'financial_impact': int(rng.integers(1000, 100001)),
+            'data_compromised': bool(rng.choice([True, False])),
+            'pii_involved': bool(rng.choice([True, False])),
+            'regulatory_impact': str(rng.choice(['GDPR', 'HIPAA', 'PCI-DSS', 'None'])),
             'lessons_learned': f'Lesson learned from incident {i+1}',
             'prevention_measures': f'Prevention measure for incident {i+1}'
         }
         sample_incidents.append(incident)
-    
+
     return sample_incidents
+
+
+_INCIDENT_STATUS_ORDER = ['Open', 'In Progress', 'Contained', 'Resolved', 'Closed']
+
+
+def _advance_incident_status(status: str) -> str:
+    if status not in _INCIDENT_STATUS_ORDER or status == _INCIDENT_STATUS_ORDER[-1]:
+        return status
+    return _INCIDENT_STATUS_ORDER[_INCIDENT_STATUS_ORDER.index(status) + 1]
+
+
+def _sync_incidents(seed: int) -> None:
+    if st.session_state.get('_incident_seed') != seed or not st.session_state.get('incidents'):
+        st.session_state.incidents = generate_sample_data(seed)
+        st.session_state._incident_seed = seed
+    if not st.session_state.response_teams:
+        st.session_state.response_teams = generate_response_teams()
+    if not st.session_state.playbooks:
+        st.session_state.playbooks = generate_playbooks()
 
 def generate_response_teams():
     """Generate sample response teams"""
@@ -168,14 +189,6 @@ def generate_playbooks():
     ]
     return playbooks
 
-# Initialize sample data if empty
-if not st.session_state.incidents:
-    st.session_state.incidents = generate_sample_data()
-if not st.session_state.response_teams:
-    st.session_state.response_teams = generate_response_teams()
-if not st.session_state.playbooks:
-    st.session_state.playbooks = generate_playbooks()
-
 def calculate_metrics(incidents):
     """Calculate incident response metrics"""
     df = pd.DataFrame(incidents)
@@ -201,13 +214,17 @@ def main():
         kicker="Incident response",
     )
     st.markdown("Comprehensive incident tracking, response workflows, and reporting capabilities")
-    
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox(
-        "Select Page",
-        ["Dashboard", "Incident Management", "Response Teams", "Playbooks", "Analytics", "Reports"]
-    )
+
+    with st.sidebar:
+        st.title("Navigation")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        page = st.selectbox(
+            "Select Page",
+            ["Dashboard", "Incident Management", "Response Teams", "Playbooks", "Analytics", "Reports"]
+        )
+        st.caption("Sample / mock data only.")
+    _sync_incidents(seed)
     
     if page == "Dashboard":
         show_dashboard()
@@ -263,9 +280,18 @@ def show_dashboard():
                     st.write(f"**Affected Users:** {incident['affected_users']}")
                     if incident['resolution_time_days']:
                         st.write(f"**Resolution Time:** {incident['resolution_time_days']} days")
-    
-    # Incident trends
-    st.subheader("Incident Trends")
+                if st.button(
+                    "Advance status",
+                    key=f"adv_inc_{incident['id']}",
+                    disabled=incident['status'] == 'Closed',
+                ):
+                    for i, inc in enumerate(st.session_state.incidents):
+                        if inc['id'] == incident['id']:
+                            st.session_state.incidents[i]['status'] = _advance_incident_status(
+                                inc['status']
+                            )
+                            break
+                    st.rerun()
     col1, col2 = st.columns(2)
     
     with col1:
@@ -620,7 +646,14 @@ def show_analytics():
 def show_reports():
     """Show reporting interface"""
     st.header("Reports")
-    
+
+    export_df = pd.DataFrame(st.session_state.incidents).copy()
+    for col in ('reported_date', 'resolution_date'):
+        if col in export_df.columns:
+            export_df[col] = export_df[col].astype(str)
+    demo_kit.csv_download(export_df, "incidents.csv", label="Download incidents CSV")
+    df = pd.DataFrame(st.session_state.incidents)
+
     # Report generation
     col1, col2 = st.columns(2)
     

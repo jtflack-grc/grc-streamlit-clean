@@ -38,6 +38,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 # Import our IBM i audit core classes
 from ibm_i_audit_core import IBMiSecurityAuditor, IBMiDataManager, IBMiObjectAuthority, IBMiUserProfiles, IBMiSystemValues
 from demo_safety import allow_disk_persistence
+import demo_kit
 
 # Security configuration
 SESSION_TIMEOUT_MINUTES = 30
@@ -337,6 +338,20 @@ def main():
                         else:
                             add_audit_entry("Data Load", "No saved data found", status="Info")
                             st.info("No saved data found, using current data")
+            profiles = getattr(st.session_state.ibm_i_data, "user_profiles", {}) or {}
+            if profiles:
+                rows = []
+                for uid, info in profiles.items():
+                    row = {"user_id": uid}
+                    if isinstance(info, dict):
+                        row.update({k: v for k, v in info.items() if not isinstance(v, (dict, list))})
+                    rows.append(row)
+                demo_kit.csv_download(
+                    pd.DataFrame(rows),
+                    "ibm_i_user_profiles.csv",
+                    label="Export users CSV",
+                    key="ibm_i_users_csv",
+                )
         
         st.markdown("---")
         

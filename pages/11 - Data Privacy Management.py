@@ -1,4 +1,5 @@
 import streamlit as st
+import demo_kit
 import portfolio_skin
 import pandas as pd
 import numpy as np
@@ -36,8 +37,9 @@ if 'data_breaches' not in st.session_state:
 if 'consent_records' not in st.session_state:
     st.session_state.consent_records = []
 
-def generate_sample_data():
+def generate_sample_data(seed: int = 42):
     """Generate sample data privacy management data"""
+    rng = np.random.default_rng(seed)
     data_subjects = [
         {
             'id': 'DS-001',
@@ -274,8 +276,42 @@ def generate_sample_data():
             'consent_method': 'Online Form'
         }
     ]
-    
+
+    request_statuses = ['Pending', 'In Progress', 'Completed', 'Rejected']
+    for request in privacy_requests:
+        if 'response_time_hours' in request and request['response_time_hours']:
+            request['response_time_hours'] = max(
+                1, int(request['response_time_hours']) + int(rng.integers(-12, 13))
+            )
+        if int(rng.integers(0, 3)) == 0:
+            request['status'] = str(rng.choice(request_statuses))
+    for pia in privacy_impact_assessments:
+        if 'risk_score' in pia:
+            pia['risk_score'] = int(np.clip(pia['risk_score'] + int(rng.integers(-2, 3)), 1, 10))
+
     return data_subjects, privacy_requests, data_processing_activities, privacy_impact_assessments, data_breaches, consent_records
+
+
+_REQUEST_STATUS_ORDER = ['Pending', 'In Progress', 'Completed']
+
+
+def _advance_request_status(status: str) -> str:
+    if status not in _REQUEST_STATUS_ORDER or status == _REQUEST_STATUS_ORDER[-1]:
+        return status
+    return _REQUEST_STATUS_ORDER[_REQUEST_STATUS_ORDER.index(status) + 1]
+
+
+def _sync_privacy(seed: int) -> None:
+    if st.session_state.get('_privacy_seed') != seed or not st.session_state.get('data_subjects'):
+        subjects, requests, activities, pias, breaches, consents = generate_sample_data(seed)
+        st.session_state.data_subjects = subjects
+        st.session_state.privacy_requests = requests
+        st.session_state.data_processing_activities = activities
+        st.session_state.privacy_impact_assessments = pias
+        st.session_state.data_breaches = breaches
+        st.session_state.consent_records = consents
+        st.session_state._privacy_seed = seed
+
 
 def main():
     portfolio_skin.page_header(
@@ -284,23 +320,26 @@ def main():
         kicker="Privacy",
     )
     st.markdown("Comprehensive platform for managing data privacy compliance, data subject rights, privacy impact assessments, and GDPR/CCPA compliance")
-    
-    # Initialize sample data
-    if not st.session_state.data_subjects:
-        subjects, requests, activities, pias, breaches, consents = generate_sample_data()
-        st.session_state.data_subjects = subjects
-        st.session_state.privacy_requests = requests
-        st.session_state.data_processing_activities = activities
-        st.session_state.privacy_impact_assessments = pias
-        st.session_state.data_breaches = breaches
-        st.session_state.consent_records = consents
-    
-    # Sidebar navigation
-    st.sidebar.title("Navigation")
-    page = st.sidebar.selectbox(
-        "Select Module",
-        ["Dashboard", "Data Subject Management", "Privacy Requests", "Data Processing Activities", "Privacy Impact Assessments", "Data Breaches", "Consent Management", "Reports"]
-    )
+
+    with st.sidebar:
+        st.title("Navigation")
+        seed = demo_kit.seed_controls()
+        st.markdown("---")
+        page = st.selectbox(
+            "Select Module",
+            ["Dashboard", "Data Subject Management", "Privacy Requests", "Data Processing Activities", "Privacy Impact Assessments", "Data Breaches", "Consent Management", "Reports"]
+        )
+        sla_hours = st.slider(
+            "What-if SLA (hours)",
+            min_value=24,
+            max_value=240,
+            value=72,
+            step=12,
+            help="Highlight requests slower than this SLA.",
+        )
+        st.session_state._privacy_sla = sla_hours
+        st.caption("Sample / mock data only.")
+    _sync_privacy(seed)
     
     if page == "Dashboard":
         show_dashboard()
@@ -519,7 +558,25 @@ def show_privacy_requests():
         filtered_df = filtered_df[filtered_df['submitted_date'].dt.date == date_filter]
     
     st.dataframe(filtered_df, use_container_width=True)
-    
+
+    sla = int(st.session_state.get('_privacy_sla', 72))
+    slow = [
+        r for r in st.session_state.privacy_requests
+        if r.get('response_time_hours') and r['response_time_hours'] > sla
+        and r['status'] != 'Completed'
+    ]
+    st.caption(f"Requests over {sla}h SLA: {len(slow)}")
+    if not filtered_df.empty:
+        pick = st.selectbox("Advance request status for", filtered_df['id'].tolist())
+        if st.button("Advance selected request status"):
+            for i, req in enumerate(st.session_state.privacy_requests):
+                if req['id'] == pick:
+                    st.session_state.privacy_requests[i]['status'] = _advance_request_status(
+                        req['status']
+                    )
+                    break
+            st.rerun()
+
     # Request analytics
     col1, col2 = st.columns(2)
     
@@ -863,6 +920,21 @@ def show_reports():
     
     # Export functionality
     st.subheader("Export Data")
+    export_df = pd.DataFrame(st.session_state.data_subjects).copy()
+    for col in ('data_retention_date', 'last_updated'):
+        if col in export_df.columns:
+            export_df[col] = export_df[col].astype(str)
+    if 'data_types' in export_df.columns:
+        export_df['data_types'] = export_df['data_types'].astype(str)
+    demo_kit.csv_download(export_df, "data_privacy_subjects.csv", label="Download subjects CSV")
+    req_df = pd.DataFrame(st.session_state.privacy_requests).copy()
+    for col in ('submitted_date', 'completed_date'):
+        if col in req_df.columns:
+            req_df[col] = req_df[col].astype(str)
+    demo_kit.csv_download(
+        req_df, "privacy_requests.csv", label="Download requests CSV", key="privacy_requests_csv"
+    )
+
     export_format = st.selectbox("Export Format", ["CSV", "JSON", "Excel"])
     
     if st.button("Export Privacy Data"):

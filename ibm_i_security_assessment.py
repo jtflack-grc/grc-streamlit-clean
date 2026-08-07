@@ -16,6 +16,7 @@ Original Perl modules converted:
 
 import streamlit as st
 import portfolio_skin
+import demo_kit
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -142,6 +143,14 @@ def main():
             except Exception as e:
                 st.error(f"Audit failed: {str(e)}")
                 st.info("Please try again or check your configuration.")
+
+        st.session_state.ibm_i_score_adjust = st.slider(
+            "What-if compliance adjust",
+            -20,
+            20,
+            int(st.session_state.get("ibm_i_score_adjust", 0)),
+            help="Shift the displayed compliance score to explore thresholds.",
+        )
         
         # Data persistence controls
         st.header("Data Management")
@@ -168,6 +177,13 @@ def main():
         if st.session_state.audit_results is not None:
             # Use a more compact layout for export buttons
             st.markdown("**Available Reports:**")
+            if st.session_state.audit_summary:
+                demo_kit.csv_download(
+                    pd.DataFrame([st.session_state.audit_summary]),
+                    "ibm_i_audit_summary.csv",
+                    label="Summary CSV",
+                    key="ibm_i_summary_csv",
+                )
             
             # JSON Export
             if st.button("Export to JSON", key="json_export", use_container_width=True):
@@ -286,6 +302,8 @@ def show_dashboard():
     
     # Get cached metrics
     metrics = compute_dashboard_metrics(st.session_state.audit_summary)
+    adjust = int(st.session_state.get("ibm_i_score_adjust", 0))
+    shown_score = max(0, min(100, float(metrics["compliance_score"]) + adjust))
     
     # Key metrics
     col1, col2, col3, col4 = st.columns(4)
@@ -293,8 +311,8 @@ def show_dashboard():
     with col1:
         st.metric(
             label="Compliance Score",
-            value=f"{metrics['compliance_score']}%",
-            delta=None
+            value=f"{shown_score:.0f}%",
+            delta=f"{adjust:+d} what-if" if adjust else None,
         )
     
     with col2:

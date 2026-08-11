@@ -75,104 +75,104 @@ def load_framework_data():
 # Sample gap data
 @st.cache_data
 def load_gap_data():
-    """Load sample gap analysis data"""
+    """Load sample gap analysis data (illustrative register refreshed Aug 2026)."""
     gaps = [
         # Critical Gaps
-        {"id": "GAP-001", "control_id": "ISO-A.8.1", "control_name": "Inventory of Assets", "framework": "ISO27001", 
+        {"id": "GAP-001", "control_id": "ISO-A.8.1", "control_name": "Inventory of Assets", "framework": "ISO27001",
          "gap_type": "Missing", "severity": "Critical", "risk_score": 95, "status": "Open",
-         "description": "No comprehensive asset inventory exists for IT infrastructure", 
-         "business_impact": "Unable to track and protect critical assets", "current_state": "No inventory process",
+         "description": "No comprehensive asset inventory exists for IT infrastructure",
+         "business_impact": "Unable to track and protect critical assets", "current_state": "Partial CMDB; cloud and midrange gaps",
          "target_state": "Automated asset discovery and tracking", "remediation_priority": "Immediate",
-         "estimated_cost": 50000, "estimated_effort": "3 months", "owner": "IT Operations", "created_date": "2024-01-15"},
-        
-        {"id": "GAP-002", "control_id": "SOC-CC6", "control_name": "Logical and Physical Access", "framework": "SOC2", 
-         "gap_type": "Incomplete", "severity": "Critical", "risk_score": 90, "status": "In Progress",
-         "description": "MFA not implemented for all privileged accounts", 
-         "business_impact": "High risk of unauthorized access to critical systems", "current_state": "MFA on 60% of accounts",
+         "estimated_cost": 50000, "estimated_effort": "3 months", "owner": "IT Operations", "created_date": "2025-10-15"},
+
+        {"id": "GAP-002", "control_id": "SOC-CC6", "control_name": "Logical and Physical Access", "framework": "SOC2",
+         "gap_type": "Incomplete", "severity": "Medium", "risk_score": 28, "status": "Remediated",
+         "description": "MFA not implemented for all privileged accounts",
+         "business_impact": "High risk of unauthorized access to critical systems", "current_state": "MFA on 100% of privileged cloud/AD accounts",
          "target_state": "MFA on 100% of privileged accounts", "remediation_priority": "Immediate",
-         "estimated_cost": 25000, "estimated_effort": "2 months", "owner": "Security Team", "created_date": "2024-01-20"},
-        
+         "estimated_cost": 25000, "estimated_effort": "2 months", "owner": "Security Team", "created_date": "2025-10-20"},
+
         # High Gaps
-        {"id": "GAP-003", "control_id": "ISO-A.9.1", "control_name": "Access Control Policy", "framework": "ISO27001", 
-         "gap_type": "Ineffective", "severity": "High", "risk_score": 75, "status": "Open",
-         "description": "Access control policy not consistently enforced across systems", 
-         "business_impact": "Inconsistent access controls increase security risk", "current_state": "Policy exists but not enforced",
+        {"id": "GAP-003", "control_id": "ISO-A.9.1", "control_name": "Access Control Policy", "framework": "ISO27001",
+         "gap_type": "Ineffective", "severity": "High", "risk_score": 72, "status": "In Progress",
+         "description": "Access control policy not consistently enforced across systems",
+         "business_impact": "Inconsistent access controls increase security risk", "current_state": "Enforcement live for AD/SaaS; legacy platforms pending",
          "target_state": "Automated policy enforcement", "remediation_priority": "High",
-         "estimated_cost": 35000, "estimated_effort": "4 months", "owner": "Security Team", "created_date": "2024-02-01"},
-        
-        {"id": "GAP-004", "control_id": "NIST-PR.AC-1", "control_name": "Identity Management", "framework": "NIST", 
+         "estimated_cost": 35000, "estimated_effort": "4 months", "owner": "Security Team", "created_date": "2025-11-01"},
+
+        {"id": "GAP-004", "control_id": "NIST-PR.AC-1", "control_name": "Identity Management", "framework": "NIST",
          "gap_type": "Missing", "severity": "High", "risk_score": 80, "status": "Open",
-         "description": "No centralized identity management system", 
-         "business_impact": "Manual user provisioning and deprovisioning", "current_state": "Manual processes",
+         "description": "No centralized identity management system",
+         "business_impact": "Manual user provisioning and deprovisioning", "current_state": "Manual processes for non-cloud platforms",
          "target_state": "Automated identity lifecycle management", "remediation_priority": "High",
-         "estimated_cost": 75000, "estimated_effort": "6 months", "owner": "IT Operations", "created_date": "2024-02-10"},
-        
-        {"id": "GAP-005", "control_id": "SOC-CC8", "control_name": "Change Management", "framework": "SOC2", 
-         "gap_type": "Incomplete", "severity": "High", "risk_score": 70, "status": "In Progress",
-         "description": "Emergency changes bypass formal change management process", 
-         "business_impact": "Uncontrolled changes increase system instability", "current_state": "Emergency procedures exist but not followed",
+         "estimated_cost": 75000, "estimated_effort": "6 months", "owner": "IT Operations", "created_date": "2025-11-10"},
+
+        {"id": "GAP-005", "control_id": "SOC-CC8", "control_name": "Change Management", "framework": "SOC2",
+         "gap_type": "Incomplete", "severity": "Medium", "risk_score": 32, "status": "Remediated",
+         "description": "Emergency changes bypass formal change management process",
+         "business_impact": "Uncontrolled changes increase system instability", "current_state": "Emergency CAB path enforced with post-implementation review",
          "target_state": "Streamlined emergency change process", "remediation_priority": "High",
-         "estimated_cost": 15000, "estimated_effort": "2 months", "owner": "Change Management", "created_date": "2024-02-15"},
-        
+         "estimated_cost": 15000, "estimated_effort": "2 months", "owner": "Change Management", "created_date": "2025-11-15"},
+
         # Medium Gaps
-        {"id": "GAP-006", "control_id": "ISO-A.12.1", "control_name": "Operational Procedures", "framework": "ISO27001", 
-         "gap_type": "Incomplete", "severity": "Medium", "risk_score": 55, "status": "Open",
-         "description": "Documentation for critical operational procedures is outdated", 
-         "business_impact": "Inconsistent operational practices", "current_state": "Outdated documentation",
+        {"id": "GAP-006", "control_id": "ISO-A.12.1", "control_name": "Operational Procedures", "framework": "ISO27001",
+         "gap_type": "Incomplete", "severity": "Medium", "risk_score": 52, "status": "In Progress",
+         "description": "Documentation for critical operational procedures is outdated",
+         "business_impact": "Inconsistent operational practices", "current_state": "Priority runbooks being rewritten in Q1",
          "target_state": "Current, accessible procedures", "remediation_priority": "Medium",
-         "estimated_cost": 10000, "estimated_effort": "3 months", "owner": "IT Operations", "created_date": "2024-02-20"},
-        
-        {"id": "GAP-007", "control_id": "NIST-DE.AE-1", "control_name": "Baseline Network Operations", "framework": "NIST", 
+         "estimated_cost": 10000, "estimated_effort": "3 months", "owner": "IT Operations", "created_date": "2025-11-20"},
+
+        {"id": "GAP-007", "control_id": "NIST-DE.AE-1", "control_name": "Baseline Network Operations", "framework": "NIST",
          "gap_type": "Missing", "severity": "Medium", "risk_score": 60, "status": "Open",
-         "description": "No baseline established for network traffic patterns", 
+         "description": "No baseline established for network traffic patterns",
          "business_impact": "Unable to detect anomalous network activity", "current_state": "No baseline monitoring",
          "target_state": "Automated baseline monitoring", "remediation_priority": "Medium",
-         "estimated_cost": 20000, "estimated_effort": "4 months", "owner": "Network Team", "created_date": "2024-03-01"},
-        
-        {"id": "GAP-008", "control_id": "SOC-CC4", "control_name": "Monitoring Activities", "framework": "SOC2", 
-         "gap_type": "Ineffective", "severity": "Medium", "risk_score": 50, "status": "Remediated",
-         "description": "Security monitoring alerts not properly configured", 
-         "business_impact": "Delayed incident detection and response", "current_state": "Basic monitoring in place",
+         "estimated_cost": 20000, "estimated_effort": "4 months", "owner": "Network Team", "created_date": "2025-12-01"},
+
+        {"id": "GAP-008", "control_id": "SOC-CC4", "control_name": "Monitoring Activities", "framework": "SOC2",
+         "gap_type": "Ineffective", "severity": "Low", "risk_score": 22, "status": "Remediated",
+         "description": "Security monitoring alerts not properly configured",
+         "business_impact": "Delayed incident detection and response", "current_state": "Alert thresholds tuned; false positives reduced",
          "target_state": "Optimized alert configuration", "remediation_priority": "Medium",
-         "estimated_cost": 12000, "estimated_effort": "2 months", "owner": "Security Team", "created_date": "2024-01-10"},
-        
+         "estimated_cost": 12000, "estimated_effort": "2 months", "owner": "Security Team", "created_date": "2025-10-10"},
+
         # Low Gaps
-        {"id": "GAP-009", "control_id": "ISO-A.5.1", "control_name": "Information Security Policy", "framework": "ISO27001", 
-         "gap_type": "Incomplete", "severity": "Low", "risk_score": 30, "status": "Open",
-         "description": "Policy review schedule not documented", 
-         "business_impact": "Policies may become outdated", "current_state": "No review schedule",
+        {"id": "GAP-009", "control_id": "ISO-A.5.1", "control_name": "Information Security Policy", "framework": "ISO27001",
+         "gap_type": "Incomplete", "severity": "Low", "risk_score": 28, "status": "In Progress",
+         "description": "Policy review schedule not documented",
+         "business_impact": "Policies may become outdated", "current_state": "Annual review calendar drafted; owners assigned",
          "target_state": "Annual policy review process", "remediation_priority": "Low",
-         "estimated_cost": 5000, "estimated_effort": "1 month", "owner": "Compliance Team", "created_date": "2024-03-05"},
-        
-        {"id": "GAP-010", "control_id": "NIST-RC.RP-1", "control_name": "Recovery Plan Execution", "framework": "NIST", 
+         "estimated_cost": 5000, "estimated_effort": "1 month", "owner": "Compliance Team", "created_date": "2025-12-05"},
+
+        {"id": "GAP-010", "control_id": "NIST-RC.RP-1", "control_name": "Recovery Plan Execution", "framework": "NIST",
          "gap_type": "Missing", "severity": "Low", "risk_score": 25, "status": "Open",
-         "description": "No disaster recovery testing schedule", 
+         "description": "No disaster recovery testing schedule",
          "business_impact": "Recovery procedures not validated", "current_state": "No testing program",
          "target_state": "Quarterly DR testing", "remediation_priority": "Low",
-         "estimated_cost": 8000, "estimated_effort": "2 months", "owner": "Business Continuity", "created_date": "2024-03-10"},
+         "estimated_cost": 8000, "estimated_effort": "2 months", "owner": "Business Continuity", "created_date": "2025-12-10"},
 
         {"id": "GAP-011", "control_id": "ISO-A.9.1", "control_name": "Access Control Policy", "framework": "ISO27001",
          "gap_type": "Incomplete", "severity": "Critical", "risk_score": 92, "status": "Open",
          "description": "IBM i *ALLOBJ and QSECURITY controls not covered by corporate access control policy enforcement",
          "business_impact": "Privileged midrange access outside IAM standards", "current_state": "Policy covers AD/cloud only",
          "target_state": "IBM i special authorities in scope of access policy", "remediation_priority": "Immediate",
-         "estimated_cost": 40000, "estimated_effort": "4 months", "owner": "IBM i Ops", "created_date": "2024-03-15"},
+         "estimated_cost": 40000, "estimated_effort": "4 months", "owner": "IBM i Ops", "created_date": "2026-01-15"},
 
         {"id": "GAP-012", "control_id": "SOC-CC6", "control_name": "Logical and Physical Access", "framework": "SOC2",
-         "gap_type": "Incomplete", "severity": "High", "risk_score": 85, "status": "In Progress",
+         "gap_type": "Incomplete", "severity": "High", "risk_score": 82, "status": "In Progress",
          "description": "RACF SPECIAL and OPERATIONS attributes on IBM Z not included in quarterly access reviews",
-         "business_impact": "Mainframe privileged access can persist after role change", "current_state": "AD/SaaS reviews only",
+         "business_impact": "Mainframe privileged access can persist after role change", "current_state": "Pilot RACF extract feeding Q1 access review",
          "target_state": "Unified privileged access review including RACF", "remediation_priority": "High",
-         "estimated_cost": 55000, "estimated_effort": "5 months", "owner": "Mainframe Security", "created_date": "2024-03-18"},
+         "estimated_cost": 55000, "estimated_effort": "5 months", "owner": "Mainframe Security", "created_date": "2026-01-18"},
 
         {"id": "GAP-013", "control_id": "NIST-PR.AC-1", "control_name": "Identity Management", "framework": "NIST",
          "gap_type": "Ineffective", "severity": "High", "risk_score": 78, "status": "Open",
          "description": "SAP ECC SAP_ALL / DDIC and JD Edwards IFS admin roles outside central identity lifecycle",
          "business_impact": "ERP emergency access not provisioned/deprovisioned with HR events", "current_state": "Manual SU01 / World security",
          "target_state": "ERP privileged IDs in IAM workflow", "remediation_priority": "High",
-         "estimated_cost": 60000, "estimated_effort": "6 months", "owner": "ERP Security", "created_date": "2024-03-20"}
+         "estimated_cost": 60000, "estimated_effort": "6 months", "owner": "ERP Security", "created_date": "2026-01-20"}
     ]
-    
+
     df = pd.DataFrame(gaps)
     df['created_date'] = pd.to_datetime(df['created_date'])
     return df
@@ -228,7 +228,8 @@ def main():
         lede="Interactive GRC tool — #RUNGRCRaleigh build-in-public.",
         kicker="Controls",
     )
-    
+    st.caption("Sample data · refreshed Aug 2026 — illustrative gap register, not a live control environment.")
+
     # Load data
     frameworks_df, controls_df = load_framework_data()
     gaps_df = load_gap_data()
@@ -281,16 +282,16 @@ def main():
     
     with col1:
         st.metric("Total Gaps", metrics['total_gaps'])
-        st.metric("Critical Gaps", metrics['critical_gaps'], delta=f"{metrics['critical_gaps'] - 0}")
-    
+        st.metric("Critical Gaps", metrics['critical_gaps'])
+
     with col2:
         st.metric("Open Gaps", metrics['open_gaps'])
         st.metric("In Progress", metrics['in_progress_gaps'])
-    
+
     with col3:
         st.metric("Remediated", metrics['remediated_gaps'])
         st.metric("Remediation Rate", f"{metrics['remediation_rate']:.1f}%")
-    
+
     with col4:
         st.metric("Avg Risk Score", f"{metrics['avg_risk_score']:.1f}")
         st.metric("Total Cost", f"${metrics['total_cost']:,.0f}")
@@ -381,25 +382,27 @@ def main():
         
         # Trend analysis
         st.subheader("Gap Trends")
-        
-        # Simulate trend data
-        dates = pd.date_range(start='2024-01-01', end='2024-12-31', freq='ME')
+
+        # Rolling 12-month illustrative trend (improving slightly as remediations land)
+        end = pd.Timestamp.today().normalize()
+        start = end - pd.DateOffset(months=11)
+        dates = pd.date_range(start=start, end=end, freq="ME")
         trend_data = []
         rng = np.random.default_rng(seed)
-        
-        for date in dates:
-            # Simulate monthly gap counts with some trend
-            base_count = 10
-            trend_factor = 1 + (date.month - 1) * 0.02  # Slight upward trend
-            noise = rng.normal(0, 1)
-            gap_count = max(0, int(base_count * trend_factor + noise))
-            
+
+        for i, date in enumerate(dates):
+            progress = i / max(len(dates) - 1, 1)
+            base_count = 14
+            gap_count = max(8, int(base_count - progress * 2 + rng.normal(0, 0.8)))
+            remediated_share = 0.12 + progress * 0.14
+            open_share = max(0.35, 0.68 - progress * 0.22)
+
             trend_data.append({
-                'date': date,
-                'total_gaps': gap_count,
-                'open_gaps': int(gap_count * 0.6),
-                'remediated_gaps': int(gap_count * 0.2),
-                'avg_risk_score': 65 + rng.normal(0, 5)
+                "date": date,
+                "total_gaps": gap_count,
+                "open_gaps": int(gap_count * open_share),
+                "remediated_gaps": int(gap_count * remediated_share),
+                "avg_risk_score": 72 - progress * 10 + rng.normal(0, 2.5),
             })
         
         trend_df = pd.DataFrame(trend_data)

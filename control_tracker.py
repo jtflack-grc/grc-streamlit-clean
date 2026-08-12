@@ -1,16 +1,15 @@
-"""Control Tracker — Day Eight: remediation coordination (not lifecycle status).
+"""Control Tracker — lightweight remediation coordination register.
 
-GRC Lego block: isolates the idea that control remediation is often a distributed
-workflow / handoff problem before it is a compliance problem.
+Tracks where control remediation work lives across owners, doing teams, and tools.
+Sample data is illustrative; session edits are local to the browser session.
 """
 
 from __future__ import annotations
 
-import datetime
-from datetime import timedelta
+from datetime import date, datetime, timedelta
+from typing import Any
 
 import demo_kit
-import numpy as np
 import pandas as pd
 import plotly.express as px
 import portfolio_skin
@@ -25,59 +24,85 @@ st.set_page_config(
 
 portfolio_skin.apply(hide_sidebar=False)
 
-# Coordination states — not Open → In Progress → Closed
+# Practical coordination labels (fork-friendly)
 COORD_STATES = [
-    "Synced",
-    "In Between",
-    "Handoff",
-    "Split Ownership",
-    "Telephone Risk",
+    "Aligned",
+    "Pending transfer",
+    "Status drift",
+    "Split ownership",
+    "Undocumented",
 ]
 
 COORD_COLORS = {
-    "Synced": "#2e7d32",
-    "In Between": "#f57c00",
-    "Handoff": "#1976d2",
-    "Split Ownership": "#7b1fa2",
-    "Telephone Risk": "#c62828",
+    "Aligned": "#2e7d32",
+    "Pending transfer": "#1976d2",
+    "Status drift": "#f57c00",
+    "Split ownership": "#7b1fa2",
+    "Undocumented": "#c62828",
 }
 
-SYSTEMS = [
+FRAMEWORKS = ["NIST CSF", "ISO 27001", "SOC 2", "PCI DSS", "HIPAA", "Other"]
+WORK_SYSTEMS = [
     "GRC platform",
     "Jira",
     "ServiceNow",
     "Change ticket",
-    "Email thread",
+    "Email",
     "Meeting notes",
-    "Slack / Teams",
+    "Chat",
     "Spreadsheet",
+    "Other",
+]
+CONTROL_STATUSES = [
+    "Not Implemented",
+    "In Progress",
+    "Implemented",
+    "Tested",
+    "Compliant",
+]
+TEST_RESULTS = ["Not Started", "In Progress", "Passed", "Failed"]
+
+EXPORT_COLS = [
+    "control_id",
+    "control_name",
+    "framework",
+    "issue",
+    "control_status",
+    "coord_state",
+    "owner",
+    "doing_team",
+    "informed",
+    "source_of_truth",
+    "ticket_ref",
+    "notes",
+    "risk_score",
+    "last_update",
+    "due_date",
+    "evidence_count",
+    "test_results",
 ]
 
 
-@st.cache_data
-def load_control_data():
-    """Sample remediation work — current enough to feel live (Aug 2026)."""
-    # Anchor "today" for educational demos so Cloud deploys stay coherent.
-    today = datetime.date(2026, 8, 12)
-    controls = [
+def _sample_rows(today: date | None = None) -> list[dict[str, Any]]:
+    """Illustrative remediation register (Aug 2026)."""
+    today = today or date(2026, 8, 12)
+    return [
         {
             "control_id": "AC-01",
             "control_name": "Access Control Policy",
             "framework": "NIST CSF",
-            "category": "Identity Management and Access Control",
-            "description": "Establish and maintain access control policies and procedures",
-            "remediation_issue": "Annual policy refresh signed; evidence linked in GRC",
-            "status": "Compliant",
-            "coordination_state": "Synced",
-            "current_owner": "IT Security Team",
+            "issue": "Annual policy refresh; evidence attached in GRC",
+            "control_status": "Compliant",
+            "coord_state": "Aligned",
+            "owner": "IT Security Team",
             "doing_team": "IT Security Team",
-            "informed": "GRC, Internal Audit",
-            "authoritative_system": "GRC platform",
-            "handoff_note": "Single SoT — GRC matches what Security actually updated.",
+            "informed": "GRC; Internal Audit",
+            "source_of_truth": "GRC platform",
+            "ticket_ref": "GRC-CTRL-1042",
+            "notes": "GRC record matches completed policy update.",
             "risk_score": 25,
-            "last_handoff": (today - timedelta(days=12)).isoformat(),
             "last_update": (today - timedelta(days=5)).isoformat(),
-            "next_review": (today + timedelta(days=95)).isoformat(),
+            "due_date": (today + timedelta(days=95)).isoformat(),
             "evidence_count": 5,
             "test_results": "Passed",
         },
@@ -85,20 +110,18 @@ def load_control_data():
             "control_id": "AC-02",
             "control_name": "Account Management",
             "framework": "NIST CSF",
-            "category": "Identity Management and Access Control",
-            "description": "Manage information system accounts",
-            "remediation_issue": "Joiner/mover/leaver exceptions for shared service accounts",
-            "status": "Tested",
-            "coordination_state": "Handoff",
-            "current_owner": "IAM Engineering",
+            "issue": "JML exceptions for shared service accounts",
+            "control_status": "Tested",
+            "coord_state": "Pending transfer",
+            "owner": "IAM Engineering",
             "doing_team": "IAM Engineering",
-            "informed": "IT Security, GRC",
-            "authoritative_system": "Jira",
-            "handoff_note": "Work lives in Jira; GRC still shows last quarter's narrative.",
+            "informed": "IT Security; GRC",
+            "source_of_truth": "Jira",
+            "ticket_ref": "SEC-2841",
+            "notes": "Active work in Jira; GRC narrative not yet refreshed.",
             "risk_score": 35,
-            "last_handoff": (today - timedelta(days=3)).isoformat(),
             "last_update": (today - timedelta(days=1)).isoformat(),
-            "next_review": (today + timedelta(days=40)).isoformat(),
+            "due_date": (today + timedelta(days=40)).isoformat(),
             "evidence_count": 3,
             "test_results": "Passed",
         },
@@ -106,20 +129,18 @@ def load_control_data():
             "control_id": "A.5.1",
             "control_name": "Information Security Policies",
             "framework": "ISO 27001",
-            "category": "Information Security Policies",
-            "description": "Define information security policy framework",
-            "remediation_issue": "Minor editorial updates after management review",
-            "status": "Compliant",
-            "coordination_state": "Synced",
-            "current_owner": "Security Governance",
+            "issue": "Editorial updates after management review",
+            "control_status": "Compliant",
+            "coord_state": "Aligned",
+            "owner": "Security Governance",
             "doing_team": "Security Governance",
-            "informed": "Legal, GRC",
-            "authoritative_system": "GRC platform",
-            "handoff_note": "Policy set and GRC control record stay in lockstep.",
+            "informed": "Legal; GRC",
+            "source_of_truth": "GRC platform",
+            "ticket_ref": "GRC-POL-220",
+            "notes": "Policy set and control record are consistent.",
             "risk_score": 20,
-            "last_handoff": (today - timedelta(days=20)).isoformat(),
             "last_update": (today - timedelta(days=8)).isoformat(),
-            "next_review": (today + timedelta(days=110)).isoformat(),
+            "due_date": (today + timedelta(days=110)).isoformat(),
             "evidence_count": 4,
             "test_results": "Passed",
         },
@@ -127,20 +148,18 @@ def load_control_data():
             "control_id": "CC6.1",
             "control_name": "Logical Access Security Software",
             "framework": "SOC 2",
-            "category": "Security",
-            "description": "Implement logical access security software",
-            "remediation_issue": "MFA coverage gap on a subset of SaaS admin consoles",
-            "status": "Implemented",
-            "coordination_state": "In Between",
-            "current_owner": "IT Operations",
+            "issue": "MFA gaps on a subset of SaaS admin consoles",
+            "control_status": "Implemented",
+            "coord_state": "Status drift",
+            "owner": "IT Operations",
             "doing_team": "Cloud Ops",
-            "informed": "IT Security, GRC, SOC 2 readiness",
-            "authoritative_system": "ServiceNow",
-            "handoff_note": "Ticket says 'In Progress'; GRC says 'Implemented' — classic In-Between.",
+            "informed": "IT Security; GRC; SOC 2 readiness",
+            "source_of_truth": "ServiceNow",
+            "ticket_ref": "INC/RITM-77821",
+            "notes": "ServiceNow still In Progress; GRC already marked Implemented.",
             "risk_score": 45,
-            "last_handoff": (today - timedelta(days=6)).isoformat(),
             "last_update": (today - timedelta(days=2)).isoformat(),
-            "next_review": (today + timedelta(days=55)).isoformat(),
+            "due_date": (today + timedelta(days=55)).isoformat(),
             "evidence_count": 2,
             "test_results": "In Progress",
         },
@@ -148,20 +167,18 @@ def load_control_data():
             "control_id": "CC7.1",
             "control_name": "System Operation Monitoring",
             "framework": "SOC 2",
-            "category": "Security",
-            "description": "Monitor system operations for security events",
-            "remediation_issue": "Alert tuning for dormant service accounts on brownfield hosts",
-            "status": "In Progress",
-            "coordination_state": "Split Ownership",
-            "current_owner": "GRC",
+            "issue": "Alert tuning for dormant accounts on brownfield hosts",
+            "control_status": "In Progress",
+            "coord_state": "Split ownership",
+            "owner": "GRC",
             "doing_team": "Security Operations",
-            "informed": "IT Operations, Audit",
-            "authoritative_system": "Spreadsheet",
-            "handoff_note": "GRC owns the finding; SecOps owns the SIEM work; tracker is a shared sheet.",
+            "informed": "IT Operations; Audit",
+            "source_of_truth": "Spreadsheet",
+            "ticket_ref": "TRACKER-sheet-tab3",
+            "notes": "Finding owned in GRC; SIEM work owned by SecOps; shared sheet is interim.",
             "risk_score": 60,
-            "last_handoff": (today - timedelta(days=9)).isoformat(),
             "last_update": (today - timedelta(days=4)).isoformat(),
-            "next_review": (today + timedelta(days=18)).isoformat(),
+            "due_date": (today + timedelta(days=18)).isoformat(),
             "evidence_count": 1,
             "test_results": "Not Started",
         },
@@ -169,20 +186,18 @@ def load_control_data():
             "control_id": "3.1",
             "control_name": "Network Security Controls",
             "framework": "PCI DSS",
-            "category": "Network Security",
-            "description": "Implement network security controls",
-            "remediation_issue": "Segment rule review after payment-zone change",
-            "status": "Tested",
-            "coordination_state": "Synced",
-            "current_owner": "Network Security",
+            "issue": "Segment rule review after payment-zone change",
+            "control_status": "Tested",
+            "coord_state": "Aligned",
+            "owner": "Network Security",
             "doing_team": "Network Security",
-            "informed": "PCI QSA liaison, GRC",
-            "authoritative_system": "Change ticket",
-            "handoff_note": "Change ticket is authoritative until CAB close; then evidence lands in GRC.",
+            "informed": "PCI liaison; GRC",
+            "source_of_truth": "Change ticket",
+            "ticket_ref": "CHG004912",
+            "notes": "Change record is live SoT until CAB close, then evidence to GRC.",
             "risk_score": 40,
-            "last_handoff": (today - timedelta(days=15)).isoformat(),
             "last_update": (today - timedelta(days=7)).isoformat(),
-            "next_review": (today + timedelta(days=70)).isoformat(),
+            "due_date": (today + timedelta(days=70)).isoformat(),
             "evidence_count": 3,
             "test_results": "Passed",
         },
@@ -190,20 +205,18 @@ def load_control_data():
             "control_id": "164.308",
             "control_name": "Administrative Safeguards",
             "framework": "HIPAA",
-            "category": "Administrative Safeguards",
-            "description": "Implement administrative safeguards",
-            "remediation_issue": "Workforce sanction procedure not reflected in ops runbooks",
-            "status": "Not Implemented",
-            "coordination_state": "Telephone Risk",
-            "current_owner": "Compliance Team",
+            "issue": "Workforce sanction procedure missing from ops runbooks",
+            "control_status": "Not Implemented",
+            "coord_state": "Undocumented",
+            "owner": "Compliance Team",
             "doing_team": "HR Ops",
-            "informed": "Legal, Privacy, GRC",
-            "authoritative_system": "Email thread",
-            "handoff_note": "Last 'decision' lives in an email nobody can find. Progress = Telephone.",
+            "informed": "Legal; Privacy; GRC",
+            "source_of_truth": "Email",
+            "ticket_ref": "",
+            "notes": "Decision trail is email-only; no durable ticket yet.",
             "risk_score": 80,
-            "last_handoff": (today - timedelta(days=22)).isoformat(),
             "last_update": (today - timedelta(days=19)).isoformat(),
-            "next_review": (today - timedelta(days=4)).isoformat(),
+            "due_date": (today - timedelta(days=4)).isoformat(),
             "evidence_count": 0,
             "test_results": "Not Started",
         },
@@ -211,20 +224,18 @@ def load_control_data():
             "control_id": "ID.AM-1",
             "control_name": "Asset Inventory",
             "framework": "NIST CSF",
-            "category": "Asset Management",
-            "description": "Maintain asset inventory",
-            "remediation_issue": "Reconcile CMDB vs. discovered LPARs and appliances",
-            "status": "Implemented",
-            "coordination_state": "In Between",
-            "current_owner": "Asset Management",
+            "issue": "Reconcile CMDB vs discovered LPARs and appliances",
+            "control_status": "Implemented",
+            "coord_state": "Status drift",
+            "owner": "Asset Management",
             "doing_team": "Platform Engineering",
-            "informed": "IT Security, GRC",
-            "authoritative_system": "ServiceNow",
-            "handoff_note": "Discovery feed updated; CMDB owners still debating authoritative records.",
+            "informed": "IT Security; GRC",
+            "source_of_truth": "ServiceNow",
+            "ticket_ref": "CMDB-941",
+            "notes": "Discovery feed updated; CMDB ownership still under review.",
             "risk_score": 30,
-            "last_handoff": (today - timedelta(days=2)).isoformat(),
             "last_update": today.isoformat(),
-            "next_review": (today + timedelta(days=60)).isoformat(),
+            "due_date": (today + timedelta(days=60)).isoformat(),
             "evidence_count": 2,
             "test_results": "Passed",
         },
@@ -232,20 +243,18 @@ def load_control_data():
             "control_id": "PR.AC-1",
             "control_name": "Identity Management",
             "framework": "NIST CSF",
-            "category": "Identity Management and Access Control",
-            "description": "Manage identities and credentials",
-            "remediation_issue": "Privileged identity recert for break-glass accounts",
-            "status": "Compliant",
-            "coordination_state": "Synced",
-            "current_owner": "IT Security Team",
+            "issue": "Privileged identity recert for break-glass accounts",
+            "control_status": "Compliant",
+            "coord_state": "Aligned",
+            "owner": "IT Security Team",
             "doing_team": "IT Security Team",
-            "informed": "IAM, GRC",
-            "authoritative_system": "GRC platform",
-            "handoff_note": "Recert campaign closed in GRC with attestation evidence attached.",
+            "informed": "IAM; GRC",
+            "source_of_truth": "GRC platform",
+            "ticket_ref": "GRC-RECERT-88",
+            "notes": "Recert closed with attestations attached.",
             "risk_score": 25,
-            "last_handoff": (today - timedelta(days=18)).isoformat(),
             "last_update": (today - timedelta(days=10)).isoformat(),
-            "next_review": (today + timedelta(days=100)).isoformat(),
+            "due_date": (today + timedelta(days=100)).isoformat(),
             "evidence_count": 4,
             "test_results": "Passed",
         },
@@ -253,20 +262,18 @@ def load_control_data():
             "control_id": "DE.CM-1",
             "control_name": "Security Monitoring",
             "framework": "NIST CSF",
-            "category": "Security Continuous Monitoring",
-            "description": "Monitor security events",
-            "remediation_issue": "Coverage gap for legacy middleware logging",
-            "status": "In Progress",
-            "coordination_state": "Telephone Risk",
-            "current_owner": "Security Operations",
+            "issue": "Legacy middleware logging coverage gap",
+            "control_status": "In Progress",
+            "coord_state": "Undocumented",
+            "owner": "Security Operations",
             "doing_team": "Middleware Ops",
-            "informed": "GRC, Audit",
-            "authoritative_system": "Meeting notes",
-            "handoff_note": "Agreed in standup; no durable ticket yet. Upside-Down territory.",
+            "informed": "GRC; Audit",
+            "source_of_truth": "Meeting notes",
+            "ticket_ref": "",
+            "notes": "Verbal agreement in standup; ticket not opened yet.",
             "risk_score": 55,
-            "last_handoff": (today - timedelta(days=1)).isoformat(),
             "last_update": (today - timedelta(days=1)).isoformat(),
-            "next_review": (today + timedelta(days=25)).isoformat(),
+            "due_date": (today + timedelta(days=25)).isoformat(),
             "evidence_count": 1,
             "test_results": "In Progress",
         },
@@ -274,20 +281,18 @@ def load_control_data():
             "control_id": "IBMI-QSEC",
             "control_name": "IBM i QSECURITY & *ALLOBJ Governance",
             "framework": "NIST CSF",
-            "category": "Identity Management and Access Control",
-            "description": "Govern IBM i system values and special authorities including *ALLOBJ on production LPARs",
-            "remediation_issue": "Reduce standing *ALLOBJ; monitor QSECURITY level drift on prod LPARs",
-            "status": "In Progress",
-            "coordination_state": "Telephone Risk",
-            "current_owner": "IBM i Ops",
+            "issue": "Reduce standing *ALLOBJ; monitor QSECURITY drift on prod LPARs",
+            "control_status": "In Progress",
+            "coord_state": "Undocumented",
+            "owner": "IBM i Ops",
             "doing_team": "IBM i Ops",
-            "informed": "GRC, Mainframe Security, Audit",
-            "authoritative_system": "Email thread",
-            "handoff_note": "Doing team is clear; SoT is an email chain. GRC is informed, not authoritative.",
+            "informed": "GRC; Mainframe Security; Audit",
+            "source_of_truth": "Email",
+            "ticket_ref": "",
+            "notes": "Work underway; status updates live in email, not GRC.",
             "risk_score": 78,
-            "last_handoff": (today - timedelta(days=5)).isoformat(),
             "last_update": (today - timedelta(days=2)).isoformat(),
-            "next_review": (today + timedelta(days=14)).isoformat(),
+            "due_date": (today + timedelta(days=14)).isoformat(),
             "evidence_count": 2,
             "test_results": "In Progress",
         },
@@ -295,20 +300,18 @@ def load_control_data():
             "control_id": "ZOS-RACF",
             "control_name": "z/OS RACF Privileged Attribute Recertification",
             "framework": "SOC 2",
-            "category": "Security",
-            "description": "Recertify RACF SPECIAL / OPERATIONS attributes and CICS region IDs on IBM Z",
-            "remediation_issue": "Recert SPECIAL/OPERATIONS; align CICS region ID ownership",
-            "status": "Implemented",
-            "coordination_state": "In Between",
-            "current_owner": "Mainframe Security",
+            "issue": "Recert SPECIAL/OPERATIONS; align CICS region ID ownership",
+            "control_status": "Implemented",
+            "coord_state": "Status drift",
+            "owner": "Mainframe Security",
             "doing_team": "Mainframe Security",
-            "informed": "GRC, Internal Audit",
-            "authoritative_system": "Change ticket",
-            "handoff_note": "Change closed on Z; GRC control status still lagging the change record.",
+            "informed": "GRC; Internal Audit",
+            "source_of_truth": "Change ticket",
+            "ticket_ref": "CHG004880",
+            "notes": "Change closed on Z; GRC control status still lagging.",
             "risk_score": 72,
-            "last_handoff": (today - timedelta(days=8)).isoformat(),
             "last_update": (today - timedelta(days=3)).isoformat(),
-            "next_review": (today + timedelta(days=45)).isoformat(),
+            "due_date": (today + timedelta(days=45)).isoformat(),
             "evidence_count": 3,
             "test_results": "Passed",
         },
@@ -316,400 +319,389 @@ def load_control_data():
             "control_id": "ERP-SAPALL",
             "control_name": "SAP ECC / JD Edwards Privileged Access",
             "framework": "ISO 27001",
-            "category": "Access Control",
-            "description": "Control SAP_ALL, DDIC, and JD Edwards IFS admin roles with monitoring",
-            "remediation_issue": "Break-glass for SAP_ALL / DDIC and JDE IFS admin roles",
-            "status": "Not Implemented",
-            "coordination_state": "Split Ownership",
-            "current_owner": "ERP Security",
+            "issue": "Break-glass for SAP_ALL / DDIC and JDE IFS admin roles",
+            "control_status": "Not Implemented",
+            "coord_state": "Split ownership",
+            "owner": "ERP Security",
             "doing_team": "SAP Basis / JDE CNC",
-            "informed": "GRC, Internal Audit, Application owners",
-            "authoritative_system": "Jira",
-            "handoff_note": "ServiceNow has a related RITM; Jira has the sprint work; GRC has the finding.",
+            "informed": "GRC; Internal Audit; App owners",
+            "source_of_truth": "Jira",
+            "ticket_ref": "ERP-551; RITM-66210",
+            "notes": "Sprint work in Jira; related RITM in ServiceNow; finding in GRC.",
             "risk_score": 82,
-            "last_handoff": (today - timedelta(days=4)).isoformat(),
             "last_update": (today - timedelta(days=1)).isoformat(),
-            "next_review": (today - timedelta(days=2)).isoformat(),
+            "due_date": (today - timedelta(days=2)).isoformat(),
             "evidence_count": 0,
             "test_results": "Not Started",
         },
     ]
-    return pd.DataFrame(controls)
 
 
-def calculate_coordination_metrics(df: pd.DataFrame) -> dict:
-    now = datetime.datetime.now()
+def ensure_register(seed: int) -> None:
+    if st.session_state.get("_ctrl_seed") != seed or "controls" not in st.session_state:
+        st.session_state.controls = [dict(r) for r in _sample_rows()]
+        st.session_state._ctrl_seed = seed
+
+
+def to_dataframe(rows: list[dict]) -> pd.DataFrame:
+    if not rows:
+        return pd.DataFrame(columns=EXPORT_COLS)
+    return pd.DataFrame(rows)
+
+
+def metrics(df: pd.DataFrame) -> dict[str, Any]:
+    now = datetime.now()
+    if df.empty:
+        return {
+            "total": 0,
+            "aligned": 0,
+            "attention": 0,
+            "overdue": 0,
+            "owner_mismatch": 0,
+            "systems": 0,
+            "high_risk": 0,
+            "avg_risk": 0.0,
+        }
+    attention_states = {"Pending transfer", "Status drift", "Split ownership", "Undocumented"}
     return {
         "total": len(df),
-        "in_between": len(df[df["coordination_state"] == "In Between"]),
-        "telephone": len(df[df["coordination_state"] == "Telephone Risk"]),
-        "split": len(df[df["coordination_state"] == "Split Ownership"]),
-        "handoff": len(df[df["coordination_state"] == "Handoff"]),
-        "synced": len(df[df["coordination_state"] == "Synced"]),
-        "systems_in_play": df["authoritative_system"].nunique() if len(df) else 0,
-        "avg_risk": float(df["risk_score"].mean()) if len(df) else 0.0,
-        "high_risk": len(df[df["risk_score"] >= 70]),
-        "overdue_reviews": len(df[pd.to_datetime(df["next_review"]) < now]) if len(df) else 0,
-        "doing_vs_owner_mismatch": len(df[df["current_owner"] != df["doing_team"]]) if len(df) else 0,
+        "aligned": int((df["coord_state"] == "Aligned").sum()),
+        "attention": int(df["coord_state"].isin(attention_states).sum()),
+        "overdue": int((pd.to_datetime(df["due_date"]) < now).sum()),
+        "owner_mismatch": int((df["owner"] != df["doing_team"]).sum()),
+        "systems": int(df["source_of_truth"].nunique()),
+        "high_risk": int((df["risk_score"] >= 70).sum()),
+        "avg_risk": float(df["risk_score"].mean()),
     }
+
+
+def upsert_row(fields: dict[str, Any]) -> str:
+    cid = fields["control_id"].strip()
+    for i, row in enumerate(st.session_state.controls):
+        if row["control_id"] == cid:
+            st.session_state.controls[i] = {**row, **fields}
+            return "updated"
+    st.session_state.controls.append(fields)
+    return "added"
 
 
 def main():
     portfolio_skin.page_header(
         title="Control Tracker",
-        lede=(
-            "Day Eight: remediation coordination — who owns it right now, "
-            "and which system is authoritative in the In-Between."
-        ),
-        kicker="Controls · Coordination",
-        club_tag="#RUNGRCRaleigh · Sep 1 @ 6:00pm",
+        lede="Session register for control remediation ownership, handoffs, and source of truth.",
+        kicker="Controls",
     )
 
-    st.info(
-        "**GRC Lego block** — intentionally simple. Not a replacement for ticketing, "
-        "GRC platforms, or delivery tools. Isolates one idea: control remediation can be a "
-        "**distributed workflow problem** before it is a compliance problem."
-    )
-
-    df = load_control_data()
+    seed = demo_kit.ensure_seed()
+    ensure_register(seed)
 
     st.sidebar.header("Controls")
-    seed = demo_kit.seed_controls()
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Filters")
+    demo_kit.seed_controls()
+    st.sidebar.caption("Resample reloads sample rows (session edits cleared).")
 
-    framework_filter = st.sidebar.multiselect(
+    with st.sidebar.expander("Add / update item", expanded=False):
+        with st.form("upsert_control"):
+            control_id = st.text_input("Control ID", placeholder="e.g. AC-02")
+            control_name = st.text_input("Control name")
+            framework = st.selectbox("Framework", FRAMEWORKS)
+            issue = st.text_area("Remediation issue", height=80)
+            c1, c2 = st.columns(2)
+            with c1:
+                control_status = st.selectbox("Control status", CONTROL_STATUSES)
+                owner = st.text_input("Owner (accountable)")
+                source_of_truth = st.selectbox("Source of truth", WORK_SYSTEMS)
+                risk_score = st.slider("Risk score", 1, 100, 50)
+            with c2:
+                coord_state = st.selectbox("Coordination state", COORD_STATES)
+                doing_team = st.text_input("Doing team")
+                ticket_ref = st.text_input("Ticket / ref", placeholder="Jira / CHG / RITM…")
+                evidence_count = st.number_input("Evidence count", 0, 50, 0)
+            informed = st.text_input("Informed", placeholder="GRC; Audit; …")
+            notes = st.text_area("Notes", height=60)
+            test_results = st.selectbox("Test results", TEST_RESULTS)
+            due_date = st.date_input("Due date", value=date(2026, 9, 30))
+            submitted = st.form_submit_button("Save item", type="primary")
+            if submitted:
+                if not control_id.strip() or not control_name.strip():
+                    st.error("Control ID and name are required.")
+                else:
+                    fields = {
+                        "control_id": control_id.strip(),
+                        "control_name": control_name.strip(),
+                        "framework": framework,
+                        "issue": issue.strip() or "—",
+                        "control_status": control_status,
+                        "coord_state": coord_state,
+                        "owner": owner.strip() or "Unassigned",
+                        "doing_team": doing_team.strip() or owner.strip() or "Unassigned",
+                        "informed": informed.strip(),
+                        "source_of_truth": source_of_truth,
+                        "ticket_ref": ticket_ref.strip(),
+                        "notes": notes.strip(),
+                        "risk_score": int(risk_score),
+                        "last_update": date.today().isoformat(),
+                        "due_date": due_date.isoformat(),
+                        "evidence_count": int(evidence_count),
+                        "test_results": test_results,
+                    }
+                    action = upsert_row(fields)
+                    st.success(f"{'Updated' if action == 'updated' else 'Added'} {fields['control_id']}")
+                    st.rerun()
+
+    df = to_dataframe(st.session_state.controls)
+
+    st.sidebar.subheader("Filters")
+    fw_filter = st.sidebar.multiselect(
         "Framework",
-        sorted(df["framework"].unique()),
-        default=sorted(df["framework"].unique()),
+        sorted(df["framework"].unique()) if not df.empty else FRAMEWORKS,
+        default=sorted(df["framework"].unique()) if not df.empty else [],
     )
     coord_filter = st.sidebar.multiselect(
         "Coordination state",
         COORD_STATES,
         default=COORD_STATES,
     )
-    system_filter = st.sidebar.multiselect(
-        "Authoritative system",
-        sorted(df["authoritative_system"].unique()),
-        default=sorted(df["authoritative_system"].unique()),
+    sot_filter = st.sidebar.multiselect(
+        "Source of truth",
+        sorted(df["source_of_truth"].unique()) if not df.empty else WORK_SYSTEMS,
+        default=sorted(df["source_of_truth"].unique()) if not df.empty else [],
     )
-    risk_filter = st.sidebar.slider("Risk score range", 0, 100, (0, 100))
+    risk_lo, risk_hi = st.sidebar.slider("Risk score", 0, 100, (0, 100))
 
-    filtered = df[
-        df["framework"].isin(framework_filter)
-        & df["coordination_state"].isin(coord_filter)
-        & df["authoritative_system"].isin(system_filter)
-        & (df["risk_score"] >= risk_filter[0])
-        & (df["risk_score"] <= risk_filter[1])
-    ]
+    filtered = df
+    if not df.empty:
+        filtered = df[
+            df["framework"].isin(fw_filter)
+            & df["coord_state"].isin(coord_filter)
+            & df["source_of_truth"].isin(sot_filter)
+            & (df["risk_score"] >= risk_lo)
+            & (df["risk_score"] <= risk_hi)
+        ]
 
-    metrics = calculate_coordination_metrics(filtered)
-
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(
-        ["Dashboard", "Work in Motion", "Analytics", "Coordination Watch", "Export"]
-    )
+    m = metrics(filtered)
+    tab1, tab2, tab3, tab4 = st.tabs(["Dashboard", "Register", "Attention", "Export"])
 
     with tab1:
-        st.header("Coordination Dashboard")
-        st.caption(
-            "Less Open → In Progress → Complete. More: who is doing the work, "
-            "who is only informed, and which system is authoritative *right now*."
-        )
-
+        st.header("Dashboard")
         c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Active items", metrics["total"], delta=f"{metrics['synced']} Synced")
-        c2.metric(
-            "In-Between / Handoff",
-            metrics["in_between"] + metrics["handoff"],
-            delta=f"{metrics['in_between']} In Between",
-        )
-        c3.metric(
-            "Telephone / Split",
-            metrics["telephone"] + metrics["split"],
-            delta=f"{metrics['telephone']} Telephone Risk",
-            delta_color="inverse",
-        )
-        c4.metric(
-            "Systems of record in play",
-            metrics["systems_in_play"],
-            delta=f"{metrics['doing_vs_owner_mismatch']} owner≠doer",
-        )
+        c1.metric("Items", m["total"], delta=f"{m['aligned']} aligned")
+        c2.metric("Needs attention", m["attention"], delta=f"{m['owner_mismatch']} owner≠doer")
+        c3.metric("Past due", m["overdue"])
+        c4.metric("Avg risk", f"{m['avg_risk']:.0f}", delta=f"{m['high_risk']} ≥70")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            counts = filtered["coordination_state"].value_counts().reindex(COORD_STATES).fillna(0)
-            fig = px.pie(
-                names=counts.index,
-                values=counts.values,
-                title="Coordination state (not lifecycle)",
-                color=counts.index,
-                color_discrete_map=COORD_COLORS,
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        with col2:
-            sys_counts = filtered["authoritative_system"].value_counts()
-            fig2 = px.bar(
-                x=sys_counts.index,
-                y=sys_counts.values,
-                title="Where authoritative state lives *now*",
-                labels={"x": "System", "y": "Items"},
-            )
-            st.plotly_chart(fig2, use_container_width=True)
+        if filtered.empty:
+            st.info("No rows match the current filters.")
+        else:
+            left, right = st.columns(2)
+            with left:
+                counts = (
+                    filtered["coord_state"]
+                    .value_counts()
+                    .reindex(COORD_STATES)
+                    .fillna(0)
+                )
+                fig = px.pie(
+                    names=counts.index,
+                    values=counts.values,
+                    title="Coordination state",
+                    color=counts.index,
+                    color_discrete_map=COORD_COLORS,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            with right:
+                sot = filtered["source_of_truth"].value_counts()
+                fig2 = px.bar(
+                    x=sot.index,
+                    y=sot.values,
+                    title="Source of truth",
+                    labels={"x": "System", "y": "Items"},
+                )
+                st.plotly_chart(fig2, use_container_width=True)
 
-        fig3 = px.histogram(
-            filtered,
-            x="risk_score",
-            nbins=10,
-            title="Risk score distribution",
-            labels={"risk_score": "Risk score", "count": "Items"},
-        )
-        fig3.add_vline(x=70, line_dash="dash", line_color="red", annotation_text="High risk")
-        st.plotly_chart(fig3, use_container_width=True)
-
-    with tab2:
-        st.header("Work in Motion")
-        st.caption(
-            "Ask on every row: Who owns it right now? What is the source of truth? "
-            "Who is doing vs. informed? How do we stop progress from becoming Telephone?"
-        )
-
-        search = st.text_input(
-            "Search",
-            placeholder="ID, name, team, system, or issue…",
-        )
-        sort_by = st.selectbox(
-            "Sort by",
-            [
-                "Coordination state",
-                "Risk score",
-                "Last update",
-                "Control ID",
-                "Authoritative system",
-            ],
-        )
-
-        display = filtered
-        if search:
-            q = search.lower()
-            mask = (
-                display["control_id"].str.lower().str.contains(q, na=False)
-                | display["control_name"].str.lower().str.contains(q, na=False)
-                | display["remediation_issue"].str.lower().str.contains(q, na=False)
-                | display["current_owner"].str.lower().str.contains(q, na=False)
-                | display["doing_team"].str.lower().str.contains(q, na=False)
-                | display["authoritative_system"].str.lower().str.contains(q, na=False)
-            )
-            display = display[mask]
-
-        sort_map = {
-            "Coordination state": ("coordination_state", True),
-            "Risk score": ("risk_score", False),
-            "Last update": ("last_update", False),
-            "Control ID": ("control_id", True),
-            "Authoritative system": ("authoritative_system", True),
-        }
-        col, asc = sort_map[sort_by]
-        display = display.sort_values(col, ascending=asc)
-
-        for _, row in display.iterrows():
-            label = (
-                f"{row['control_id']} — {row['control_name']} · "
-                f"{row['coordination_state']} · SoT: {row['authoritative_system']}"
-            )
-            with st.expander(label):
-                left, right = st.columns([2, 1])
-                with left:
-                    st.write(f"**Framework:** {row['framework']} · **Category:** {row['category']}")
-                    st.write(f"**Remediation issue:** {row['remediation_issue']}")
-                    st.write(f"**Current owner (now):** {row['current_owner']}")
-                    st.write(f"**Doing the work:** {row['doing_team']}")
-                    st.write(f"**Informed:** {row['informed']}")
-                    st.write(f"**Authoritative system (this moment):** {row['authoritative_system']}")
-                    st.write(f"**Handoff note:** {row['handoff_note']}")
-                with right:
-                    risk_color = (
-                        "red"
-                        if row["risk_score"] >= 70
-                        else "orange"
-                        if row["risk_score"] >= 50
-                        else "green"
-                    )
-                    st.metric("Risk score", row["risk_score"], delta=f"{risk_color} band")
-                    st.write(f"**Lifecycle label (legacy):** {row['status']}")
-                    st.write(f"**Test results:** {row['test_results']}")
-                    st.write(f"**Last handoff:** {row['last_handoff']}")
-                    st.write(f"**Last update:** {row['last_update']}")
-                    st.write(f"**Next review:** {row['next_review']}")
-                    st.write(f"**Evidence count:** {row['evidence_count']}")
-
-                    mismatch = row["current_owner"] != row["doing_team"]
-                    if mismatch:
-                        st.warning("Owner ≠ doing team — seam risk.")
-                    if row["coordination_state"] in ("Telephone Risk", "Split Ownership"):
-                        st.error("Coordination friction — durable SoT unclear or fragmented.")
-                    elif row["coordination_state"] == "Synced":
-                        st.success("Authoritative state and ownership line up.")
-
-    with tab3:
-        st.header("Analytics")
-        col1, col2 = st.columns(2)
-        with col1:
             by_fw = (
-                filtered.groupby("framework")["coordination_state"]
-                .apply(lambda s: (s != "Synced").sum())
-                .reset_index(name="Not Synced")
+                filtered.groupby(["framework", "coord_state"])
+                .size()
+                .reset_index(name="count")
             )
-            fig = px.bar(
+            fig3 = px.bar(
                 by_fw,
                 x="framework",
-                y="Not Synced",
-                title="Items not Synced by framework",
-                labels={"framework": "Framework"},
+                y="count",
+                color="coord_state",
+                color_discrete_map=COORD_COLORS,
+                title="Coordination by framework",
+                barmode="stack",
             )
-            st.plotly_chart(fig, use_container_width=True)
-        with col2:
-            fig = px.box(
-                filtered,
-                x="authoritative_system",
-                y="risk_score",
-                title="Risk by authoritative system",
-                labels={"authoritative_system": "System", "risk_score": "Risk score"},
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig3, use_container_width=True)
 
-        st.subheader("Handoff activity (simulated weekly pulse)")
-        rng = np.random.default_rng(seed)
-        weeks = pd.date_range(end=datetime.date(2026, 8, 12), periods=16, freq="W")
-        pulse = []
-        for i, w in enumerate(weeks):
-            base = 4 + (i % 5)
-            pulse.append(
-                {
-                    "Week": w,
-                    "Handoffs recorded": max(0, int(base + rng.normal(0, 1.2))),
-                    "Telephone-risk flags": max(0, int(1 + rng.integers(0, 3))),
-                }
-            )
-        pulse_df = pd.DataFrame(pulse)
-        fig = px.line(
-            pulse_df,
-            x="Week",
-            y=["Handoffs recorded", "Telephone-risk flags"],
-            title="Coordination pulse (demo)",
+    with tab2:
+        st.header("Register")
+        search = st.text_input("Search", placeholder="ID, name, owner, ticket, issue…")
+        sort_by = st.selectbox(
+            "Sort by",
+            ["Risk score", "Due date", "Coordination state", "Control ID", "Last update"],
         )
-        st.plotly_chart(fig, use_container_width=True)
+
+        view = filtered.copy()
+        if search and not view.empty:
+            q = search.lower()
+            mask = False
+            for col in (
+                "control_id",
+                "control_name",
+                "issue",
+                "owner",
+                "doing_team",
+                "source_of_truth",
+                "ticket_ref",
+                "notes",
+            ):
+                mask = mask | view[col].astype(str).str.lower().str.contains(q, na=False)
+            view = view[mask]
+
+        sort_map = {
+            "Risk score": ("risk_score", False),
+            "Due date": ("due_date", True),
+            "Coordination state": ("coord_state", True),
+            "Control ID": ("control_id", True),
+            "Last update": ("last_update", False),
+        }
+        col, asc = sort_map[sort_by]
+        if not view.empty:
+            view = view.sort_values(col, ascending=asc)
+
+        st.dataframe(
+            view[EXPORT_COLS] if not view.empty else view,
+            use_container_width=True,
+            hide_index=True,
+            height=420,
+        )
+
+        for _, row in view.iterrows():
+            title = (
+                f"{row['control_id']} — {row['control_name']} · "
+                f"{row['coord_state']} · {row['source_of_truth']}"
+            )
+            with st.expander(title):
+                a, b = st.columns([2, 1])
+                with a:
+                    st.write(f"**Issue:** {row['issue']}")
+                    st.write(f"**Owner:** {row['owner']}")
+                    st.write(f"**Doing team:** {row['doing_team']}")
+                    st.write(f"**Informed:** {row['informed'] or '—'}")
+                    st.write(f"**Source of truth:** {row['source_of_truth']}")
+                    st.write(f"**Ticket / ref:** {row['ticket_ref'] or '—'}")
+                    st.write(f"**Notes:** {row['notes'] or '—'}")
+                with b:
+                    st.metric("Risk", int(row["risk_score"]))
+                    st.write(f"**Control status:** {row['control_status']}")
+                    st.write(f"**Test:** {row['test_results']}")
+                    st.write(f"**Evidence:** {row['evidence_count']}")
+                    st.write(f"**Updated:** {row['last_update']}")
+                    st.write(f"**Due:** {row['due_date']}")
+                    if row["owner"] != row["doing_team"]:
+                        st.warning("Owner and doing team differ.")
+                    if row["coord_state"] in ("Undocumented", "Split ownership", "Status drift"):
+                        st.error("Coordination gap — confirm durable source of truth.")
+                    elif row["coord_state"] == "Aligned":
+                        st.success("Ownership and source of truth look consistent.")
+
+    with tab3:
+        st.header("Attention queue")
+        if filtered.empty:
+            st.info("No rows to review.")
+        else:
+            needs = filtered[
+                filtered["coord_state"].isin(
+                    ["Undocumented", "Split ownership", "Status drift", "Pending transfer"]
+                )
+            ].sort_values("risk_score", ascending=False)
+
+            overdue = filtered[pd.to_datetime(filtered["due_date"]) < datetime.now()]
+            high = filtered[filtered["risk_score"] >= 70]
+
+            if len(needs):
+                st.warning(f"{len(needs)} items with coordination friction")
+                st.dataframe(
+                    needs[
+                        [
+                            "control_id",
+                            "control_name",
+                            "coord_state",
+                            "source_of_truth",
+                            "owner",
+                            "doing_team",
+                            "ticket_ref",
+                            "risk_score",
+                            "due_date",
+                        ]
+                    ],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            else:
+                st.success("No coordination friction in the current filter set.")
+
+            if len(overdue):
+                st.error(f"{len(overdue)} past due")
+                for _, row in overdue.iterrows():
+                    days = (datetime.now() - pd.to_datetime(row["due_date"])).days
+                    st.write(
+                        f"• {row['control_id']} — {row['control_name']} "
+                        f"({days}d) · {row['source_of_truth']} · {row['ticket_ref'] or 'no ticket'}"
+                    )
+            else:
+                st.success("No past-due items in the filtered set.")
+
+            if len(high):
+                st.subheader("High risk (≥ 70)")
+                st.dataframe(
+                    high[
+                        [
+                            "control_id",
+                            "control_name",
+                            "coord_state",
+                            "source_of_truth",
+                            "owner",
+                            "doing_team",
+                            "risk_score",
+                        ]
+                    ],
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
     with tab4:
-        st.header("Coordination Watch")
+        st.header("Export")
         st.caption(
-            "Governance breakdowns rarely happen only in Open or Closed — "
-            "they show up in the nebulous In-Between."
-        )
-
-        friction = filtered[
-            filtered["coordination_state"].isin(
-                ["Telephone Risk", "Split Ownership", "In Between", "Handoff"]
-            )
-        ].sort_values("risk_score", ascending=False)
-
-        if len(friction):
-            st.warning(f"{len(friction)} items with active coordination friction")
-            for _, row in friction.iterrows():
-                with st.expander(
-                    f"{row['control_id']} — {row['control_name']} "
-                    f"({row['coordination_state']}, risk {row['risk_score']})"
-                ):
-                    st.write(f"**Issue:** {row['remediation_issue']}")
-                    st.write(f"**Owner now:** {row['current_owner']} · **Doing:** {row['doing_team']}")
-                    st.write(f"**Informed:** {row['informed']}")
-                    st.write(f"**Authoritative system:** {row['authoritative_system']}")
-                    st.write(f"**Why it matters:** {row['handoff_note']}")
-                    st.markdown(
-                        "- Who owns it **right now**?\n"
-                        "- What system is the **source of truth** for current state?\n"
-                        "- Who is **doing** vs. merely **informed**?\n"
-                        "- How do we keep progress from becoming a game of **Telephone**?"
-                    )
-        else:
-            st.success("No coordination friction in the current filter set.")
-
-        overdue = filtered[pd.to_datetime(filtered["next_review"]) < datetime.datetime.now()]
-        if len(overdue):
-            st.error(f"{len(overdue)} items past next-review date")
-            for _, row in overdue.iterrows():
-                days = (datetime.datetime.now() - pd.to_datetime(row["next_review"])).days
-                st.write(
-                    f"• {row['control_id']} — {row['control_name']} "
-                    f"({days} days past review) · SoT: {row['authoritative_system']}"
-                )
-        else:
-            st.success("Next-review dates are current for the filtered set.")
-
-        high = filtered[filtered["risk_score"] >= 70]
-        if len(high):
-            st.subheader("High-risk items (score ≥ 70)")
-            st.dataframe(
-                high[
-                    [
-                        "control_id",
-                        "control_name",
-                        "coordination_state",
-                        "authoritative_system",
-                        "current_owner",
-                        "doing_team",
-                        "risk_score",
-                    ]
-                ],
-                use_container_width=True,
-                hide_index=True,
-            )
-
-    with tab5:
-        st.header("Export & notes")
-        st.markdown(
-            """
-**If you try something like this in your own org, ask:**
-
-When a control issue is actively being worked, can you tell where the
-**authoritative state** actually lives — and who is responsible for updating it as it moves?
-
-Most governance breakdowns don’t happen in an “Open” or “Closed” state.
-They happen in the **In-Between**.
-            """
+            "Fork-friendly CSV of the filtered register. Session edits are not persisted server-side."
         )
         demo_kit.csv_download(
-            filtered.copy(),
-            "control_coordination_filtered.csv",
-            label="Download filtered view",
+            filtered[EXPORT_COLS].copy() if not filtered.empty else filtered,
+            "control_remediation_register.csv",
+            label="Download filtered CSV",
         )
-        if st.button("Refresh"):
-            st.rerun()
-
         summary = pd.DataFrame(
             {
                 "Metric": [
-                    "Active items",
-                    "Synced",
-                    "In Between",
-                    "Handoff",
-                    "Split Ownership",
-                    "Telephone Risk",
+                    "Items",
+                    "Aligned",
+                    "Needs attention",
                     "Owner ≠ doing team",
-                    "Systems of record in play",
+                    "Distinct sources of truth",
                     "High risk (≥70)",
-                    "Past next review",
+                    "Past due",
+                    "Average risk",
                 ],
                 "Value": [
-                    metrics["total"],
-                    metrics["synced"],
-                    metrics["in_between"],
-                    metrics["handoff"],
-                    metrics["split"],
-                    metrics["telephone"],
-                    metrics["doing_vs_owner_mismatch"],
-                    metrics["systems_in_play"],
-                    metrics["high_risk"],
-                    metrics["overdue_reviews"],
+                    m["total"],
+                    m["aligned"],
+                    m["attention"],
+                    m["owner_mismatch"],
+                    m["systems"],
+                    m["high_risk"],
+                    m["overdue"],
+                    f"{m['avg_risk']:.1f}",
                 ],
             }
         )

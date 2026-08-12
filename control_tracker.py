@@ -1,16 +1,21 @@
-import streamlit as st
-import demo_kit
-import portfolio_skin
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+"""Control Tracker — Day Eight: remediation coordination (not lifecycle status).
+
+GRC Lego block: isolates the idea that control remediation is often a distributed
+workflow / handoff problem before it is a compliance problem.
+"""
+
+from __future__ import annotations
+
 import datetime
 from datetime import timedelta
-import random
 
-# Page configuration
+import demo_kit
+import numpy as np
+import pandas as pd
+import plotly.express as px
+import portfolio_skin
+import streamlit as st
+
 st.set_page_config(
     page_title="Control Tracker · i on GRC",
     page_icon="assets/favicon.svg",
@@ -20,12 +25,40 @@ st.set_page_config(
 
 portfolio_skin.apply(hide_sidebar=False)
 
+# Coordination states — not Open → In Progress → Closed
+COORD_STATES = [
+    "Synced",
+    "In Between",
+    "Handoff",
+    "Split Ownership",
+    "Telephone Risk",
+]
+
+COORD_COLORS = {
+    "Synced": "#2e7d32",
+    "In Between": "#f57c00",
+    "Handoff": "#1976d2",
+    "Split Ownership": "#7b1fa2",
+    "Telephone Risk": "#c62828",
+}
+
+SYSTEMS = [
+    "GRC platform",
+    "Jira",
+    "ServiceNow",
+    "Change ticket",
+    "Email thread",
+    "Meeting notes",
+    "Slack / Teams",
+    "Spreadsheet",
+]
 
 
-# Sample control data
 @st.cache_data
 def load_control_data():
-    """Load sample control data"""
+    """Sample remediation work — current enough to feel live (Aug 2026)."""
+    # Anchor "today" for educational demos so Cloud deploys stay coherent.
+    today = datetime.date(2026, 8, 12)
     controls = [
         {
             "control_id": "AC-01",
@@ -33,14 +66,20 @@ def load_control_data():
             "framework": "NIST CSF",
             "category": "Identity Management and Access Control",
             "description": "Establish and maintain access control policies and procedures",
+            "remediation_issue": "Annual policy refresh signed; evidence linked in GRC",
             "status": "Compliant",
-            "owner": "IT Security Team",
+            "coordination_state": "Synced",
+            "current_owner": "IT Security Team",
+            "doing_team": "IT Security Team",
+            "informed": "GRC, Internal Audit",
+            "authoritative_system": "GRC platform",
+            "handoff_note": "Single SoT — GRC matches what Security actually updated.",
             "risk_score": 25,
-            "last_review": "2024-01-15",
-            "next_review": "2024-07-15",
+            "last_handoff": (today - timedelta(days=12)).isoformat(),
+            "last_update": (today - timedelta(days=5)).isoformat(),
+            "next_review": (today + timedelta(days=95)).isoformat(),
             "evidence_count": 5,
             "test_results": "Passed",
-            "implementation_date": "2023-06-01"
         },
         {
             "control_id": "AC-02",
@@ -48,14 +87,20 @@ def load_control_data():
             "framework": "NIST CSF",
             "category": "Identity Management and Access Control",
             "description": "Manage information system accounts",
+            "remediation_issue": "Joiner/mover/leaver exceptions for shared service accounts",
             "status": "Tested",
-            "owner": "IT Security Team",
+            "coordination_state": "Handoff",
+            "current_owner": "IAM Engineering",
+            "doing_team": "IAM Engineering",
+            "informed": "IT Security, GRC",
+            "authoritative_system": "Jira",
+            "handoff_note": "Work lives in Jira; GRC still shows last quarter's narrative.",
             "risk_score": 35,
-            "last_review": "2024-02-01",
-            "next_review": "2024-08-01",
+            "last_handoff": (today - timedelta(days=3)).isoformat(),
+            "last_update": (today - timedelta(days=1)).isoformat(),
+            "next_review": (today + timedelta(days=40)).isoformat(),
             "evidence_count": 3,
             "test_results": "Passed",
-            "implementation_date": "2023-07-15"
         },
         {
             "control_id": "A.5.1",
@@ -63,14 +108,20 @@ def load_control_data():
             "framework": "ISO 27001",
             "category": "Information Security Policies",
             "description": "Define information security policy framework",
+            "remediation_issue": "Minor editorial updates after management review",
             "status": "Compliant",
-            "owner": "Security Governance",
+            "coordination_state": "Synced",
+            "current_owner": "Security Governance",
+            "doing_team": "Security Governance",
+            "informed": "Legal, GRC",
+            "authoritative_system": "GRC platform",
+            "handoff_note": "Policy set and GRC control record stay in lockstep.",
             "risk_score": 20,
-            "last_review": "2024-01-20",
-            "next_review": "2024-07-20",
+            "last_handoff": (today - timedelta(days=20)).isoformat(),
+            "last_update": (today - timedelta(days=8)).isoformat(),
+            "next_review": (today + timedelta(days=110)).isoformat(),
             "evidence_count": 4,
             "test_results": "Passed",
-            "implementation_date": "2023-05-01"
         },
         {
             "control_id": "CC6.1",
@@ -78,14 +129,20 @@ def load_control_data():
             "framework": "SOC 2",
             "category": "Security",
             "description": "Implement logical access security software",
+            "remediation_issue": "MFA coverage gap on a subset of SaaS admin consoles",
             "status": "Implemented",
-            "owner": "IT Operations",
+            "coordination_state": "In Between",
+            "current_owner": "IT Operations",
+            "doing_team": "Cloud Ops",
+            "informed": "IT Security, GRC, SOC 2 readiness",
+            "authoritative_system": "ServiceNow",
+            "handoff_note": "Ticket says 'In Progress'; GRC says 'Implemented' — classic In-Between.",
             "risk_score": 45,
-            "last_review": "2024-02-10",
-            "next_review": "2024-08-10",
+            "last_handoff": (today - timedelta(days=6)).isoformat(),
+            "last_update": (today - timedelta(days=2)).isoformat(),
+            "next_review": (today + timedelta(days=55)).isoformat(),
             "evidence_count": 2,
             "test_results": "In Progress",
-            "implementation_date": "2023-08-01"
         },
         {
             "control_id": "CC7.1",
@@ -93,14 +150,20 @@ def load_control_data():
             "framework": "SOC 2",
             "category": "Security",
             "description": "Monitor system operations for security events",
+            "remediation_issue": "Alert tuning for dormant service accounts on brownfield hosts",
             "status": "In Progress",
-            "owner": "IT Operations",
+            "coordination_state": "Split Ownership",
+            "current_owner": "GRC",
+            "doing_team": "Security Operations",
+            "informed": "IT Operations, Audit",
+            "authoritative_system": "Spreadsheet",
+            "handoff_note": "GRC owns the finding; SecOps owns the SIEM work; tracker is a shared sheet.",
             "risk_score": 60,
-            "last_review": "2024-01-30",
-            "next_review": "2024-07-30",
+            "last_handoff": (today - timedelta(days=9)).isoformat(),
+            "last_update": (today - timedelta(days=4)).isoformat(),
+            "next_review": (today + timedelta(days=18)).isoformat(),
             "evidence_count": 1,
             "test_results": "Not Started",
-            "implementation_date": "2023-09-15"
         },
         {
             "control_id": "3.1",
@@ -108,14 +171,20 @@ def load_control_data():
             "framework": "PCI DSS",
             "category": "Network Security",
             "description": "Implement network security controls",
+            "remediation_issue": "Segment rule review after payment-zone change",
             "status": "Tested",
-            "owner": "Network Security",
+            "coordination_state": "Synced",
+            "current_owner": "Network Security",
+            "doing_team": "Network Security",
+            "informed": "PCI QSA liaison, GRC",
+            "authoritative_system": "Change ticket",
+            "handoff_note": "Change ticket is authoritative until CAB close; then evidence lands in GRC.",
             "risk_score": 40,
-            "last_review": "2024-02-05",
-            "next_review": "2024-08-05",
+            "last_handoff": (today - timedelta(days=15)).isoformat(),
+            "last_update": (today - timedelta(days=7)).isoformat(),
+            "next_review": (today + timedelta(days=70)).isoformat(),
             "evidence_count": 3,
             "test_results": "Passed",
-            "implementation_date": "2023-06-15"
         },
         {
             "control_id": "164.308",
@@ -123,14 +192,20 @@ def load_control_data():
             "framework": "HIPAA",
             "category": "Administrative Safeguards",
             "description": "Implement administrative safeguards",
+            "remediation_issue": "Workforce sanction procedure not reflected in ops runbooks",
             "status": "Not Implemented",
-            "owner": "Compliance Team",
+            "coordination_state": "Telephone Risk",
+            "current_owner": "Compliance Team",
+            "doing_team": "HR Ops",
+            "informed": "Legal, Privacy, GRC",
+            "authoritative_system": "Email thread",
+            "handoff_note": "Last 'decision' lives in an email nobody can find. Progress = Telephone.",
             "risk_score": 80,
-            "last_review": "2024-01-10",
-            "next_review": "2024-07-10",
+            "last_handoff": (today - timedelta(days=22)).isoformat(),
+            "last_update": (today - timedelta(days=19)).isoformat(),
+            "next_review": (today - timedelta(days=4)).isoformat(),
             "evidence_count": 0,
             "test_results": "Not Started",
-            "implementation_date": None
         },
         {
             "control_id": "ID.AM-1",
@@ -138,14 +213,20 @@ def load_control_data():
             "framework": "NIST CSF",
             "category": "Asset Management",
             "description": "Maintain asset inventory",
+            "remediation_issue": "Reconcile CMDB vs. discovered LPARs and appliances",
             "status": "Implemented",
-            "owner": "Asset Management",
+            "coordination_state": "In Between",
+            "current_owner": "Asset Management",
+            "doing_team": "Platform Engineering",
+            "informed": "IT Security, GRC",
+            "authoritative_system": "ServiceNow",
+            "handoff_note": "Discovery feed updated; CMDB owners still debating authoritative records.",
             "risk_score": 30,
-            "last_review": "2024-02-15",
-            "next_review": "2024-08-15",
+            "last_handoff": (today - timedelta(days=2)).isoformat(),
+            "last_update": today.isoformat(),
+            "next_review": (today + timedelta(days=60)).isoformat(),
             "evidence_count": 2,
             "test_results": "Passed",
-            "implementation_date": "2023-07-01"
         },
         {
             "control_id": "PR.AC-1",
@@ -153,14 +234,20 @@ def load_control_data():
             "framework": "NIST CSF",
             "category": "Identity Management and Access Control",
             "description": "Manage identities and credentials",
+            "remediation_issue": "Privileged identity recert for break-glass accounts",
             "status": "Compliant",
-            "owner": "IT Security Team",
+            "coordination_state": "Synced",
+            "current_owner": "IT Security Team",
+            "doing_team": "IT Security Team",
+            "informed": "IAM, GRC",
+            "authoritative_system": "GRC platform",
+            "handoff_note": "Recert campaign closed in GRC with attestation evidence attached.",
             "risk_score": 25,
-            "last_review": "2024-01-25",
-            "next_review": "2024-07-25",
+            "last_handoff": (today - timedelta(days=18)).isoformat(),
+            "last_update": (today - timedelta(days=10)).isoformat(),
+            "next_review": (today + timedelta(days=100)).isoformat(),
             "evidence_count": 4,
             "test_results": "Passed",
-            "implementation_date": "2023-05-15"
         },
         {
             "control_id": "DE.CM-1",
@@ -168,14 +255,20 @@ def load_control_data():
             "framework": "NIST CSF",
             "category": "Security Continuous Monitoring",
             "description": "Monitor security events",
+            "remediation_issue": "Coverage gap for legacy middleware logging",
             "status": "In Progress",
-            "owner": "Security Operations",
+            "coordination_state": "Telephone Risk",
+            "current_owner": "Security Operations",
+            "doing_team": "Middleware Ops",
+            "informed": "GRC, Audit",
+            "authoritative_system": "Meeting notes",
+            "handoff_note": "Agreed in standup; no durable ticket yet. Upside-Down territory.",
             "risk_score": 55,
-            "last_review": "2024-02-20",
-            "next_review": "2024-08-20",
+            "last_handoff": (today - timedelta(days=1)).isoformat(),
+            "last_update": (today - timedelta(days=1)).isoformat(),
+            "next_review": (today + timedelta(days=25)).isoformat(),
             "evidence_count": 1,
             "test_results": "In Progress",
-            "implementation_date": "2023-10-01"
         },
         {
             "control_id": "IBMI-QSEC",
@@ -183,14 +276,20 @@ def load_control_data():
             "framework": "NIST CSF",
             "category": "Identity Management and Access Control",
             "description": "Govern IBM i system values and special authorities including *ALLOBJ on production LPARs",
+            "remediation_issue": "Reduce standing *ALLOBJ; monitor QSECURITY level drift on prod LPARs",
             "status": "In Progress",
-            "owner": "IBM i Ops",
+            "coordination_state": "Telephone Risk",
+            "current_owner": "IBM i Ops",
+            "doing_team": "IBM i Ops",
+            "informed": "GRC, Mainframe Security, Audit",
+            "authoritative_system": "Email thread",
+            "handoff_note": "Doing team is clear; SoT is an email chain. GRC is informed, not authoritative.",
             "risk_score": 78,
-            "last_review": "2024-03-01",
-            "next_review": "2024-09-01",
+            "last_handoff": (today - timedelta(days=5)).isoformat(),
+            "last_update": (today - timedelta(days=2)).isoformat(),
+            "next_review": (today + timedelta(days=14)).isoformat(),
             "evidence_count": 2,
             "test_results": "In Progress",
-            "implementation_date": "2023-11-01"
         },
         {
             "control_id": "ZOS-RACF",
@@ -198,14 +297,20 @@ def load_control_data():
             "framework": "SOC 2",
             "category": "Security",
             "description": "Recertify RACF SPECIAL / OPERATIONS attributes and CICS region IDs on IBM Z",
+            "remediation_issue": "Recert SPECIAL/OPERATIONS; align CICS region ID ownership",
             "status": "Implemented",
-            "owner": "Mainframe Security",
+            "coordination_state": "In Between",
+            "current_owner": "Mainframe Security",
+            "doing_team": "Mainframe Security",
+            "informed": "GRC, Internal Audit",
+            "authoritative_system": "Change ticket",
+            "handoff_note": "Change closed on Z; GRC control status still lagging the change record.",
             "risk_score": 72,
-            "last_review": "2024-03-05",
-            "next_review": "2024-09-05",
+            "last_handoff": (today - timedelta(days=8)).isoformat(),
+            "last_update": (today - timedelta(days=3)).isoformat(),
+            "next_review": (today + timedelta(days=45)).isoformat(),
             "evidence_count": 3,
             "test_results": "Passed",
-            "implementation_date": "2023-12-15"
         },
         {
             "control_id": "ERP-SAPALL",
@@ -213,457 +318,403 @@ def load_control_data():
             "framework": "ISO 27001",
             "category": "Access Control",
             "description": "Control SAP_ALL, DDIC, and JD Edwards IFS admin roles with monitoring",
+            "remediation_issue": "Break-glass for SAP_ALL / DDIC and JDE IFS admin roles",
             "status": "Not Implemented",
-            "owner": "ERP Security",
+            "coordination_state": "Split Ownership",
+            "current_owner": "ERP Security",
+            "doing_team": "SAP Basis / JDE CNC",
+            "informed": "GRC, Internal Audit, Application owners",
+            "authoritative_system": "Jira",
+            "handoff_note": "ServiceNow has a related RITM; Jira has the sprint work; GRC has the finding.",
             "risk_score": 82,
-            "last_review": "2024-03-10",
-            "next_review": "2024-09-10",
+            "last_handoff": (today - timedelta(days=4)).isoformat(),
+            "last_update": (today - timedelta(days=1)).isoformat(),
+            "next_review": (today - timedelta(days=2)).isoformat(),
             "evidence_count": 0,
             "test_results": "Not Started",
-            "implementation_date": None
-        }
+        },
     ]
-    
     return pd.DataFrame(controls)
 
-def calculate_control_metrics(df):
-    """Calculate key control metrics"""
-    metrics = {
-        'total_controls': len(df),
-        'compliant_controls': len(df[df['status'] == 'Compliant']),
-        'implemented_controls': len(df[df['status'].isin(['Implemented', 'Tested', 'Compliant'])]),
-        'in_progress_controls': len(df[df['status'] == 'In Progress']),
-        'not_implemented_controls': len(df[df['status'] == 'Not Implemented']),
-        'avg_risk_score': df['risk_score'].mean(),
-        'high_risk_controls': len(df[df['risk_score'] >= 70]),
-        'overdue_reviews': len(df[pd.to_datetime(df['next_review']) < datetime.datetime.now()])
-    }
-    
-    # Calculate compliance percentage
-    metrics['compliance_rate'] = (metrics['compliant_controls'] / metrics['total_controls']) * 100
-    metrics['implementation_rate'] = (metrics['implemented_controls'] / metrics['total_controls']) * 100
-    
-    return metrics
 
-def get_status_color(status):
-    """Get color for status"""
-    colors = {
-        'Not Implemented': '#d32f2f',
-        'In Progress': '#f57c00',
-        'Implemented': '#388e3c',
-        'Tested': '#1976d2',
-        'Compliant': '#7b1fa2'
+def calculate_coordination_metrics(df: pd.DataFrame) -> dict:
+    now = datetime.datetime.now()
+    return {
+        "total": len(df),
+        "in_between": len(df[df["coordination_state"] == "In Between"]),
+        "telephone": len(df[df["coordination_state"] == "Telephone Risk"]),
+        "split": len(df[df["coordination_state"] == "Split Ownership"]),
+        "handoff": len(df[df["coordination_state"] == "Handoff"]),
+        "synced": len(df[df["coordination_state"] == "Synced"]),
+        "systems_in_play": df["authoritative_system"].nunique() if len(df) else 0,
+        "avg_risk": float(df["risk_score"].mean()) if len(df) else 0.0,
+        "high_risk": len(df[df["risk_score"] >= 70]),
+        "overdue_reviews": len(df[pd.to_datetime(df["next_review"]) < now]) if len(df) else 0,
+        "doing_vs_owner_mismatch": len(df[df["current_owner"] != df["doing_team"]]) if len(df) else 0,
     }
-    return colors.get(status, '#757575')
+
 
 def main():
     portfolio_skin.page_header(
         title="Control Tracker",
-        lede="Interactive GRC tool — #RUNGRCRaleigh build-in-public.",
-        kicker="Controls",
+        lede=(
+            "Day Eight: remediation coordination — who owns it right now, "
+            "and which system is authoritative in the In-Between."
+        ),
+        kicker="Controls · Coordination",
+        club_tag="#RUNGRCRaleigh · Sep 1 @ 6:00pm",
     )
-    
-    # Load data
+
+    st.info(
+        "**GRC Lego block** — intentionally simple. Not a replacement for ticketing, "
+        "GRC platforms, or delivery tools. Isolates one idea: control remediation can be a "
+        "**distributed workflow problem** before it is a compliance problem."
+    )
+
     df = load_control_data()
-    
-    # Sidebar
+
     st.sidebar.header("Controls")
     seed = demo_kit.seed_controls()
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Control Management")
-    
-    # Add new control form
-    with st.sidebar.expander("Add New Control", expanded=False):
-        with st.form("add_control"):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                control_id = st.text_input("Control ID", placeholder="e.g., AC-01")
-                control_name = st.text_input("Control Name", placeholder="e.g., Access Control Policy")
-                framework = st.selectbox("Framework", ["NIST CSF", "ISO 27001", "SOC 2", "PCI DSS", "HIPAA", "GDPR"])
-                category = st.text_input("Category", placeholder="e.g., Identity Management")
-            
-            with col2:
-                status = st.selectbox("Status", ["Not Implemented", "In Progress", "Implemented", "Tested", "Compliant"])
-                owner = st.text_input("Owner", placeholder="e.g., IT Security Team")
-                risk_score = st.slider("Risk Score", 1, 100, 50)
-                evidence_count = st.number_input("Evidence Count", 0, 10, 0)
-            
-            description = st.text_area("Description", placeholder="Control description...")
-            
-            submitted = st.form_submit_button("Add Control")
-            if submitted:
-                st.success("Control added successfully!")
-    
-    # Filters
     st.sidebar.subheader("Filters")
-    
+
     framework_filter = st.sidebar.multiselect(
         "Framework",
-        df['framework'].unique(),
-        default=df['framework'].unique()
+        sorted(df["framework"].unique()),
+        default=sorted(df["framework"].unique()),
     )
-    
-    status_filter = st.sidebar.multiselect(
-        "Status",
-        df['status'].unique(),
-        default=df['status'].unique()
+    coord_filter = st.sidebar.multiselect(
+        "Coordination state",
+        COORD_STATES,
+        default=COORD_STATES,
     )
-    
-    risk_filter = st.sidebar.slider(
-        "Risk Score Range",
-        0, 100, (0, 100)
+    system_filter = st.sidebar.multiselect(
+        "Authoritative system",
+        sorted(df["authoritative_system"].unique()),
+        default=sorted(df["authoritative_system"].unique()),
     )
-    
-    # Apply filters
-    filtered_df = df[
-        (df['framework'].isin(framework_filter)) &
-        (df['status'].isin(status_filter)) &
-        (df['risk_score'] >= risk_filter[0]) &
-        (df['risk_score'] <= risk_filter[1])
+    risk_filter = st.sidebar.slider("Risk score range", 0, 100, (0, 100))
+
+    filtered = df[
+        df["framework"].isin(framework_filter)
+        & df["coordination_state"].isin(coord_filter)
+        & df["authoritative_system"].isin(system_filter)
+        & (df["risk_score"] >= risk_filter[0])
+        & (df["risk_score"] <= risk_filter[1])
     ]
-    
-    # Calculate metrics
-    metrics = calculate_control_metrics(filtered_df)
-    
-    # Main content
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Dashboard", "Control Inventory", "Analytics", "Risk Management", "Management"])
-    
+
+    metrics = calculate_coordination_metrics(filtered)
+
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(
+        ["Dashboard", "Work in Motion", "Analytics", "Coordination Watch", "Export"]
+    )
+
     with tab1:
-        st.header("Control Dashboard")
-        
-        # Key metrics
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric(
-                "Total Controls",
-                metrics['total_controls'],
-                delta=f"{metrics['compliance_rate']:.1f}% Compliant"
-            )
-        
-        with col2:
-            st.metric(
-                "Compliance Rate",
-                f"{metrics['compliance_rate']:.1f}%",
-                delta=f"{metrics['compliant_controls']} Controls"
-            )
-        
-        with col3:
-            st.metric(
-                "Implementation Rate",
-                f"{metrics['implementation_rate']:.1f}%",
-                delta=f"{metrics['implemented_controls']} Implemented"
-            )
-        
-        with col4:
-            st.metric(
-                "Average Risk Score",
-                f"{metrics['avg_risk_score']:.1f}",
-                delta=f"{metrics['high_risk_controls']} High Risk"
-            )
-        
-        # Charts
+        st.header("Coordination Dashboard")
+        st.caption(
+            "Less Open → In Progress → Complete. More: who is doing the work, "
+            "who is only informed, and which system is authoritative *right now*."
+        )
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Active items", metrics["total"], delta=f"{metrics['synced']} Synced")
+        c2.metric(
+            "In-Between / Handoff",
+            metrics["in_between"] + metrics["handoff"],
+            delta=f"{metrics['in_between']} In Between",
+        )
+        c3.metric(
+            "Telephone / Split",
+            metrics["telephone"] + metrics["split"],
+            delta=f"{metrics['telephone']} Telephone Risk",
+            delta_color="inverse",
+        )
+        c4.metric(
+            "Systems of record in play",
+            metrics["systems_in_play"],
+            delta=f"{metrics['doing_vs_owner_mismatch']} owner≠doer",
+        )
+
         col1, col2 = st.columns(2)
-        
         with col1:
-            # Status distribution
-            status_counts = filtered_df['status'].value_counts()
-            fig_status = px.pie(
-                values=status_counts.values,
-                names=status_counts.index,
-                title="Control Status Distribution",
-                color_discrete_map={
-                    'Not Implemented': '#d32f2f',
-                    'In Progress': '#f57c00',
-                    'Implemented': '#388e3c',
-                    'Tested': '#1976d2',
-                    'Compliant': '#7b1fa2'
-                }
+            counts = filtered["coordination_state"].value_counts().reindex(COORD_STATES).fillna(0)
+            fig = px.pie(
+                names=counts.index,
+                values=counts.values,
+                title="Coordination state (not lifecycle)",
+                color=counts.index,
+                color_discrete_map=COORD_COLORS,
             )
-            st.plotly_chart(fig_status, use_container_width=True)
-        
+            st.plotly_chart(fig, use_container_width=True)
         with col2:
-            # Framework distribution
-            framework_counts = filtered_df['framework'].value_counts()
-            fig_framework = px.bar(
-                x=framework_counts.index,
-                y=framework_counts.values,
-                title="Controls by Framework",
-                labels={'x': 'Framework', 'y': 'Number of Controls'}
+            sys_counts = filtered["authoritative_system"].value_counts()
+            fig2 = px.bar(
+                x=sys_counts.index,
+                y=sys_counts.values,
+                title="Where authoritative state lives *now*",
+                labels={"x": "System", "y": "Items"},
             )
-            st.plotly_chart(fig_framework, use_container_width=True)
-        
-        # Risk score distribution
-        fig_risk = px.histogram(
-            filtered_df,
-            x='risk_score',
+            st.plotly_chart(fig2, use_container_width=True)
+
+        fig3 = px.histogram(
+            filtered,
+            x="risk_score",
             nbins=10,
-            title="Risk Score Distribution",
-            labels={'risk_score': 'Risk Score', 'count': 'Number of Controls'}
+            title="Risk score distribution",
+            labels={"risk_score": "Risk score", "count": "Items"},
         )
-        fig_risk.add_vline(x=70, line_dash="dash", line_color="red", annotation_text="High Risk Threshold")
-        st.plotly_chart(fig_risk, use_container_width=True)
-    
+        fig3.add_vline(x=70, line_dash="dash", line_color="red", annotation_text="High risk")
+        st.plotly_chart(fig3, use_container_width=True)
+
     with tab2:
-        st.header("Control Inventory")
-        
-        # Search and sort
-        col1, col2 = st.columns([2, 1])
-        
-        with col1:
-            search_term = st.text_input("Search Controls", placeholder="Search by ID, name, or description...")
-        
-        with col2:
-            sort_by = st.selectbox("Sort by", ["Control ID", "Status", "Risk Score", "Framework", "Owner"])
-        
-        # Apply search filter
-        if search_term:
-            search_filter = (
-                filtered_df['control_id'].str.contains(search_term, case=False) |
-                filtered_df['control_name'].str.contains(search_term, case=False) |
-                filtered_df['description'].str.contains(search_term, case=False)
-            )
-            display_df = filtered_df[search_filter]
-        else:
-            display_df = filtered_df
-        
-        # Sort data
-        if sort_by == "Control ID":
-            display_df = display_df.sort_values('control_id')
-        elif sort_by == "Status":
-            display_df = display_df.sort_values('status')
-        elif sort_by == "Risk Score":
-            display_df = display_df.sort_values('risk_score', ascending=False)
-        elif sort_by == "Framework":
-            display_df = display_df.sort_values('framework')
-        elif sort_by == "Owner":
-            display_df = display_df.sort_values('owner')
-        
-        # Display controls
-        for _, control in display_df.iterrows():
-            with st.expander(f"{control['control_id']} - {control['control_name']} ({control['status']})"):
-                col1, col2 = st.columns([2, 1])
-                
-                with col1:
-                    st.write(f"**Framework:** {control['framework']}")
-                    st.write(f"**Category:** {control['category']}")
-                    st.write(f"**Description:** {control['description']}")
-                    st.write(f"**Owner:** {control['owner']}")
-                
-                with col2:
-                    # Risk score indicator
-                    risk_color = "red" if control['risk_score'] >= 70 else "orange" if control['risk_score'] >= 50 else "green"
-                    st.metric("Risk Score", control['risk_score'], delta=f"{risk_color} Risk")
-                    
-                    st.write(f"**Evidence Count:** {control['evidence_count']}")
-                    st.write(f"**Test Results:** {control['test_results']}")
-                    st.write(f"**Last Review:** {control['last_review']}")
-                    st.write(f"**Next Review:** {control['next_review']}")
-                
-                # Progress bar for implementation status
-                status_progress = {
-                    'Not Implemented': 0,
-                    'In Progress': 25,
-                    'Implemented': 50,
-                    'Tested': 75,
-                    'Compliant': 100
-                }
-                st.progress(status_progress[control['status']] / 100)
-                st.caption(f"Implementation Progress: {status_progress[control['status']]}%")
-    
-    with tab3:
-        st.header("Analytics & Trends")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Framework compliance comparison
-            framework_compliance = []
-            for framework in filtered_df['framework'].unique():
-                framework_df = filtered_df[filtered_df['framework'] == framework]
-                compliant_count = len(framework_df[framework_df['status'] == 'Compliant'])
-                total_count = len(framework_df)
-                compliance_rate = (compliant_count / total_count) * 100 if total_count > 0 else 0
-                framework_compliance.append({
-                    'Framework': framework,
-                    'Compliance Rate': compliance_rate,
-                    'Total Controls': total_count,
-                    'Compliant Controls': compliant_count
-                })
-            
-            framework_compliance_df = pd.DataFrame(framework_compliance)
-            
-            fig_compliance = px.bar(
-                framework_compliance_df,
-                x='Framework',
-                y='Compliance Rate',
-                title="Compliance Rate by Framework",
-                labels={'Compliance Rate': 'Compliance Rate (%)'}
-            )
-            st.plotly_chart(fig_compliance, use_container_width=True)
-        
-        with col2:
-            # Risk score by framework
-            fig_risk_framework = px.box(
-                filtered_df,
-                x='framework',
-                y='risk_score',
-                title="Risk Score Distribution by Framework",
-                labels={'framework': 'Framework', 'risk_score': 'Risk Score'}
-            )
-            st.plotly_chart(fig_risk_framework, use_container_width=True)
-        
-        # Trend analysis (simulated)
-        st.subheader("Implementation Trends")
-        
-        # Simulate historical data
-        dates = pd.date_range(start='2023-01-01', end='2024-12-31', freq='ME')
-        trend_data = []
-        rng = np.random.default_rng(seed)
-        
-        for date in dates:
-            # Simulate realistic implementation trend
-            base_implementation = 30 + (date.year - 2023) * 20 + (date.month - 1) * 1.5
-            variation = rng.normal(0, 2)
-            implementation_rate = max(0, min(100, base_implementation + variation))
-            
-            trend_data.append({
-                'Date': date,
-                'Implementation Rate': implementation_rate,
-                'Month': date.strftime('%Y-%m')
-            })
-        
-        trend_df = pd.DataFrame(trend_data)
-        
-        fig_trend = px.line(
-            trend_df,
-            x='Date',
-            y='Implementation Rate',
-            title="Control Implementation Trend (Simulated)",
-            labels={'Implementation Rate': 'Implementation Rate (%)'}
+        st.header("Work in Motion")
+        st.caption(
+            "Ask on every row: Who owns it right now? What is the source of truth? "
+            "Who is doing vs. informed? How do we stop progress from becoming Telephone?"
         )
-        fig_trend.add_hline(y=metrics['implementation_rate'], line_dash="dash", line_color="red", 
-                          annotation_text=f"Current Rate: {metrics['implementation_rate']:.1f}%")
-        st.plotly_chart(fig_trend, use_container_width=True)
-    
-    with tab4:
-        st.header("Risk Management")
-        
-        # High-risk controls
-        high_risk_df = filtered_df[filtered_df['risk_score'] >= 70]
-        
-        if len(high_risk_df) > 0:
-            st.warning(f"{len(high_risk_df)} High-Risk Controls Identified")
-            
-            for _, control in high_risk_df.iterrows():
-                with st.expander(f"{control['control_id']} - {control['control_name']} (Risk: {control['risk_score']})"):
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.write(f"**Status:** {control['status']}")
-                        st.write(f"**Framework:** {control['framework']}")
-                        st.write(f"**Owner:** {control['owner']}")
-                        st.write(f"**Description:** {control['description']}")
-                    
-                    with col2:
-                        st.write("**Risk Mitigation Actions:**")
-                        st.write("1. Prioritize implementation")
-                        st.write("2. Assign dedicated resources")
-                        st.write("3. Establish monitoring")
-                        st.write("4. Regular status reviews")
-        else:
-            st.success("No high-risk controls identified")
-        
-        # Overdue reviews
-        overdue_df = filtered_df[pd.to_datetime(filtered_df['next_review']) < datetime.datetime.now()]
-        
-        if len(overdue_df) > 0:
-            st.error(f"{len(overdue_df)} Controls with Overdue Reviews")
-            
-            for _, control in overdue_df.iterrows():
-                days_overdue = (datetime.datetime.now() - pd.to_datetime(control['next_review'])).days
-                st.write(f"• {control['control_id']} - {control['control_name']} ({days_overdue} days overdue)")
-        else:
-            st.success("All control reviews are up to date")
-        
-        # Risk heatmap
-        st.subheader("Risk Heatmap")
-        
-        # Create risk matrix
-        risk_matrix = pd.DataFrame({
-            'Risk Score': range(0, 101, 10),
-            'Count': [len(filtered_df[(filtered_df['risk_score'] >= i) & (filtered_df['risk_score'] < i+10)]) for i in range(0, 101, 10)]
-        })
-        
-        fig_heatmap = px.bar(
-            risk_matrix,
-            x='Risk Score',
-            y='Count',
-            title="Risk Score Distribution",
-            color='Count',
-            color_continuous_scale='Reds'
+
+        search = st.text_input(
+            "Search",
+            placeholder="ID, name, team, system, or issue…",
         )
-        st.plotly_chart(fig_heatmap, use_container_width=True)
-    
-    with tab5:
-        st.header("Management & Reporting")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Export Options")
-            demo_kit.csv_download(
-                filtered_df.copy(),
-                "controls_filtered.csv",
-                label="Download filtered controls",
+        sort_by = st.selectbox(
+            "Sort by",
+            [
+                "Coordination state",
+                "Risk score",
+                "Last update",
+                "Control ID",
+                "Authoritative system",
+            ],
+        )
+
+        display = filtered
+        if search:
+            q = search.lower()
+            mask = (
+                display["control_id"].str.lower().str.contains(q, na=False)
+                | display["control_name"].str.lower().str.contains(q, na=False)
+                | display["remediation_issue"].str.lower().str.contains(q, na=False)
+                | display["current_owner"].str.lower().str.contains(q, na=False)
+                | display["doing_team"].str.lower().str.contains(q, na=False)
+                | display["authoritative_system"].str.lower().str.contains(q, na=False)
             )
-        
-        with col2:
-            # Management actions
-            st.subheader("Management Actions")
-            
-            if st.button("Refresh Data"):
-                st.rerun()
-            
-            if st.button("Schedule Reviews"):
-                st.success("Review schedule updated!")
-            
-            if st.button("Send Notifications"):
-                st.success("Notifications sent to control owners!")
-        
-        # Summary statistics
-        st.subheader("Summary Statistics")
-        
-        summary_data = {
-            'Metric': [
-                'Total Controls',
-                'Compliant Controls',
-                'Implementation Rate',
-                'Average Risk Score',
-                'High Risk Controls',
-                'Overdue Reviews'
-            ],
-            'Value': [
-                metrics['total_controls'],
-                metrics['compliant_controls'],
-                f"{metrics['implementation_rate']:.1f}%",
-                f"{metrics['avg_risk_score']:.1f}",
-                metrics['high_risk_controls'],
-                metrics['overdue_reviews']
-            ],
-            'Status': [
-                '' if metrics['total_controls'] > 0 else '',
-                '' if metrics['compliant_controls'] > 0 else '',
-                '' if metrics['implementation_rate'] >= 80 else '',
-                '' if metrics['avg_risk_score'] <= 50 else '',
-                '' if metrics['high_risk_controls'] > 0 else '',
-                '' if metrics['overdue_reviews'] > 0 else ''
-            ]
+            display = display[mask]
+
+        sort_map = {
+            "Coordination state": ("coordination_state", True),
+            "Risk score": ("risk_score", False),
+            "Last update": ("last_update", False),
+            "Control ID": ("control_id", True),
+            "Authoritative system": ("authoritative_system", True),
         }
-        
-        summary_df = pd.DataFrame(summary_data)
-        st.dataframe(summary_df, use_container_width=True, hide_index=True)
+        col, asc = sort_map[sort_by]
+        display = display.sort_values(col, ascending=asc)
+
+        for _, row in display.iterrows():
+            label = (
+                f"{row['control_id']} — {row['control_name']} · "
+                f"{row['coordination_state']} · SoT: {row['authoritative_system']}"
+            )
+            with st.expander(label):
+                left, right = st.columns([2, 1])
+                with left:
+                    st.write(f"**Framework:** {row['framework']} · **Category:** {row['category']}")
+                    st.write(f"**Remediation issue:** {row['remediation_issue']}")
+                    st.write(f"**Current owner (now):** {row['current_owner']}")
+                    st.write(f"**Doing the work:** {row['doing_team']}")
+                    st.write(f"**Informed:** {row['informed']}")
+                    st.write(f"**Authoritative system (this moment):** {row['authoritative_system']}")
+                    st.write(f"**Handoff note:** {row['handoff_note']}")
+                with right:
+                    risk_color = (
+                        "red"
+                        if row["risk_score"] >= 70
+                        else "orange"
+                        if row["risk_score"] >= 50
+                        else "green"
+                    )
+                    st.metric("Risk score", row["risk_score"], delta=f"{risk_color} band")
+                    st.write(f"**Lifecycle label (legacy):** {row['status']}")
+                    st.write(f"**Test results:** {row['test_results']}")
+                    st.write(f"**Last handoff:** {row['last_handoff']}")
+                    st.write(f"**Last update:** {row['last_update']}")
+                    st.write(f"**Next review:** {row['next_review']}")
+                    st.write(f"**Evidence count:** {row['evidence_count']}")
+
+                    mismatch = row["current_owner"] != row["doing_team"]
+                    if mismatch:
+                        st.warning("Owner ≠ doing team — seam risk.")
+                    if row["coordination_state"] in ("Telephone Risk", "Split Ownership"):
+                        st.error("Coordination friction — durable SoT unclear or fragmented.")
+                    elif row["coordination_state"] == "Synced":
+                        st.success("Authoritative state and ownership line up.")
+
+    with tab3:
+        st.header("Analytics")
+        col1, col2 = st.columns(2)
+        with col1:
+            by_fw = (
+                filtered.groupby("framework")["coordination_state"]
+                .apply(lambda s: (s != "Synced").sum())
+                .reset_index(name="Not Synced")
+            )
+            fig = px.bar(
+                by_fw,
+                x="framework",
+                y="Not Synced",
+                title="Items not Synced by framework",
+                labels={"framework": "Framework"},
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        with col2:
+            fig = px.box(
+                filtered,
+                x="authoritative_system",
+                y="risk_score",
+                title="Risk by authoritative system",
+                labels={"authoritative_system": "System", "risk_score": "Risk score"},
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.subheader("Handoff activity (simulated weekly pulse)")
+        rng = np.random.default_rng(seed)
+        weeks = pd.date_range(end=datetime.date(2026, 8, 12), periods=16, freq="W")
+        pulse = []
+        for i, w in enumerate(weeks):
+            base = 4 + (i % 5)
+            pulse.append(
+                {
+                    "Week": w,
+                    "Handoffs recorded": max(0, int(base + rng.normal(0, 1.2))),
+                    "Telephone-risk flags": max(0, int(1 + rng.integers(0, 3))),
+                }
+            )
+        pulse_df = pd.DataFrame(pulse)
+        fig = px.line(
+            pulse_df,
+            x="Week",
+            y=["Handoffs recorded", "Telephone-risk flags"],
+            title="Coordination pulse (demo)",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    with tab4:
+        st.header("Coordination Watch")
+        st.caption(
+            "Governance breakdowns rarely happen only in Open or Closed — "
+            "they show up in the nebulous In-Between."
+        )
+
+        friction = filtered[
+            filtered["coordination_state"].isin(
+                ["Telephone Risk", "Split Ownership", "In Between", "Handoff"]
+            )
+        ].sort_values("risk_score", ascending=False)
+
+        if len(friction):
+            st.warning(f"{len(friction)} items with active coordination friction")
+            for _, row in friction.iterrows():
+                with st.expander(
+                    f"{row['control_id']} — {row['control_name']} "
+                    f"({row['coordination_state']}, risk {row['risk_score']})"
+                ):
+                    st.write(f"**Issue:** {row['remediation_issue']}")
+                    st.write(f"**Owner now:** {row['current_owner']} · **Doing:** {row['doing_team']}")
+                    st.write(f"**Informed:** {row['informed']}")
+                    st.write(f"**Authoritative system:** {row['authoritative_system']}")
+                    st.write(f"**Why it matters:** {row['handoff_note']}")
+                    st.markdown(
+                        "- Who owns it **right now**?\n"
+                        "- What system is the **source of truth** for current state?\n"
+                        "- Who is **doing** vs. merely **informed**?\n"
+                        "- How do we keep progress from becoming a game of **Telephone**?"
+                    )
+        else:
+            st.success("No coordination friction in the current filter set.")
+
+        overdue = filtered[pd.to_datetime(filtered["next_review"]) < datetime.datetime.now()]
+        if len(overdue):
+            st.error(f"{len(overdue)} items past next-review date")
+            for _, row in overdue.iterrows():
+                days = (datetime.datetime.now() - pd.to_datetime(row["next_review"])).days
+                st.write(
+                    f"• {row['control_id']} — {row['control_name']} "
+                    f"({days} days past review) · SoT: {row['authoritative_system']}"
+                )
+        else:
+            st.success("Next-review dates are current for the filtered set.")
+
+        high = filtered[filtered["risk_score"] >= 70]
+        if len(high):
+            st.subheader("High-risk items (score ≥ 70)")
+            st.dataframe(
+                high[
+                    [
+                        "control_id",
+                        "control_name",
+                        "coordination_state",
+                        "authoritative_system",
+                        "current_owner",
+                        "doing_team",
+                        "risk_score",
+                    ]
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    with tab5:
+        st.header("Export & notes")
+        st.markdown(
+            """
+**If you try something like this in your own org, ask:**
+
+When a control issue is actively being worked, can you tell where the
+**authoritative state** actually lives — and who is responsible for updating it as it moves?
+
+Most governance breakdowns don’t happen in an “Open” or “Closed” state.
+They happen in the **In-Between**.
+            """
+        )
+        demo_kit.csv_download(
+            filtered.copy(),
+            "control_coordination_filtered.csv",
+            label="Download filtered view",
+        )
+        if st.button("Refresh"):
+            st.rerun()
+
+        summary = pd.DataFrame(
+            {
+                "Metric": [
+                    "Active items",
+                    "Synced",
+                    "In Between",
+                    "Handoff",
+                    "Split Ownership",
+                    "Telephone Risk",
+                    "Owner ≠ doing team",
+                    "Systems of record in play",
+                    "High risk (≥70)",
+                    "Past next review",
+                ],
+                "Value": [
+                    metrics["total"],
+                    metrics["synced"],
+                    metrics["in_between"],
+                    metrics["handoff"],
+                    metrics["split"],
+                    metrics["telephone"],
+                    metrics["doing_vs_owner_mismatch"],
+                    metrics["systems_in_play"],
+                    metrics["high_risk"],
+                    metrics["overdue_reviews"],
+                ],
+            }
+        )
+        st.dataframe(summary, use_container_width=True, hide_index=True)
+
 
 if __name__ == "__main__":
     main()

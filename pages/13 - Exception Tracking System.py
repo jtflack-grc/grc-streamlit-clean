@@ -1,16 +1,18 @@
+#!/usr/bin/env python3
+"""Control-exception / policy-waiver register — club teaching toy."""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
+import numpy as np
+import pandas as pd
+import plotly.express as px
 import streamlit as st
+
 import demo_kit
 import portfolio_skin
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import datetime
-from datetime import timedelta
-import random
 
-# Page configuration
 st.set_page_config(
     page_title="Exception Tracking System · i on GRC",
     page_icon="assets/favicon.svg",
@@ -20,589 +22,834 @@ st.set_page_config(
 
 portfolio_skin.apply(hide_sidebar=False)
 
+STATUSES = ["Submitted", "In Review", "Approved", "Denied", "Expired", "Closed"]
+RISK_ORDER = ["Critical", "High", "Medium", "Low"]
+STATUS_COLOR = {
+    "Submitted": "#91aa9b",
+    "In Review": "#f2b84b",
+    "Approved": "#38e881",
+    "Denied": "#e8f4ec",
+    "Expired": "#ff6b6b",
+    "Closed": "#5c7a68",
+}
 
 
-# Sample exception data
-@st.cache_data
-def load_exception_data():
-    """Load sample exception tracking data"""
-    exceptions = [
+def _today() -> pd.Timestamp:
+    return pd.Timestamp.now().normalize()
+
+
+def _sample_exceptions(seed: int) -> pd.DataFrame:
+    """Time-boxed waivers a GRC team would actually keep in a register."""
+    today = _today()
+    rng = np.random.default_rng(seed)
+
+    def jitter(lo: int, hi: int) -> int:
+        return int(rng.integers(lo, hi))
+
+    rows = [
         {
-            "exception_id": "EX-001",
-            "system_asset": "IBM i",
-            "description": "MFA not implemented due to application compatibility issues",
-            "compensating_control": "None",
-            "expiration_date": "2025-06-13",
-            "risk_accepted": False,
+            "exception_id": "EXC-2026-001",
+            "title": "MFA not enforced on IBM i 5250 sessions",
+            "control": "AC-07 MFA / ISO A.8.5",
+            "system_asset": "IBM i (PRODBOX)",
+            "category": "Access",
+            "exception_type": "Time-boxed waiver",
             "status": "Approved",
-            "category": "Technical",
-            "owner": "IT Security Team",
-            "created_date": "2024-01-15",
-            "risk_score": 85,
-            "business_impact": "High",
-            "approval_level": "CISO",
-            "review_frequency": "Monthly"
+            "residual_risk": "High",
+            "requestor": "IBM i Ops",
+            "owner": "IAM",
+            "approver": "CISO",
+            "business_justification": "TN5250 clients used by plant supervisors do not support MFA; replacement client is in FY27 roadmap.",
+            "compensating_control": "VPN + source-IP restrict; QAUDJRN on *SIGNON; weekly DSPUSRPRF of interactive profiles",
+            "conditions": "No new interactive profiles without Security sign-off. Exit by 5250 client cutover.",
+            "linked_finding": "AUD-2026-014",
+            "extension_count": 1,
+            "requested": today - timedelta(days=120),
+            "effective": today - timedelta(days=110),
+            "expiration": today + timedelta(days=45 + jitter(-4, 5)),
+            "next_review": today + timedelta(days=12),
         },
         {
-            "exception_id": "EX-002",
+            "exception_id": "EXC-2026-002",
+            "title": "Quarterly access recertification slipped — Citrix VDI",
+            "control": "AC-02 Access review / SOC 2 CC6.2",
             "system_asset": "Citrix VDI",
-            "description": "Access review postponed due to staffing limitations",
-            "compensating_control": "None",
-            "expiration_date": "2025-06-25",
-            "risk_accepted": False,
+            "category": "Access",
+            "exception_type": "Time-boxed waiver",
             "status": "Expired",
-            "category": "Operational",
-            "owner": "IT Operations",
-            "created_date": "2024-02-01",
-            "risk_score": 65,
-            "business_impact": "Medium",
-            "approval_level": "IT Manager",
-            "review_frequency": "Quarterly"
+            "residual_risk": "Medium",
+            "requestor": "IT Operations",
+            "owner": "IAM",
+            "approver": "IT Manager",
+            "business_justification": "Staffing gap during Q2; recert campaign not launched.",
+            "compensating_control": "None in place — joiner/mover/leaver still via ticket only",
+            "conditions": "Complete recert within 30 days of approval. No further extension without CISO.",
+            "linked_finding": "AUD-2026-022",
+            "extension_count": 2,
+            "requested": today - timedelta(days=200),
+            "effective": today - timedelta(days=190),
+            "expiration": today - timedelta(days=18 + jitter(0, 6)),
+            "next_review": today - timedelta(days=18),
         },
         {
-            "exception_id": "EX-003",
-            "system_asset": "Oracle DB",
-            "description": "Audit logging disabled temporarily for performance tuning",
-            "compensating_control": "None",
-            "expiration_date": "2025-07-22",
-            "risk_accepted": False,
-            "status": "Open",
-            "category": "Technical",
-            "owner": "Database Team",
-            "created_date": "2024-03-10",
-            "risk_score": 75,
-            "business_impact": "High",
-            "approval_level": "CISO",
-            "review_frequency": "Weekly"
+            "exception_id": "EXC-2026-003",
+            "title": "Audit logging disabled on Oracle DB for perf test",
+            "control": "AU-02 Audit logging / ISO A.8.15",
+            "system_asset": "Oracle DB (FINPROD)",
+            "category": "Logging",
+            "exception_type": "Time-boxed waiver",
+            "status": "In Review",
+            "residual_risk": "High",
+            "requestor": "Database Team",
+            "owner": "Security Engineering",
+            "approver": "",
+            "business_justification": "Month-end close job overruns SLA with unified auditing on; DBA wants a 14-day window.",
+            "compensating_control": "Host OS audit + network IDS on DB subnet; change freeze except this job",
+            "conditions": "Production only. Re-enable unified auditing at window end. CISO approval required.",
+            "linked_finding": "",
+            "extension_count": 0,
+            "requested": today - timedelta(days=3),
+            "effective": pd.NaT,
+            "expiration": today + timedelta(days=14),
+            "next_review": today + timedelta(days=7),
         },
         {
-            "exception_id": "EX-004",
+            "exception_id": "EXC-2026-004",
+            "title": "Legacy VPN concentrator OS unsupported by EDR",
+            "control": "SI-02 Malware protection / ISO A.8.7",
             "system_asset": "VPN Gateway",
-            "description": "Legacy OS version unsupported by endpoint protection software",
-            "compensating_control": "Manual log review weekly",
-            "expiration_date": "2025-07-31",
-            "risk_accepted": True,
-            "status": "Open",
-            "category": "Technical",
-            "owner": "Network Team",
-            "created_date": "2024-01-20",
-            "risk_score": 70,
-            "business_impact": "Medium",
-            "approval_level": "IT Director",
-            "review_frequency": "Monthly"
+            "category": "Endpoint",
+            "exception_type": "Time-boxed waiver",
+            "status": "Approved",
+            "residual_risk": "Medium",
+            "requestor": "Network Team",
+            "owner": "Infrastructure",
+            "approver": "IT Director",
+            "business_justification": "Hardware refresh PO approved; lead time 10 weeks. Current image has no EDR agent.",
+            "compensating_control": "Management plane on jump host; weekly config diff; no split-tunnel; geo-block",
+            "conditions": "No feature changes on the box. Cutover by refresh date. Do not extend past hardware arrival + 14 days.",
+            "linked_finding": "VM-2026-088",
+            "extension_count": 0,
+            "requested": today - timedelta(days=40),
+            "effective": today - timedelta(days=35),
+            "expiration": today + timedelta(days=16 + jitter(-3, 4)),
+            "next_review": today + timedelta(days=5),
         },
         {
-            "exception_id": "EX-005",
+            "exception_id": "EXC-2026-005",
+            "title": "Standing admin on time-tracking app",
+            "control": "AC-06 Least privilege / ISO A.8.2",
             "system_asset": "Time Tracking System",
-            "description": "Privileged account has permanent access due to operational constraints",
-            "compensating_control": "Manual log review weekly",
-            "expiration_date": "2025-08-19",
-            "risk_accepted": True,
-            "status": "Under Review",
-            "category": "Operational",
-            "owner": "HR IT Team",
-            "created_date": "2024-02-15",
-            "risk_score": 80,
-            "business_impact": "High",
-            "approval_level": "CISO",
-            "review_frequency": "Weekly"
+            "category": "Privileged access",
+            "exception_type": "Risk acceptance",
+            "status": "Denied",
+            "residual_risk": "High",
+            "requestor": "HR IT",
+            "owner": "IAM",
+            "approver": "CISO",
+            "business_justification": "Vendor console has no JIT / PAM integration; payroll ops want 24/7 admin.",
+            "compensating_control": "Proposed: named accounts + monthly log review (not implemented)",
+            "conditions": "Standing privileged access is out of policy. Use break-glass with 8-hour expiry.",
+            "linked_finding": "",
+            "extension_count": 0,
+            "requested": today - timedelta(days=28),
+            "effective": pd.NaT,
+            "expiration": today - timedelta(days=5),
+            "next_review": pd.NaT,
         },
         {
-            "exception_id": "EX-006",
-            "system_asset": "Cloud IAM Portal",
-            "description": "Firewall exceptions granted to vendor-controlled IP range",
-            "compensating_control": "Manual log review weekly",
-            "expiration_date": "2025-08-06",
-            "risk_accepted": True,
-            "status": "Open",
-            "category": "Technical",
-            "owner": "Cloud Team",
-            "created_date": "2024-03-01",
-            "risk_score": 60,
-            "business_impact": "Medium",
-            "approval_level": "IT Director",
-            "review_frequency": "Monthly"
+            "exception_id": "EXC-2026-006",
+            "title": "Vendor-controlled IPs permitted through edge firewall",
+            "control": "SC-07 Boundary protection / PCI 1.3",
+            "system_asset": "Cloud IAM / edge FW",
+            "category": "Network",
+            "exception_type": "Time-boxed waiver",
+            "status": "Approved",
+            "residual_risk": "Medium",
+            "requestor": "Cloud Team",
+            "owner": "Network Security",
+            "approver": "IT Director",
+            "business_justification": "Payroll SaaS file-drop still uses vendor NAT pool; they will publish FQDN allow-list in Q4.",
+            "compensating_control": "Allow-list to SFTP DMZ only; TLS 1.2+; vendor IPs reviewed monthly; no inbound shell",
+            "conditions": "Replace with FQDN/egress proxy by expiration. Any new vendor IP requires a change ticket.",
+            "linked_finding": "",
+            "extension_count": 0,
+            "requested": today - timedelta(days=55),
+            "effective": today - timedelta(days=50),
+            "expiration": today + timedelta(days=70 + jitter(-5, 6)),
+            "next_review": today + timedelta(days=20),
         },
         {
-            "exception_id": "EX-007",
+            "exception_id": "EXC-2026-007",
+            "title": "Critical patch deferred — backup appliance vendor hold",
+            "control": "SI-02 Patch SLA / ISO A.8.8",
             "system_asset": "Backup Appliance",
-            "description": "Critical patch delayed pending vendor validation",
-            "compensating_control": "None",
-            "expiration_date": "2025-06-13",
-            "risk_accepted": False,
-            "status": "Open",
-            "category": "Technical",
-            "owner": "Infrastructure Team",
-            "created_date": "2024-01-25",
-            "risk_score": 90,
-            "business_impact": "Critical",
-            "approval_level": "CISO",
-            "review_frequency": "Daily"
-        },
-        {
-            "exception_id": "EX-008",
-            "system_asset": "Linux Web Server",
-            "description": "Monitoring tools excluded due to licensing limits",
-            "compensating_control": "None",
-            "expiration_date": "2025-07-16",
-            "risk_accepted": False,
+            "category": "Patching",
+            "exception_type": "Time-boxed waiver",
             "status": "Approved",
-            "category": "Technical",
-            "owner": "Web Team",
-            "created_date": "2024-02-10",
-            "risk_score": 55,
-            "business_impact": "Low",
-            "approval_level": "IT Manager",
-            "review_frequency": "Monthly"
+            "residual_risk": "Critical",
+            "requestor": "Infrastructure",
+            "owner": "Vulnerability Mgmt",
+            "approver": "CISO",
+            "business_justification": "Vendor PSIRT: patch bricks replication on our code-level. Hotfix promised.",
+            "compensating_control": "Appliance isolated to backup VLAN; admin via PAM; IDS on replication ports; daily vendor PSIRT check",
+            "conditions": "Apply hotfix within 7 days of vendor release. No internet admin. Max one extension.",
+            "linked_finding": "VM-2026-104",
+            "extension_count": 0,
+            "requested": today - timedelta(days=21),
+            "effective": today - timedelta(days=20),
+            "expiration": today + timedelta(days=6 + jitter(-2, 3)),
+            "next_review": today + timedelta(days=2),
         },
         {
-            "exception_id": "EX-009",
+            "exception_id": "EXC-2026-008",
+            "title": "Web farm excluded from central monitoring (license cap)",
+            "control": "SI-04 Monitoring / SOC 2 CC7.2",
+            "system_asset": "Linux Web Server farm",
+            "category": "Logging",
+            "exception_type": "Time-boxed waiver",
+            "status": "Closed",
+            "residual_risk": "Low",
+            "requestor": "Web Team",
+            "owner": "SecOps",
+            "approver": "IT Manager",
+            "business_justification": "License shortfall during FY26 true-up.",
+            "compensating_control": "Was: host syslog to local disk. Now: SIEM onboarded after license add.",
+            "conditions": "Closed — control operating as designed.",
+            "linked_finding": "",
+            "extension_count": 1,
+            "requested": today - timedelta(days=160),
+            "effective": today - timedelta(days=150),
+            "expiration": today - timedelta(days=20),
+            "next_review": pd.NaT,
+        },
+        {
+            "exception_id": "EXC-2026-009",
+            "title": "SMBv1 required by legacy CRM file share",
+            "control": "SC-08 Transmission / CIS 4.8",
             "system_asset": "Legacy CRM",
-            "description": "Unsupported protocol (SMBv1) still required by legacy application",
-            "compensating_control": "Manual log review weekly",
-            "expiration_date": "2025-10-08",
-            "risk_accepted": True,
-            "status": "Under Review",
-            "category": "Technical",
-            "owner": "Business Systems",
-            "created_date": "2024-01-30",
-            "risk_score": 85,
-            "business_impact": "High",
-            "approval_level": "CISO",
-            "review_frequency": "Weekly"
-        },
-        {
-            "exception_id": "EX-010",
-            "system_asset": "Wireless Controllers",
-            "description": "Automated backup encryption paused due to failed script recovery",
-            "compensating_control": "Manual log review weekly",
-            "expiration_date": "2025-09-17",
-            "risk_accepted": True,
-            "status": "Open",
-            "category": "Technical",
-            "owner": "Network Team",
-            "created_date": "2024-03-05",
-            "risk_score": 70,
-            "business_impact": "Medium",
-            "approval_level": "IT Director",
-            "review_frequency": "Monthly"
-        },
-        {
-            "exception_id": "EX-011",
-            "system_asset": "IBM i",
-            "description": "*ALLOBJ retained on production ops profiles pending application remediation",
-            "compensating_control": "QAUDJRN monitoring and weekly DSPUSRPRF review",
-            "expiration_date": "2025-08-31",
-            "risk_accepted": True,
+            "category": "Network",
+            "exception_type": "Time-boxed waiver",
             "status": "Approved",
-            "category": "Technical",
-            "owner": "IBM i Ops",
-            "created_date": "2024-03-12",
-            "risk_score": 92,
-            "business_impact": "Critical",
-            "approval_level": "CISO",
-            "review_frequency": "Weekly"
+            "residual_risk": "High",
+            "requestor": "Business Systems",
+            "owner": "Infrastructure",
+            "approver": "CISO",
+            "business_justification": "Vendor sunset is 2027; plant floor PCs cannot speak SMBv2 without a line-stop.",
+            "compensating_control": "Share VLAN isolated; SMB signing where possible; no internet path; weekly vuln scan",
+            "conditions": "No additional SMBv1 hosts. Migration milestone review each quarter. Third extension requires Risk Committee.",
+            "linked_finding": "AUD-2025-061",
+            "extension_count": 2,
+            "requested": today - timedelta(days=400),
+            "effective": today - timedelta(days=390),
+            "expiration": today + timedelta(days=85 + jitter(-6, 7)),
+            "next_review": today + timedelta(days=25),
         },
         {
-            "exception_id": "EX-012",
-            "system_asset": "IBM Z",
-            "description": "RACF SPECIAL granted to contractor TSO IDs for migration project beyond policy duration",
-            "compensating_control": "Daily SMF / RACF auditor review of SPECIAL use",
-            "expiration_date": "2025-07-15",
-            "risk_accepted": True,
-            "status": "Open",
-            "category": "Technical",
+            "exception_id": "EXC-2026-010",
+            "title": "Backup job encryption paused after failed script",
+            "control": "SC-28 Encryption at rest / ISO A.8.24",
+            "system_asset": "Wireless Controllers / backup",
+            "category": "Encryption",
+            "exception_type": "Time-boxed waiver",
+            "status": "Submitted",
+            "residual_risk": "High",
+            "requestor": "Network Team",
+            "owner": "Infrastructure",
+            "approver": "",
+            "business_justification": "Nightly config backup job failing after key-rotation; ops paused encryption to restore recoverability.",
+            "compensating_control": "Backups land on encrypted volume; access limited to backup operators; restore test this week",
+            "conditions": "Pending Security review. Encryption must resume within 14 days of approval.",
+            "linked_finding": "",
+            "extension_count": 0,
+            "requested": today - timedelta(days=1),
+            "effective": pd.NaT,
+            "expiration": today + timedelta(days=14),
+            "next_review": today + timedelta(days=7),
+        },
+        {
+            "exception_id": "EXC-2026-011",
+            "title": "*ALLOBJ retained on production ops profiles",
+            "control": "AC-06 Least privilege / IBM i Security Standard",
+            "system_asset": "IBM i (PRODBOX)",
+            "category": "Privileged access",
+            "exception_type": "Time-boxed waiver",
+            "status": "Approved",
+            "residual_risk": "Critical",
+            "requestor": "IBM i Ops",
+            "owner": "IBM i Security",
+            "approver": "CISO",
+            "business_justification": "Nightly save / restore and vendor PTF apply still coded to *ALLOBJ. Split-owner project in flight.",
+            "compensating_control": "QAUDJRN *AUTFAIL *SAVRST; weekly DSPUSRPRF; profiles signoff via PAM checkout 4h max",
+            "conditions": "Named profiles only (no QSECOFR day-use). Remove *ALLOBJ from batch by expiration.",
+            "linked_finding": "IBMi-2026-007",
+            "extension_count": 1,
+            "requested": today - timedelta(days=95),
+            "effective": today - timedelta(days=90),
+            "expiration": today + timedelta(days=19 + jitter(-3, 4)),
+            "next_review": today - timedelta(days=2),
+            "review_note": "Weekly review is overdue.",
+        },
+        {
+            "exception_id": "EXC-2026-012",
+            "title": "RACF SPECIAL on contractor TSO IDs past project end",
+            "control": "AC-02 Account management / RACF standard",
+            "system_asset": "IBM Z (z/OS)",
+            "category": "Privileged access",
+            "exception_type": "Time-boxed waiver",
+            "status": "Expired",
+            "residual_risk": "Critical",
+            "requestor": "Mainframe Security",
             "owner": "Mainframe Security",
-            "created_date": "2024-03-18",
-            "risk_score": 88,
-            "business_impact": "Critical",
-            "approval_level": "CISO",
-            "review_frequency": "Weekly"
+            "approver": "CISO",
+            "business_justification": "Migration project overrun; contractor SPECIAL not revoked at original end date.",
+            "compensating_control": "Daily SMF / RACF auditor extract of SPECIAL use — still running, IDs still active",
+            "conditions": "Revoke at project close. Expired — treat as unauthorized standing access until closed or re-approved.",
+            "linked_finding": "MF-2026-003",
+            "extension_count": 1,
+            "requested": today - timedelta(days=150),
+            "effective": today - timedelta(days=140),
+            "expiration": today - timedelta(days=12 + jitter(0, 5)),
+            "next_review": today - timedelta(days=12),
         },
         {
-            "exception_id": "EX-013",
+            "exception_id": "EXC-2026-013",
+            "title": "SAP_ALL on dual-control break-glass until Firefighter live",
+            "control": "AC-06 Least privilege / SAP security standard",
             "system_asset": "SAP ECC",
-            "description": "SAP_ALL on dual-control break-glass IDs until Firefighter workflow replaces SU01 grants",
-            "compensating_control": "ST01 session logging and dual approval ticket",
-            "expiration_date": "2025-09-30",
-            "risk_accepted": True,
-            "status": "Under Review",
-            "category": "Operational",
-            "owner": "SAP Basis",
-            "created_date": "2024-03-22",
-            "risk_score": 86,
-            "business_impact": "High",
-            "approval_level": "CISO",
-            "review_frequency": "Weekly"
-        }
+            "category": "Privileged access",
+            "exception_type": "Time-boxed waiver",
+            "status": "In Review",
+            "residual_risk": "High",
+            "requestor": "SAP Basis",
+            "owner": "ERP Security",
+            "approver": "",
+            "business_justification": "GRC Firefighter workflow delayed; month-end still needs emergency SU01 path.",
+            "compensating_control": "ST01 session logging; dual approval ticket; password in PAM; 4-hour checkout",
+            "conditions": "Two named IDs only. Firefighter go-live is the exit. Risk Committee if >90 days.",
+            "linked_finding": "SAP-2026-011",
+            "extension_count": 0,
+            "requested": today - timedelta(days=8),
+            "effective": pd.NaT,
+            "expiration": today + timedelta(days=60),
+            "next_review": today + timedelta(days=14),
+        },
+        {
+            "exception_id": "EXC-2026-014",
+            "title": "AD service account password-never-expires",
+            "control": "IA-05 Authenticator management / CIS 5.2",
+            "system_asset": "Windows AD (on-prem)",
+            "category": "Access",
+            "exception_type": "Time-boxed waiver",
+            "status": "Approved",
+            "residual_risk": "Medium",
+            "requestor": "Windows Engineering",
+            "owner": "IAM",
+            "approver": "IT Director",
+            "business_justification": "Print-spooler and backup agents fail when the password rotates; gMSA conversion scheduled.",
+            "compensating_control": "LAPS/gMSA for new accounts; these 6 accounts in PAM vault; Kerberos AES; no interactive logon",
+            "conditions": "Convert to gMSA by expiration. No additional never-expire flags.",
+            "linked_finding": "",
+            "extension_count": 0,
+            "requested": today - timedelta(days=33),
+            "effective": today - timedelta(days=30),
+            "expiration": today + timedelta(days=28 + jitter(-4, 5)),
+            "next_review": today + timedelta(days=14),
+        },
+        {
+            "exception_id": "EXC-2026-015",
+            "title": "Oracle EBS APPS schema used by batch jobs",
+            "control": "AC-06 Least privilege / Oracle EBS standard",
+            "system_asset": "Oracle E-Business Suite",
+            "category": "Privileged access",
+            "exception_type": "Time-boxed waiver",
+            "status": "Approved",
+            "residual_risk": "High",
+            "requestor": "ERP Ops",
+            "owner": "Database Team",
+            "approver": "CISO",
+            "business_justification": "Concurrent Manager customizations still connect as APPS; proxy-user rewrite in sprint 3.",
+            "compensating_control": "APPS login from app tier only; Unified Audit on APPS; no ad-hoc SQL*Plus for humans",
+            "conditions": "Human APPS use remains prohibited. Proxy-user cutover is the exit.",
+            "linked_finding": "EBS-2026-004",
+            "extension_count": 0,
+            "requested": today - timedelta(days=48),
+            "effective": today - timedelta(days=44),
+            "expiration": today + timedelta(days=52 + jitter(-5, 6)),
+            "next_review": today + timedelta(days=16),
+        },
+        {
+            "exception_id": "EXC-2026-016",
+            "title": "AIX adopted authority on shared run user",
+            "control": "AC-06 Least privilege / AIX security standard",
+            "system_asset": "AIX LPAR (nfin01)",
+            "category": "Privileged access",
+            "exception_type": "Time-boxed waiver",
+            "status": "Closed",
+            "residual_risk": "Low",
+            "requestor": "UNIX Team",
+            "owner": "UNIX Team",
+            "approver": "IT Director",
+            "business_justification": "Was required for a vendor agent; agent now runs with dedicated UID.",
+            "compensating_control": "N/A — remediated. Adopted authority removed; vendor UID confined.",
+            "conditions": "Closed after config review 2026-07-22.",
+            "linked_finding": "",
+            "extension_count": 0,
+            "requested": today - timedelta(days=110),
+            "effective": today - timedelta(days=100),
+            "expiration": today - timedelta(days=40),
+            "next_review": pd.NaT,
+        },
+        {
+            "exception_id": "EXC-2026-017",
+            "title": "JDE World menu security bypass for plant clerks",
+            "control": "AC-03 Access enforcement / JDE security standard",
+            "system_asset": "JD Edwards World",
+            "category": "Access",
+            "exception_type": "Time-boxed waiver",
+            "status": "Submitted",
+            "residual_risk": "Medium",
+            "requestor": "Plant IT",
+            "owner": "ERP Security",
+            "approver": "",
+            "business_justification": "World program *PUBLIC on inventory inquiry during peak season; role redesign not done.",
+            "compensating_control": "Inquiry-only library list; no update programs; nightly user extract to IAM",
+            "conditions": "Peak-season only. Role redesign before next season.",
+            "linked_finding": "",
+            "extension_count": 0,
+            "requested": today - timedelta(days=2),
+            "effective": pd.NaT,
+            "expiration": today + timedelta(days=90),
+            "next_review": today + timedelta(days=30),
+        },
+        {
+            "exception_id": "EXC-2026-018",
+            "title": "Break-glass on PCI CDE jump host without MFA",
+            "control": "PCI DSS 8.3.1 / AC-07 MFA",
+            "system_asset": "PCI CDE jump host",
+            "category": "Access",
+            "exception_type": "Time-boxed waiver",
+            "status": "Approved",
+            "residual_risk": "High",
+            "requestor": "Card Ops",
+            "owner": "PCI Compliance",
+            "approver": "CISO",
+            "business_justification": "Hardware token shipment delayed; one emergency ID for QSA evidence window.",
+            "compensating_control": "Password in PAM; 2-person checkout; session recording; ID disabled when unused 24h",
+            "conditions": "Single named ID. MFA live before QSA fieldwork. No extension without PCI Lead + CISO.",
+            "linked_finding": "PCI-2026-009",
+            "extension_count": 0,
+            "requested": today - timedelta(days=12),
+            "effective": today - timedelta(days=11),
+            "expiration": today + timedelta(days=9 + jitter(-2, 3)),
+            "next_review": today + timedelta(days=3),
+        },
     ]
-    
-    df = pd.DataFrame(exceptions)
-    df['expiration_date'] = pd.to_datetime(df['expiration_date'])
-    df['created_date'] = pd.to_datetime(df['created_date'])
+
+    df = pd.DataFrame(rows)
+    for col in ("requested", "effective", "expiration", "next_review"):
+        df[col] = pd.to_datetime(df[col], errors="coerce")
+    if "review_note" not in df.columns:
+        df["review_note"] = ""
+    df["review_note"] = df["review_note"].fillna("")
     return df
 
-def calculate_exception_metrics(df):
-    """Calculate key exception metrics"""
-    today = datetime.datetime.now()
-    
-    metrics = {
-        'total_exceptions': len(df),
-        'open_exceptions': len(df[df['status'] == 'Open']),
-        'under_review': len(df[df['status'] == 'Under Review']),
-        'approved_exceptions': len(df[df['status'] == 'Approved']),
-        'expired_exceptions': len(df[df['status'] == 'Expired']),
-        'risk_accepted': len(df[df['risk_accepted'] == True]),
-        'expiring_soon': len(df[(df['expiration_date'] - today).dt.days <= 30]),
-        'overdue_reviews': len(df[(df['expiration_date'] - today).dt.days < 0]),
-        'avg_risk_score': df['risk_score'].mean(),
-        'critical_exceptions': len(df[df['business_impact'] == 'Critical'])
-    }
-    
-    return metrics
 
-def main():
+def _enrich(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    today = _today()
+    out["days_to_expire"] = (out["expiration"] - today).dt.days
+    out["review_overdue"] = (
+        out["status"].eq("Approved")
+        & out["next_review"].notna()
+        & (out["next_review"] < today)
+    )
+    out["lapsed_in_prod"] = out["status"].eq("Expired") | (
+        out["status"].eq("Approved") & (out["days_to_expire"] < 0)
+    )
+    out["expiring_30"] = out["status"].eq("Approved") & out["days_to_expire"].between(0, 30)
+    return out
+
+
+def _sync(seed: int) -> pd.DataFrame:
+    if st.session_state.get("_exc_seed") != seed or "exceptions" not in st.session_state:
+        st.session_state.exceptions = _sample_exceptions(seed)
+        st.session_state._exc_seed = seed
+    return st.session_state.exceptions
+
+
+def _save(df: pd.DataFrame) -> None:
+    st.session_state.exceptions = df.reset_index(drop=True)
+
+
+def _patch(exception_id: str, **fields) -> None:
+    df = st.session_state.exceptions.copy()
+    loc = df.index[df["exception_id"] == exception_id]
+    if len(loc) == 0:
+        return
+    i = loc[0]
+    for k, v in fields.items():
+        df.at[i, k] = v
+    _save(df)
+
+
+def _metrics(df: pd.DataFrame) -> dict:
+    e = _enrich(df)
+    active = e[e["status"] == "Approved"]
+    pending = e[e["status"].isin(["Submitted", "In Review"])]
+    return {
+        "active": int(len(active)),
+        "pending": int(len(pending)),
+        "expiring": int(e["expiring_30"].sum()),
+        "lapsed": int(e["lapsed_in_prod"].sum()),
+        "overdue_review": int(e["review_overdue"].sum()),
+        "repeat_ext": int((e["extension_count"] >= 2).sum()),
+        "critical_active": int(len(active[active["residual_risk"] == "Critical"])),
+    }
+
+
+def _fmt(ts) -> str:
+    if pd.isna(ts):
+        return "—"
+    return pd.Timestamp(ts).strftime("%Y-%m-%d")
+
+
+def _detail(row: pd.Series) -> None:
+    c1, c2 = st.columns(2)
+    with c1:
+        st.write(f"**Control waived:** {row['control']}")
+        st.write(f"**Type:** {row['exception_type']}")
+        st.write(f"**Status:** {row['status']} · residual **{row['residual_risk']}**")
+        st.write(f"**Requestor / owner:** {row['requestor']} / {row['owner']}")
+        st.write(f"**Approver:** {row['approver'] or '— (pending)'}")
+        st.write(f"**Linked finding:** {row['linked_finding'] or '—'}")
+    with c2:
+        st.write(f"**Requested:** {_fmt(row['requested'])}")
+        st.write(f"**Effective:** {_fmt(row['effective'])}")
+        st.write(f"**Expires:** {_fmt(row['expiration'])} ({row['days_to_expire']}d)")
+        st.write(f"**Next review:** {_fmt(row['next_review'])}")
+        st.write(f"**Extensions:** {int(row['extension_count'])}")
+    st.write(f"**Justification:** {row['business_justification']}")
+    st.write(f"**Compensating control:** {row['compensating_control']}")
+    st.write(f"**Conditions of approval:** {row['conditions']}")
+
+
+def _actions(row: pd.Series, *, key: str) -> None:
+    eid = row["exception_id"]
+    today = _today()
+    a1, a2, a3, a4 = st.columns(4)
+    with a1:
+        if row["status"] in {"Submitted", "In Review"} and st.button(
+            "Approve 90d", key=f"appr_{key}", use_container_width=True
+        ):
+            _patch(
+                eid,
+                status="Approved",
+                approver="CISO (demo)",
+                effective=today,
+                expiration=today + timedelta(days=90),
+                next_review=today + timedelta(days=30),
+            )
+            st.rerun()
+    with a2:
+        if row["status"] in {"Submitted", "In Review"} and st.button(
+            "Deny", key=f"deny_{key}", use_container_width=True
+        ):
+            _patch(eid, status="Denied", approver="CISO (demo)", effective=pd.NaT)
+            st.rerun()
+    with a3:
+        if row["status"] in {"Approved", "Expired"} and st.button(
+            "Extend 90d", key=f"ext_{key}", use_container_width=True
+        ):
+            new_exp = pd.Timestamp(row["expiration"])
+            if pd.isna(new_exp) or new_exp < today:
+                new_exp = today
+            _patch(
+                eid,
+                status="Approved",
+                expiration=new_exp + timedelta(days=90),
+                next_review=today + timedelta(days=30),
+                extension_count=int(row["extension_count"]) + 1,
+                approver=row["approver"] or "CISO (demo)",
+                effective=row["effective"] if pd.notna(row["effective"]) else today,
+            )
+            st.rerun()
+    with a4:
+        if row["status"] not in {"Closed", "Denied"} and st.button(
+            "Close — remediated", key=f"cls_{key}", use_container_width=True
+        ):
+            _patch(eid, status="Closed", next_review=pd.NaT)
+            st.rerun()
+
+
+def main() -> None:
     portfolio_skin.page_header(
         title="Exception Tracking System",
-        lede="Interactive GRC tool — #RUNGRCRaleigh build-in-public.",
-        kicker="Controls",
+        lede="Time-boxed control waivers: request, compensate, approve, expire. Club demo — not a system of record.",
+        kicker="Control exceptions",
     )
-    
-    # Load data
-    df = load_exception_data()
-    metrics = calculate_exception_metrics(df)
-    
-    # Sidebar
-    st.sidebar.header("Controls")
+
     seed = demo_kit.seed_controls()
+    df = _sync(seed)
+    enriched = _enrich(df)
+    m = _metrics(df)
+
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Exception Management")
-    
-    # Add new exception form
-    with st.sidebar.expander("Add New Exception", expanded=False):
-        with st.form("add_exception"):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                exception_id = st.text_input("Exception ID", placeholder="e.g., EX-001")
-                system_asset = st.text_input("System/Asset", placeholder="e.g., IBM i")
-                category = st.selectbox("Category", ["Technical", "Operational", "Compliance"])
-                business_impact = st.selectbox("Business Impact", ["Low", "Medium", "High", "Critical"])
-                risk_score = st.slider("Risk Score", 1, 100, 50)
-            
-            with col2:
-                status = st.selectbox("Status", ["Open", "Under Review", "Approved", "Expired"])
-                risk_accepted = st.checkbox("Risk Accepted")
-                approval_level = st.selectbox("Approval Level", ["IT Manager", "IT Director", "CISO"])
-                review_frequency = st.selectbox("Review Frequency", ["Daily", "Weekly", "Monthly", "Quarterly"])
-            
-            description = st.text_area("Description", placeholder="Describe the exception...")
-            compensating_control = st.text_area("Compensating Control", placeholder="Describe compensating controls...")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                expiration_date = st.date_input("Expiration Date", value=datetime.date.today() + timedelta(days=90))
-            with col2:
-                owner = st.text_input("Owner", placeholder="e.g., IT Security Team")
-            
-            submitted = st.form_submit_button("Add Exception")
-            if submitted:
-                st.success("Exception added successfully!")
-    
-    # Filters
-    st.sidebar.subheader("Filters")
-    
-    status_filter = st.sidebar.multiselect(
-        "Status",
-        df['status'].unique(),
-        default=df['status'].unique()
-    )
-    
-    category_filter = st.sidebar.multiselect(
-        "Category",
-        df['category'].unique(),
-        default=df['category'].unique()
-    )
-    
-    risk_accepted_filter = st.sidebar.multiselect(
-        "Risk Accepted",
-        df['risk_accepted'].unique(),
-        default=df['risk_accepted'].unique()
-    )
-    
-    # Apply filters
-    filtered_df = df[
-        (df['status'].isin(status_filter)) &
-        (df['category'].isin(category_filter)) &
-        (df['risk_accepted'].isin(risk_accepted_filter))
+    st.sidebar.subheader("Register filters")
+    status_f = st.sidebar.multiselect("Status", STATUSES, default=STATUSES)
+    risk_f = st.sidebar.multiselect("Residual risk", RISK_ORDER, default=RISK_ORDER)
+    systems = sorted(df["system_asset"].astype(str).unique())
+    system_f = st.sidebar.multiselect("System / asset", systems, default=systems)
+
+    filtered = enriched[
+        enriched["status"].isin(status_f)
+        & enriched["residual_risk"].isin(risk_f)
+        & enriched["system_asset"].isin(system_f)
     ]
-    
-    # Main content
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Dashboard", "Exception List", "Risk Analysis", "Expiration Tracking", "Reports"])
-    
-    with tab1:
-        st.header("Exception Dashboard")
-        
-        # Key metrics
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric("Total Exceptions", metrics['total_exceptions'])
-        
-        with col2:
-            st.metric("Open Exceptions", metrics['open_exceptions'])
-        
-        with col3:
-            st.metric("Expiring Soon (30 days)", metrics['expiring_soon'])
-        
-        with col4:
-            st.metric("Overdue Reviews", metrics['overdue_reviews'])
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Status distribution
-            status_counts = df['status'].value_counts()
-            fig_status = px.pie(
-                values=status_counts.values,
-                names=status_counts.index,
-                title="Exception Status Distribution"
-            )
-            st.plotly_chart(fig_status, use_container_width=True)
-        
-        with col2:
-            # Category distribution
-            category_counts = df['category'].value_counts()
-            fig_category = px.bar(
-                x=category_counts.index,
-                y=category_counts.values,
-                title="Exceptions by Category",
-                labels={'x': 'Category', 'y': 'Count'}
-            )
-            st.plotly_chart(fig_category, use_container_width=True)
-        
-        # Risk score distribution
-        fig_risk_dist = px.histogram(
-            df,
-            x='risk_score',
-            title="Risk Score Distribution",
-            labels={'risk_score': 'Risk Score', 'y': 'Count'},
-            nbins=10
+
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Active waivers", m["active"], help="Status = Approved (clock is running).")
+    k2.metric("Awaiting decision", m["pending"])
+    k3.metric("Expire in 30 days", m["expiring"])
+    k4.metric(
+        "Lapsed still in prod",
+        m["lapsed"],
+        help="Expired (or past date) and not closed — this is what auditors sample.",
+    )
+    st.caption(
+        f"Overdue periodic reviews: {m['overdue_review']} · "
+        f"Repeat extensions (≥2): {m['repeat_ext']} · "
+        f"Critical among active: {m['critical_active']}"
+    )
+
+    work, register, intake, aging, export = st.tabs(
+        ["Workbench", "Register", "Intake", "Aging", "Export"]
+    )
+
+    with work:
+        st.subheader("Needs action")
+        st.caption(
+            "Submitted / In Review → approve or deny. Approved → watch the clock. "
+            "Expired still in production is an open risk, not a filing status."
         )
-        st.plotly_chart(fig_risk_dist, use_container_width=True)
-        
-        # Expiration timeline
-        st.subheader("Expiration Timeline")
-        
-        # Calculate days to expiration
-        today = datetime.datetime.now()
-        df['days_to_expiration'] = (df['expiration_date'] - today).dt.days
-        
-        fig_timeline = px.scatter(
-            df,
-            x='days_to_expiration',
-            y='risk_score',
-            color='status',
-            size='risk_score',
-            hover_data=['exception_id', 'system_asset'],
-            title="Exception Expiration Timeline",
-            labels={'days_to_expiration': 'Days to Expiration', 'risk_score': 'Risk Score'}
+
+        pending = enriched[enriched["status"].isin(["Submitted", "In Review"])].sort_values(
+            "requested"
         )
-        fig_timeline.add_vline(x=0, line_dash="dash", line_color="red", annotation_text="Today")
-        fig_timeline.add_vline(x=30, line_dash="dash", line_color="orange", annotation_text="30 Days")
-        st.plotly_chart(fig_timeline, use_container_width=True)
-    
-    with tab2:
-        st.header("Exception List")
-        
-        # Display filtered exceptions
-        if len(filtered_df) > 0:
-            # Format data for display
-            display_df = filtered_df.copy()
-            display_df['expiration_date'] = display_df['expiration_date'].dt.strftime('%Y-%m-%d')
-            display_df['created_date'] = display_df['created_date'].dt.strftime('%Y-%m-%d')
-            display_df['risk_accepted'] = display_df['risk_accepted'].map({True: 'Yes', False: 'No'})
-            
-            st.dataframe(
-                display_df[['exception_id', 'system_asset', 'description', 'status', 'risk_accepted', 'expiration_date', 'risk_score', 'owner']],
-                use_container_width=True,
-                hide_index=True
-            )
+        expiring = enriched[enriched["expiring_30"]].sort_values("days_to_expire")
+        lapsed = enriched[enriched["lapsed_in_prod"]].sort_values("days_to_expire")
+        overdue = enriched[enriched["review_overdue"]].sort_values("next_review")
+
+        st.markdown(f"**Awaiting decision ({len(pending)})**")
+        if pending.empty:
+            st.success("Nothing in the approval queue.")
         else:
-            st.warning("No exceptions found matching the selected filters.")
-    
-    with tab3:
-        st.header("Risk Analysis")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            # Risk score by category
-            fig_risk_category = px.box(
-                filtered_df,
-                x='category',
-                y='risk_score',
-                title="Risk Score by Category",
-                labels={'category': 'Category', 'risk_score': 'Risk Score'}
-            )
-            st.plotly_chart(fig_risk_category, use_container_width=True)
-        
-        with col2:
-            # Risk acceptance analysis
-            risk_acceptance_counts = filtered_df['risk_accepted'].value_counts()
-            fig_risk_acceptance = px.pie(
-                values=risk_acceptance_counts.values,
-                names=risk_acceptance_counts.index.map({True: 'Accepted', False: 'Not Accepted'}),
-                title="Risk Acceptance Distribution"
-            )
-            st.plotly_chart(fig_risk_acceptance, use_container_width=True)
-        
-        # High-risk exceptions
-        st.subheader("High-Risk Exceptions (Score > 75)")
-        high_risk_df = filtered_df[filtered_df['risk_score'] > 75]
-        
-        if len(high_risk_df) > 0:
-            for _, exception in high_risk_df.iterrows():
-                with st.expander(f"{exception['exception_id']} - {exception['system_asset']} (Score: {exception['risk_score']})"):
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.write(f"**Description:** {exception['description']}")
-                        st.write(f"**Category:** {exception['category']}")
-                        st.write(f"**Business Impact:** {exception['business_impact']}")
-                        st.write(f"**Status:** {exception['status']}")
-                    
-                    with col2:
-                        st.write(f"**Compensating Control:** {exception['compensating_control']}")
-                        st.write(f"**Risk Accepted:** {'Yes' if exception['risk_accepted'] else 'No'}")
-                        st.write(f"**Expiration:** {exception['expiration_date'].strftime('%Y-%m-%d')}")
-                        st.write(f"**Owner:** {exception['owner']}")
+            for _, row in pending.iterrows():
+                with st.expander(
+                    f"{row['exception_id']} · {row['title']} · {row['status']} · {row['residual_risk']}"
+                ):
+                    _detail(row)
+                    _actions(row, key=f"pend_{row['exception_id']}")
+
+        st.markdown(f"**Expiring within 30 days ({len(expiring)})**")
+        if expiring.empty:
+            st.info("No active waivers inside the 30-day window.")
         else:
-            st.info("No high-risk exceptions found.")
-    
-    with tab4:
-        st.header("Expiration Tracking")
-        
-        # Calculate days to expiration
-        today = datetime.datetime.now()
-        filtered_df['days_to_expiration'] = (filtered_df['expiration_date'] - today).dt.days
-        
-        # Expiring soon (within 30 days)
-        expiring_soon = filtered_df[filtered_df['days_to_expiration'] <= 30]
-        
-        if len(expiring_soon) > 0:
-            st.subheader("Expiring Soon (Within 30 Days)")
-            
-            for _, exception in expiring_soon.iterrows():
-                days_left = exception['days_to_expiration']
-                color = "red" if days_left < 0 else "orange" if days_left <= 7 else "yellow"
-                
-                with st.expander(f"{exception['exception_id']} - {exception['system_asset']} ({days_left} days left)"):
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.write(f"**Description:** {exception['description']}")
-                        st.write(f"**Status:** {exception['status']}")
-                        st.write(f"**Risk Score:** {exception['risk_score']}")
-                    
-                    with col2:
-                        st.write(f"**Expiration Date:** {exception['expiration_date'].strftime('%Y-%m-%d')}")
-                        st.write(f"**Owner:** {exception['owner']}")
-                        st.write(f"**Review Frequency:** {exception['review_frequency']}")
-                    
-                    if st.button(f"Extend {exception['exception_id']}", key=f"extend_{exception['exception_id']}"):
-                        st.success(f"Exception {exception['exception_id']} extended by 30 days!")
+            for _, row in expiring.iterrows():
+                with st.expander(
+                    f"{row['exception_id']} · {row['title']} · {int(row['days_to_expire'])}d left"
+                ):
+                    _detail(row)
+                    _actions(row, key=f"exp_{row['exception_id']}")
+
+        st.markdown(f"**Lapsed — still in production ({len(lapsed)})**")
+        if lapsed.empty:
+            st.success("No lapsed waivers hanging open.")
         else:
-            st.success("No exceptions expiring within 30 days.")
-        
-        # Expiration trend
-        st.subheader("Expiration Trend")
-        
-        # Group by month
-        monthly_expirations = filtered_df.groupby(filtered_df['expiration_date'].dt.to_period('M')).size()
-        
-        fig_trend = px.line(
-            x=monthly_expirations.index.astype(str),
-            y=monthly_expirations.values,
-            title="Monthly Exception Expirations",
-            labels={'x': 'Month', 'y': 'Number of Expirations'}
-        )
-        st.plotly_chart(fig_trend, use_container_width=True)
-    
-    with tab5:
-        st.header("Reports & Analytics")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.subheader("Export Options")
-            export_df = filtered_df.copy()
-            for col in ("expiration_date", "created_date"):
-                if col in export_df.columns:
-                    export_df[col] = export_df[col].astype(str)
-            demo_kit.csv_download(
-                export_df,
-                "exceptions_filtered.csv",
-                label="Download filtered exceptions",
-            )
-        
-        with col2:
-            # Management actions
-            st.subheader("Management Actions")
-            
-            if st.button("Refresh Data"):
-                st.rerun()
-            
-            if st.button("Send Expiration Notifications"):
-                st.success("Expiration notifications sent!")
-            
-            if st.button("Schedule Reviews"):
-                st.success("Review schedule updated!")
-        
-        # Summary statistics
-        st.subheader("Summary Statistics")
-        
-        summary_data = {
-            'Metric': [
-                'Total Exceptions',
-                'Open Exceptions',
-                'Under Review',
-                'Approved',
-                'Expired',
-                'Risk Accepted',
-                'Expiring Soon',
-                'Overdue Reviews',
-                'Average Risk Score',
-                'Critical Exceptions'
-            ],
-            'Value': [
-                str(metrics['total_exceptions']),
-                str(metrics['open_exceptions']),
-                str(metrics['under_review']),
-                str(metrics['approved_exceptions']),
-                str(metrics['expired_exceptions']),
-                str(metrics['risk_accepted']),
-                str(metrics['expiring_soon']),
-                str(metrics['overdue_reviews']),
-                f"{metrics['avg_risk_score']:.1f}",
-                str(metrics['critical_exceptions'])
-            ],
-            'Status': [
-                '' if metrics['total_exceptions'] > 0 else '',
-                '' if metrics['open_exceptions'] > 0 else '',
-                '' if metrics['under_review'] > 0 else '',
-                '' if metrics['approved_exceptions'] > 0 else '',
-                '' if metrics['expired_exceptions'] > 0 else '',
-                '' if metrics['risk_accepted'] > 0 else '',
-                '' if metrics['expiring_soon'] > 0 else '',
-                '' if metrics['overdue_reviews'] > 0 else '',
-                '' if metrics['avg_risk_score'] <= 70 else '',
-                '' if metrics['critical_exceptions'] > 0 else ''
+            st.warning("These expired without close-out. Extend (renewal) or close as remediated.")
+            for _, row in lapsed.iterrows():
+                with st.expander(
+                    f"{row['exception_id']} · {row['title']} · expired {abs(int(row['days_to_expire']))}d ago"
+                ):
+                    _detail(row)
+                    _actions(row, key=f"lapse_{row['exception_id']}")
+
+        st.markdown(f"**Periodic review overdue ({len(overdue)})**")
+        if overdue.empty:
+            st.info("Active waivers are inside their review cadence.")
+        else:
+            for _, row in overdue.iterrows():
+                with st.expander(
+                    f"{row['exception_id']} · {row['title']} · review was {_fmt(row['next_review'])}"
+                ):
+                    _detail(row)
+                    _actions(row, key=f"rev_{row['exception_id']}")
+
+    with register:
+        st.subheader("Exception register")
+        show = filtered[
+            [
+                "exception_id",
+                "title",
+                "system_asset",
+                "control",
+                "status",
+                "residual_risk",
+                "owner",
+                "approver",
+                "expiration",
+                "days_to_expire",
+                "extension_count",
+                "linked_finding",
             ]
-        }
-        
-        summary_df = pd.DataFrame(summary_data)
-        st.dataframe(summary_df, use_container_width=True, hide_index=True)
+        ].copy()
+        show["expiration"] = show["expiration"].dt.strftime("%Y-%m-%d")
+        st.dataframe(show, use_container_width=True, hide_index=True)
+
+        ids = filtered["exception_id"].tolist()
+        if ids:
+            pick = st.selectbox("Open a record", ids)
+            row = enriched[enriched["exception_id"] == pick].iloc[0]
+            _detail(row)
+            _actions(row, key=f"reg_{pick}")
+
+    with intake:
+        st.subheader("Request a waiver")
+        st.caption("A real intake asks what control you are breaking, for how long, and what sits in front of the hole.")
+        with st.form("intake"):
+            c1, c2 = st.columns(2)
+            with c1:
+                title = st.text_input("Short title", placeholder="e.g. MFA not on plant-floor 5250")
+                system_asset = st.text_input("System / asset", placeholder="e.g. IBM i (PRODBOX)")
+                control = st.text_input("Control / policy waived", placeholder="e.g. AC-07 MFA / ISO A.8.5")
+                category = st.selectbox(
+                    "Category",
+                    ["Access", "Privileged access", "Logging", "Patching", "Encryption", "Network", "Endpoint"],
+                )
+                exception_type = st.selectbox(
+                    "Type",
+                    ["Time-boxed waiver", "Risk acceptance", "Scope exclusion"],
+                )
+                residual_risk = st.selectbox("Residual risk", RISK_ORDER, index=1)
+            with c2:
+                requestor = st.text_input("Requestor (business)", placeholder="e.g. Plant IT")
+                owner = st.text_input("Control owner", placeholder="e.g. IAM")
+                linked_finding = st.text_input("Linked finding (optional)", placeholder="AUD-2026-014")
+                expiration = st.date_input(
+                    "Requested expiration",
+                    value=(_today() + timedelta(days=90)).date(),
+                )
+                justification = st.text_area("Business justification")
+                compensating = st.text_area("Compensating control")
+            conditions = st.text_input(
+                "Proposed conditions",
+                placeholder="Named accounts only; no further extension without CISO",
+            )
+            submitted = st.form_submit_button("Submit to register")
+
+        if submitted:
+            if not title.strip() or not control.strip() or not compensating.strip():
+                st.error("Title, control, and compensating control are required.")
+            else:
+                n = len(st.session_state.exceptions) + 1
+                new_id = f"EXC-2026-{n:03d}"
+                today = _today()
+                add = {
+                    "exception_id": new_id,
+                    "title": title.strip(),
+                    "control": control.strip(),
+                    "system_asset": system_asset.strip() or "Unspecified",
+                    "category": category,
+                    "exception_type": exception_type,
+                    "status": "Submitted",
+                    "residual_risk": residual_risk,
+                    "requestor": requestor.strip() or "Requestor",
+                    "owner": owner.strip() or "Control owner",
+                    "approver": "",
+                    "business_justification": justification.strip() or "—",
+                    "compensating_control": compensating.strip(),
+                    "conditions": conditions.strip() or "Time-boxed. Exit criteria required before renewal.",
+                    "linked_finding": linked_finding.strip(),
+                    "extension_count": 0,
+                    "requested": today,
+                    "effective": pd.NaT,
+                    "expiration": pd.Timestamp(expiration),
+                    "next_review": today + timedelta(days=14),
+                    "review_note": "",
+                }
+                _save(pd.concat([st.session_state.exceptions, pd.DataFrame([add])], ignore_index=True))
+                st.success(f"{new_id} submitted. It is on the Workbench approval queue.")
+                st.rerun()
+
+    with aging:
+        st.subheader("Clock and concentration")
+        plot_df = filtered.copy()
+        if plot_df.empty:
+            st.info("No rows in the current filter.")
+        else:
+            plot_df["renewals"] = plot_df["extension_count"].astype(int) + 1
+            fig = px.scatter(
+                plot_df,
+                x="days_to_expire",
+                y="residual_risk",
+                color="status",
+                size="renewals",
+                size_max=24,
+                hover_name="exception_id",
+                hover_data=["title", "system_asset", "owner", "extension_count"],
+                color_discrete_map=STATUS_COLOR,
+                category_orders={"residual_risk": RISK_ORDER, "status": STATUSES},
+                title="Days to expiration vs residual risk (bubble = 1 + renewal count)",
+                labels={"days_to_expire": "Days to expiration (negative = already lapsed)"},
+            )
+            fig.add_vline(x=0, line_dash="dash", line_color="#ff6b6b")
+            fig.add_vline(x=30, line_dash="dot", line_color="#f2b84b")
+            st.plotly_chart(fig, use_container_width=True)
+
+            c1, c2 = st.columns(2)
+            with c1:
+                status_counts = (
+                    plot_df["status"]
+                    .value_counts()
+                    .reindex(STATUSES)
+                    .fillna(0)
+                    .rename_axis("status")
+                    .reset_index(name="count")
+                )
+                fig_s = px.bar(
+                    status_counts,
+                    x="status",
+                    y="count",
+                    color="status",
+                    color_discrete_map=STATUS_COLOR,
+                    title="By status",
+                )
+                fig_s.update_layout(showlegend=False)
+                st.plotly_chart(fig_s, use_container_width=True)
+            with c2:
+                cat_counts = (
+                    plot_df["category"].value_counts().rename_axis("category").reset_index(name="count")
+                )
+                fig_c = px.bar(cat_counts, x="category", y="count", title="By category")
+                st.plotly_chart(fig_c, use_container_width=True)
+
+            repeats = plot_df[plot_df["extension_count"] >= 2]
+            if not repeats.empty:
+                st.caption("Repeat extensions are a finding in most audit programs — they mean the exit never happened.")
+                st.dataframe(
+                    repeats[["exception_id", "title", "extension_count", "status", "expiration"]],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+    with export:
+        st.subheader("Filtered register")
+        out = filtered.copy()
+        for col in ("requested", "effective", "expiration", "next_review"):
+            out[col] = out[col].apply(_fmt)
+        demo_kit.csv_download(out.drop(columns=["review_note"], errors="ignore"), "exception_register.csv")
+        st.caption("Resample in the sidebar rebuilds the demo set. Adds and approvals live in this browser session only.")
+
 
 if __name__ == "__main__":
     main()

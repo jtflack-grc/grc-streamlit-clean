@@ -1,18 +1,18 @@
+#!/usr/bin/env python3
+"""Compliance obligation calendar — club teaching toy."""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
+import numpy as np
+import pandas as pd
+import plotly.express as px
 import streamlit as st
+
 import demo_kit
 import portfolio_skin
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import datetime
-from datetime import timedelta, date
-import random
-import json
-import calendar
 
-# Page configuration
 st.set_page_config(
     page_title="Compliance Calendar · i on GRC",
     page_icon="assets/favicon.svg",
@@ -22,1057 +22,746 @@ st.set_page_config(
 
 portfolio_skin.apply(hide_sidebar=False)
 
+STATUSES = ["Not started", "In progress", "Evidence due", "Complete"]
+TYPES = [
+    "Recertification",
+    "Control test",
+    "Evidence pack",
+    "External audit",
+    "Regulatory filing",
+    "Policy review",
+    "Training",
+    "Exercise",
+    "Committee pack",
+]
+PROGRAMS = ["SOC 2", "ISO 27001", "PCI DSS", "SOX", "GDPR", "NIST CSF", "Internal"]
+STATUS_COLOR = {
+    "Not started": "#91aa9b",
+    "In progress": "#f2b84b",
+    "Evidence due": "#ffb347",
+    "Complete": "#38e881",
+    "Overdue": "#ff6b6b",
+}
 
 
-# Initialize session state
-if 'compliance_events' not in st.session_state:
-    st.session_state.compliance_events = []
-if 'regulatory_deadlines' not in st.session_state:
-    st.session_state.regulatory_deadlines = []
-if 'audit_schedules' not in st.session_state:
-    st.session_state.audit_schedules = []
-if 'reminders' not in st.session_state:
-    st.session_state.reminders = []
-if 'holidays' not in st.session_state:
-    st.session_state.holidays = []
+def _today() -> pd.Timestamp:
+    return pd.Timestamp.now().normalize()
 
-def generate_sample_data(seed: int = 42):
-    """Generate sample compliance calendar data"""
+
+def _sample_obligations(seed: int) -> pd.DataFrame:
+    """Named GRC obligations with clocks relative to today — not a wall calendar."""
+    today = _today()
     rng = np.random.default_rng(seed)
-    compliance_events = [
+
+    def j(lo: int, hi: int) -> int:
+        return int(rng.integers(lo, hi))
+
+    rows = [
         {
-            'id': 'CE-2024-001',
-            'title': 'SOC 2 Type II Audit Kickoff',
-            'event_type': 'Audit',
-            'framework': 'SOC 2',
-            'start_date': datetime.datetime.now() + timedelta(days=30),
-            'end_date': datetime.datetime.now() + timedelta(days=35),
-            'priority': 'High',
-            'assigned_to': 'IT Security Team',
-            'description': 'Kickoff meeting for SOC 2 Type II audit with Deloitte',
-            'location': 'Conference Room A',
-            'status': 'Scheduled',
-            'reminder_days': 7
+            "obligation_id": "OBL-2026-001",
+            "title": "Q3 privileged access recertification",
+            "obligation_type": "Recertification",
+            "program": "SOC 2",
+            "cadence": "Quarterly",
+            "owner": "IAM",
+            "work_product": "Manager attestations + exception list for standing privileged IDs",
+            "status": "Evidence due",
+            "ticket_ref": "GRC-REC-331",
+            "notes": "Citrix VDI cohort still outstanding — same gap as EXC-2026-002.",
+            "due": today + timedelta(days=4 + j(-2, 3)),
+            "window_start": today - timedelta(days=20),
+            "window_end": today + timedelta(days=10),
+            "last_done": today - timedelta(days=92),
+            "slip_count": 1,
         },
         {
-            'id': 'CE-2024-002',
-            'title': 'Quarterly Access Review Due',
-            'event_type': 'Compliance',
-            'framework': 'SOX',
-            'start_date': datetime.datetime.now() + timedelta(days=15),
-            'end_date': datetime.datetime.now() + timedelta(days=15),
-            'priority': 'Critical',
-            'assigned_to': 'IT Security Team',
-            'description': 'Quarterly access review for privileged accounts',
-            'location': 'Online',
-            'status': 'Pending',
-            'reminder_days': 3
+            "obligation_id": "OBL-2026-002",
+            "title": "SOC 2 Type II fieldwork (FY26)",
+            "obligation_type": "External audit",
+            "program": "SOC 2",
+            "cadence": "Annual",
+            "owner": "GRC",
+            "work_product": "PBC list complete; walkthroughs; Type II sample evidence in GRC",
+            "status": "In progress",
+            "ticket_ref": "SOC2-FY26",
+            "notes": "Deloitte on-site window. CUECs for payroll SaaS still thin.",
+            "due": today + timedelta(days=24 + j(-3, 4)),
+            "window_start": today - timedelta(days=5),
+            "window_end": today + timedelta(days=24),
+            "last_done": today - timedelta(days=370),
+            "slip_count": 0,
         },
         {
-            'id': 'CE-2024-003',
-            'title': 'PCI DSS Annual Assessment',
-            'event_type': 'Assessment',
-            'framework': 'PCI DSS',
-            'start_date': datetime.datetime.now() + timedelta(days=60),
-            'end_date': datetime.datetime.now() + timedelta(days=65),
-            'priority': 'High',
-            'assigned_to': 'Compliance Team',
-            'description': 'Annual PCI DSS compliance assessment',
-            'location': 'Main Office',
-            'status': 'Scheduled',
-            'reminder_days': 14
+            "obligation_id": "OBL-2026-003",
+            "title": "PCI DSS ROC / AOC package",
+            "obligation_type": "Regulatory filing",
+            "program": "PCI DSS",
+            "cadence": "Annual",
+            "owner": "PCI Lead",
+            "work_product": "Signed ROC + AOC to acquirer; ASV scans current",
+            "status": "In progress",
+            "ticket_ref": "PCI-2026-ROC",
+            "notes": "Jump-host MFA waiver (EXC-2026-018) must be closed or disclosed.",
+            "due": today + timedelta(days=48 + j(-4, 5)),
+            "window_start": today + timedelta(days=20),
+            "window_end": today + timedelta(days=48),
+            "last_done": today - timedelta(days=340),
+            "slip_count": 0,
         },
         {
-            'id': 'CE-2024-004',
-            'title': 'Security Awareness Training',
-            'event_type': 'Training',
-            'framework': 'General',
-            'start_date': datetime.datetime.now() + timedelta(days=10),
-            'end_date': datetime.datetime.now() + timedelta(days=10),
-            'priority': 'Medium',
-            'assigned_to': 'HR Team',
-            'description': 'Annual security awareness training for all employees',
-            'location': 'Training Center',
-            'status': 'Scheduled',
-            'reminder_days': 5
+            "obligation_id": "OBL-2026-004",
+            "title": "ISO 27001 surveillance audit",
+            "obligation_type": "External audit",
+            "program": "ISO 27001",
+            "cadence": "Annual",
+            "owner": "ISMS owner",
+            "work_product": "Statement of Applicability refresh + internal audit close-out",
+            "status": "Not started",
+            "ticket_ref": "ISO-SURV-26",
+            "notes": "Internal audit finding on logging coverage still open.",
+            "due": today + timedelta(days=95 + j(-6, 7)),
+            "window_start": today + timedelta(days=80),
+            "window_end": today + timedelta(days=95),
+            "last_done": today - timedelta(days=280),
+            "slip_count": 0,
         },
         {
-            'id': 'CE-2024-005',
-            'title': 'GDPR Data Protection Review',
-            'event_type': 'Review',
-            'framework': 'GDPR',
-            'start_date': datetime.datetime.now() + timedelta(days=45),
-            'end_date': datetime.datetime.now() + timedelta(days=47),
-            'priority': 'High',
-            'assigned_to': 'Legal Team',
-            'description': 'Annual GDPR data protection impact assessment',
-            'location': 'Legal Department',
-            'status': 'Scheduled',
-            'reminder_days': 10
+            "obligation_id": "OBL-2026-005",
+            "title": "Acceptable Use Policy annual review",
+            "obligation_type": "Policy review",
+            "program": "Internal",
+            "cadence": "Annual",
+            "owner": "Security Governance",
+            "work_product": "Reviewed AUP posted; ack campaign ≥90%",
+            "status": "Not started",
+            "ticket_ref": "POL-2026-002",
+            "notes": "Already past next-review on the policy library. Ack sitting ~81%.",
+            "due": today - timedelta(days=22 + j(0, 6)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=400),
+            "slip_count": 0,
         },
         {
-            'id': 'CE-2024-006',
-            'title': 'IBM i QSECURITY Review',
-            'event_type': 'Review',
-            'framework': 'Internal Security Standard',
-            'start_date': datetime.datetime.now() + timedelta(days=20),
-            'end_date': datetime.datetime.now() + timedelta(days=20),
-            'priority': 'High',
-            'assigned_to': 'IBM i Ops',
-            'description': 'Quarterly review of IBM i QSECURITY and special authorities on production LPARs',
-            'location': 'Online',
-            'status': 'Scheduled',
-            'reminder_days': 5
+            "obligation_id": "OBL-2026-006",
+            "title": "IBM i QSECURITY / special-authority review",
+            "obligation_type": "Recertification",
+            "program": "SOX",
+            "cadence": "Quarterly",
+            "owner": "IBM i Ops",
+            "work_product": "DSPUSRPRF extract + *ALLOBJ exceptions tied to EXC-2026-011",
+            "status": "In progress",
+            "ticket_ref": "IBMi-Q3-REV",
+            "notes": "QAUDJRN sample ready; *ALLOBJ on ops profiles still waived.",
+            "due": today + timedelta(days=11 + j(-2, 3)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=88),
+            "slip_count": 0,
         },
         {
-            'id': 'CE-2024-007',
-            'title': 'RACF Privileged Attribute Recertification',
-            'event_type': 'Compliance',
-            'framework': 'SOX',
-            'start_date': datetime.datetime.now() + timedelta(days=35),
-            'end_date': datetime.datetime.now() + timedelta(days=37),
-            'priority': 'Critical',
-            'assigned_to': 'Mainframe Security',
-            'description': 'Recertify RACF SPECIAL / OPERATIONS attributes on IBM Z / z/OS',
-            'location': 'Mainframe Ops bridge',
-            'status': 'Pending',
-            'reminder_days': 7
-        }
+            "obligation_id": "OBL-2026-007",
+            "title": "RACF SPECIAL / OPERATIONS recert",
+            "obligation_type": "Recertification",
+            "program": "SOX",
+            "cadence": "Quarterly",
+            "owner": "Mainframe Security",
+            "work_product": "SIGNED recert of SPECIAL attributes; contractor IDs revoked or re-justified",
+            "status": "Evidence due",
+            "ticket_ref": "MF-REC-Q3",
+            "notes": "Contractor SPECIAL (EXC-2026-012) lapsed — do not recertify as-is.",
+            "due": today - timedelta(days=3 + j(0, 4)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=94),
+            "slip_count": 1,
+        },
+        {
+            "obligation_id": "OBL-2026-008",
+            "title": "ERP backup restore drill",
+            "obligation_type": "Exercise",
+            "program": "SOC 2",
+            "cadence": "Semi-annual",
+            "owner": "Infrastructure",
+            "work_product": "Restore timings vs RTO; checksum sign-off",
+            "status": "Complete",
+            "ticket_ref": "BC-DRILL-Q2",
+            "notes": "Completed 3h 40m against 4h RTO. Next drill Q4.",
+            "due": today - timedelta(days=40),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=40),
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-009",
+            "title": "Annual security awareness campaign close",
+            "obligation_type": "Training",
+            "program": "SOC 2",
+            "cadence": "Annual",
+            "owner": "People Ops",
+            "work_product": "LMS completion ≥95%; phish-sim click-rate vs target",
+            "status": "In progress",
+            "ticket_ref": "AWR-2026",
+            "notes": "Two contractor cohorts late. Completion ~88%.",
+            "due": today + timedelta(days=16 + j(-3, 4)),
+            "window_start": today - timedelta(days=45),
+            "window_end": today + timedelta(days=16),
+            "last_done": today - timedelta(days=360),
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-010",
+            "title": "GDPR Article 30 RoPA refresh",
+            "obligation_type": "Regulatory filing",
+            "program": "GDPR",
+            "cadence": "Quarterly",
+            "owner": "Privacy",
+            "work_product": "Updated processing register + DPA log",
+            "status": "Not started",
+            "ticket_ref": "PRIV-ROPA-Q3",
+            "notes": "New HRIS processor not on the register yet.",
+            "due": today + timedelta(days=28 + j(-4, 5)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=80),
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-011",
+            "title": "Q3 risk committee pack",
+            "obligation_type": "Committee pack",
+            "program": "Internal",
+            "cadence": "Quarterly",
+            "owner": "GRC",
+            "work_product": "KRI dashboard, top risks, exception aging, overdue obligations",
+            "status": "Not started",
+            "ticket_ref": "BRD-Q3-26",
+            "notes": "Needs lapsed-exception count and this calendar's overdue list.",
+            "due": today + timedelta(days=21 + j(-2, 3)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=85),
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-012",
+            "title": "Tier-1 vendor recertifications",
+            "obligation_type": "Recertification",
+            "program": "SOC 2",
+            "cadence": "Annual",
+            "owner": "TPRM",
+            "work_product": "SOC reports on file + residual-risk memos for 8 Tier-1 vendors",
+            "status": "Evidence due",
+            "ticket_ref": "TPRM-T1-26",
+            "notes": "Payroll SaaS SOC 2 bridge letter expired last month.",
+            "due": today + timedelta(days=9 + j(-2, 3)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=355),
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-013",
+            "title": "MFA enforcement control test",
+            "obligation_type": "Control test",
+            "program": "SOC 2",
+            "cadence": "Quarterly",
+            "owner": "IT Security",
+            "work_product": "Sample of remote-access and admin consoles vs AC-07",
+            "status": "In progress",
+            "ticket_ref": "CT-2026-009",
+            "notes": "IBM i 5250 still excepted. Cloud admin consoles in sample.",
+            "due": today + timedelta(days=7 + j(-2, 3)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=86),
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-014",
+            "title": "Ransomware tabletop",
+            "obligation_type": "Exercise",
+            "program": "NIST CSF",
+            "cadence": "Annual",
+            "owner": "SecOps",
+            "work_product": "After-action + playbook updates",
+            "status": "Complete",
+            "ticket_ref": "IR-TTX-26",
+            "notes": "Ran 2026-07-09. Comms templates still to refresh.",
+            "due": today - timedelta(days=38),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=38),
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-015",
+            "title": "SOX 404 management certification",
+            "obligation_type": "Regulatory filing",
+            "program": "SOX",
+            "cadence": "Annual",
+            "owner": "CFO / ITGC lead",
+            "work_product": "ITGC testing complete; deficiency log; management assertion",
+            "status": "Not started",
+            "ticket_ref": "SOX-404-FY26",
+            "notes": "Year-end. Depends on access recerts and change-control samples.",
+            "due": today + timedelta(days=130 + j(-8, 9)),
+            "window_start": today + timedelta(days=90),
+            "window_end": today + timedelta(days=130),
+            "last_done": today - timedelta(days=250),
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-016",
+            "title": "Exception register aging review",
+            "obligation_type": "Evidence pack",
+            "program": "Internal",
+            "cadence": "Monthly",
+            "owner": "GRC",
+            "work_product": "Lapsed-in-prod list + repeat-extension memo to CISO",
+            "status": "Not started",
+            "ticket_ref": "EXC-AGE-AUG",
+            "notes": "Pull from the waiver workbench. RACF and Citrix recert are the story.",
+            "due": today + timedelta(days=5 + j(-1, 2)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=28),
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-017",
+            "title": "SAP Firefighter / SAP_ALL recert",
+            "obligation_type": "Recertification",
+            "program": "SOX",
+            "cadence": "Quarterly",
+            "owner": "ERP Security",
+            "work_product": "Firefighter logs + SU01 dual-control sample",
+            "status": "Not started",
+            "ticket_ref": "SAP-FF-Q3",
+            "notes": "Firefighter workflow still In Review as a waiver.",
+            "due": today + timedelta(days=19 + j(-3, 4)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=89),
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-018",
+            "title": "Central logging coverage evidence",
+            "obligation_type": "Control test",
+            "program": "SOC 2",
+            "cadence": "Quarterly",
+            "owner": "SecOps",
+            "work_product": "Asset inventory vs SIEM sources; DMZ gap close-out",
+            "status": "Evidence due",
+            "ticket_ref": "CT-2026-006",
+            "notes": "Failed last test — 6 DMZ jump hosts. Corrective due this window.",
+            "due": today - timedelta(days=8 + j(0, 4)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=25),
+            "slip_count": 1,
+        },
+        {
+            "obligation_id": "OBL-2026-019",
+            "title": "BCP / crisis comms tabletop",
+            "obligation_type": "Exercise",
+            "program": "ISO 27001",
+            "cadence": "Annual",
+            "owner": "Business Continuity",
+            "work_product": "Scenario write-up + action log",
+            "status": "Not started",
+            "ticket_ref": "BCP-TTX-26",
+            "notes": "Schedule after SOC 2 fieldwork so GRC is not double-booked.",
+            "due": today + timedelta(days=70 + j(-5, 6)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=310),
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-020",
+            "title": "DPIA — new HRIS processor",
+            "obligation_type": "Evidence pack",
+            "program": "GDPR",
+            "cadence": "Ad hoc",
+            "owner": "Privacy",
+            "work_product": "DPIA signed before go-live; DPA executed",
+            "status": "In progress",
+            "ticket_ref": "DPIA-HRIS-26",
+            "notes": "Legal has the DPA. Go-live targeted next month.",
+            "due": today + timedelta(days=33 + j(-4, 5)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": pd.NaT,
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-021",
+            "title": "Q2 access recertification close-out",
+            "obligation_type": "Recertification",
+            "program": "SOC 2",
+            "cadence": "Quarterly",
+            "owner": "IAM",
+            "work_product": "Completed campaign pack in GRC",
+            "status": "Complete",
+            "ticket_ref": "GRC-REC-318",
+            "notes": "Closed on time. Citrix follow-ups rolled into Q3.",
+            "due": today - timedelta(days=55),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=52),
+            "slip_count": 0,
+        },
+        {
+            "obligation_id": "OBL-2026-022",
+            "title": "Records retention legal-hold cleanup",
+            "obligation_type": "Policy review",
+            "program": "GDPR",
+            "cadence": "Annual",
+            "owner": "Privacy / Legal",
+            "work_product": "Hold register vs repositories; disposal evidence",
+            "status": "Not started",
+            "ticket_ref": "STD-2026-017",
+            "notes": "Retention standard is past review on the policy library.",
+            "due": today - timedelta(days=14 + j(0, 5)),
+            "window_start": pd.NaT,
+            "window_end": pd.NaT,
+            "last_done": today - timedelta(days=390),
+            "slip_count": 0,
+        },
     ]
-    
-    regulatory_deadlines = [
-        {
-            'id': 'RD-2024-001',
-            'title': 'SOX 404 Certification',
-            'regulation': 'SOX',
-            'deadline': datetime.datetime.now() + timedelta(days=90),
-            'frequency': 'Annual',
-            'description': 'Management certification of internal controls',
-            'responsible_party': 'CFO',
-            'status': 'Pending',
-            'priority': 'Critical',
-            'consequences': 'Financial penalties, regulatory scrutiny'
-        },
-        {
-            'id': 'RD-2024-002',
-            'title': 'PCI DSS SAQ Submission',
-            'regulation': 'PCI DSS',
-            'deadline': datetime.datetime.now() + timedelta(days=120),
-            'frequency': 'Annual',
-            'description': 'Self-Assessment Questionnaire submission',
-            'responsible_party': 'Compliance Officer',
-            'status': 'In Progress',
-            'priority': 'High',
-            'consequences': 'Loss of payment processing ability'
-        },
-        {
-            'id': 'RD-2024-003',
-            'title': 'GDPR Data Processing Register',
-            'regulation': 'GDPR',
-            'deadline': datetime.datetime.now() + timedelta(days=30),
-            'frequency': 'Quarterly',
-            'description': 'Update data processing activities register',
-            'responsible_party': 'DPO',
-            'status': 'Pending',
-            'priority': 'High',
-            'consequences': 'Fines up to 4% of global revenue'
-        },
-        {
-            'id': 'RD-2024-004',
-            'title': 'HIPAA Security Assessment',
-            'regulation': 'HIPAA',
-            'deadline': datetime.datetime.now() + timedelta(days=180),
-            'frequency': 'Annual',
-            'description': 'Annual HIPAA security rule assessment',
-            'responsible_party': 'Security Officer',
-            'status': 'Scheduled',
-            'priority': 'High',
-            'consequences': 'OCR penalties, breach notification requirements'
-        },
-        {
-            'id': 'RD-2024-005',
-            'title': 'ISO 27001 Surveillance Audit',
-            'regulation': 'ISO 27001',
-            'deadline': datetime.datetime.now() + timedelta(days=150),
-            'frequency': 'Semi-Annual',
-            'description': 'Surveillance audit for ISO 27001 certification',
-            'responsible_party': 'ISMS Manager',
-            'status': 'Scheduled',
-            'priority': 'Medium',
-            'consequences': 'Certification suspension'
-        },
-        {
-            'id': 'RD-2024-006',
-            'title': 'IBM i QSECURITY Quarterly Review',
-            'regulation': 'Internal / SOX',
-            'deadline': datetime.datetime.now() + timedelta(days=25),
-            'frequency': 'Quarterly',
-            'description': 'Complete QSECURITY and *ALLOBJ review evidence for production IBM i LPARs',
-            'responsible_party': 'IBM i Ops',
-            'status': 'Pending',
-            'priority': 'High',
-            'consequences': 'Audit finding; privileged access risk on midrange'
-        },
-        {
-            'id': 'RD-2024-007',
-            'title': 'RACF Attribute Recertification',
-            'regulation': 'SOX',
-            'deadline': datetime.datetime.now() + timedelta(days=40),
-            'frequency': 'Quarterly',
-            'description': 'Recertify RACF SPECIAL and OPERATIONS attributes across IBM Z sysplex',
-            'responsible_party': 'Mainframe Security',
-            'status': 'In Progress',
-            'priority': 'Critical',
-            'consequences': 'SOX deficiency; uncontrolled mainframe privilege'
-        }
-    ]
-    
-    audit_schedules = [
-        {
-            'id': 'AS-2024-001',
-            'audit_name': 'SOC 2 Type II',
-            'auditor': 'Deloitte',
-            'start_date': datetime.datetime.now() + timedelta(days=30),
-            'end_date': datetime.datetime.now() + timedelta(days=90),
-            'scope': 'Information Security Controls',
-            'status': 'Scheduled',
-            'lead_auditor': 'Sarah Johnson',
-            'prep_meeting': datetime.datetime.now() + timedelta(days=25),
-            'kickoff_meeting': datetime.datetime.now() + timedelta(days=30),
-            'exit_meeting': datetime.datetime.now() + timedelta(days=85)
-        },
-        {
-            'id': 'AS-2024-002',
-            'audit_name': 'Internal Security Audit',
-            'auditor': 'Internal Audit Team',
-            'start_date': datetime.datetime.now() + timedelta(days=15),
-            'end_date': datetime.datetime.now() + timedelta(days=45),
-            'scope': 'IT Security Controls',
-            'status': 'In Progress',
-            'lead_auditor': 'Mike Chen',
-            'prep_meeting': datetime.datetime.now() + timedelta(days=10),
-            'kickoff_meeting': datetime.datetime.now() + timedelta(days=15),
-            'exit_meeting': datetime.datetime.now() + timedelta(days=40)
-        },
-        {
-            'id': 'AS-2024-003',
-            'audit_name': 'PCI DSS Assessment',
-            'auditor': 'KPMG',
-            'start_date': datetime.datetime.now() + timedelta(days=60),
-            'end_date': datetime.datetime.now() + timedelta(days=75),
-            'scope': 'Payment Card Security',
-            'status': 'Scheduled',
-            'lead_auditor': 'David Wilson',
-            'prep_meeting': datetime.datetime.now() + timedelta(days=55),
-            'kickoff_meeting': datetime.datetime.now() + timedelta(days=60),
-            'exit_meeting': datetime.datetime.now() + timedelta(days=70)
-        }
-    ]
-    
-    reminders = [
-        {
-            'id': 'REM-2024-001',
-            'event_id': 'CE-2024-001',
-            'title': 'SOC 2 Audit Prep Meeting',
-            'reminder_date': datetime.datetime.now() + timedelta(days=23),
-            'reminder_type': 'Email',
-            'recipients': ['it.security@company.com', 'compliance@company.com'],
-            'message': 'SOC 2 Type II audit preparation meeting in 7 days',
-            'status': 'Pending'
-        },
-        {
-            'id': 'REM-2024-002',
-            'event_id': 'CE-2024-002',
-            'title': 'Access Review Due',
-            'reminder_date': datetime.datetime.now() + timedelta(days=12),
-            'reminder_type': 'SMS',
-            'recipients': ['it.security@company.com'],
-            'message': 'Quarterly access review due in 3 days',
-            'status': 'Pending'
-        },
-        {
-            'id': 'REM-2024-003',
-            'event_id': 'RD-2024-001',
-            'title': 'SOX Certification Deadline',
-            'reminder_date': datetime.datetime.now() + timedelta(days=80),
-            'reminder_type': 'Email',
-            'recipients': ['cfo@company.com', 'compliance@company.com'],
-            'message': 'SOX 404 certification due in 10 days',
-            'status': 'Pending'
-        }
-    ]
-    
-    holidays = [
-        {
-            'id': 'HOL-2024-001',
-            'name': 'New Year\'s Day',
-            'date': datetime.datetime(2024, 1, 1),
-            'type': 'Federal Holiday',
-            'description': 'Office closed'
-        },
-        {
-            'id': 'HOL-2024-002',
-            'name': 'Martin Luther King Jr. Day',
-            'date': datetime.datetime(2024, 1, 15),
-            'type': 'Federal Holiday',
-            'description': 'Office closed'
-        },
-        {
-            'id': 'HOL-2024-003',
-            'name': 'Memorial Day',
-            'date': datetime.datetime(2024, 5, 27),
-            'type': 'Federal Holiday',
-            'description': 'Office closed'
-        },
-        {
-            'id': 'HOL-2024-004',
-            'name': 'Independence Day',
-            'date': datetime.datetime(2024, 7, 4),
-            'type': 'Federal Holiday',
-            'description': 'Office closed'
-        },
-        {
-            'id': 'HOL-2024-005',
-            'name': 'Labor Day',
-            'date': datetime.datetime(2024, 9, 2),
-            'type': 'Federal Holiday',
-            'description': 'Office closed'
-        }
-    ]
-
-    event_statuses = ['Scheduled', 'Pending', 'In Progress', 'Completed', 'Cancelled']
-    for event in compliance_events:
-        if int(rng.integers(0, 3)) == 0:
-            event['status'] = str(rng.choice(event_statuses))
-        event['reminder_days'] = max(1, int(event.get('reminder_days', 7)) + int(rng.integers(-2, 3)))
-    for deadline in regulatory_deadlines:
-        if int(rng.integers(0, 3)) == 0 and 'status' in deadline:
-            deadline['status'] = str(rng.choice(['Pending', 'In Progress', 'Completed']))
-
-    return compliance_events, regulatory_deadlines, audit_schedules, reminders, holidays
+    df = pd.DataFrame(rows)
+    for col in ("due", "window_start", "window_end", "last_done"):
+        df[col] = pd.to_datetime(df[col], errors="coerce")
+    return df
 
 
-_EVENT_STATUS_ORDER = ['Pending', 'Scheduled', 'In Progress', 'Completed']
-
-
-def _advance_event_status(status: str) -> str:
-    if status not in _EVENT_STATUS_ORDER or status == _EVENT_STATUS_ORDER[-1]:
-        return status
-    return _EVENT_STATUS_ORDER[_EVENT_STATUS_ORDER.index(status) + 1]
-
-
-def _sync_calendar(seed: int) -> None:
-    if st.session_state.get('_calendar_seed') != seed or not st.session_state.get('compliance_events'):
-        events, deadlines, schedules, reminders, holidays = generate_sample_data(seed)
-        st.session_state.compliance_events = events
-        st.session_state.regulatory_deadlines = deadlines
-        st.session_state.audit_schedules = schedules
-        st.session_state.reminders = reminders
-        st.session_state.holidays = holidays
-        st.session_state._calendar_seed = seed
-
-
-def main():
-    portfolio_skin.page_header(
-        title="Compliance Calendar",
-        lede="Interactive GRC tool — #RUNGRCRaleigh build-in-public.",
-        kicker="Compliance",
+def _enrich(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    today = _today()
+    out["days_to_due"] = (out["due"] - today).dt.days
+    open_row = ~out["status"].eq("Complete")
+    out["is_overdue"] = open_row & (out["days_to_due"] < 0)
+    out["due_7"] = open_row & out["days_to_due"].between(0, 7)
+    out["due_30"] = open_row & out["days_to_due"].between(0, 30)
+    out["display_status"] = np.where(out["is_overdue"], "Overdue", out["status"])
+    out["in_window"] = (
+        out["window_start"].notna()
+        & (out["window_start"] <= today)
+        & out["window_end"].notna()
+        & (out["window_end"] >= today)
+        & open_row
     )
-    st.markdown("Comprehensive calendar system for managing compliance deadlines, audit schedules, and regulatory requirements")
+    return out
 
-    with st.sidebar:
-        st.title("Navigation")
-        seed = demo_kit.seed_controls()
-        st.markdown("---")
-        page = st.selectbox(
-            "Select Module",
-            ["Calendar View", "Compliance Events", "Regulatory Deadlines", "Audit Schedules", "Reminders", "Holidays", "Reports", "Analytics"]
-        )
-        horizon_days = st.slider(
-            "What-if look-ahead (days)",
-            min_value=7,
-            max_value=180,
-            value=60,
-            step=7,
-        )
-        st.session_state._calendar_horizon = horizon_days
-        st.caption("Sample / mock data only.")
-    _sync_calendar(seed)
-    
-    if page == "Calendar View":
-        show_calendar_view()
-    elif page == "Compliance Events":
-        show_compliance_events()
-    elif page == "Regulatory Deadlines":
-        show_regulatory_deadlines()
-    elif page == "Audit Schedules":
-        show_audit_schedules()
-    elif page == "Reminders":
-        show_reminders()
-    elif page == "Holidays":
-        show_holidays()
-    elif page == "Reports":
-        show_reports()
-    elif page == "Analytics":
-        show_analytics()
 
-def show_calendar_view():
-    st.header("Calendar View")
+def _sync(seed: int) -> pd.DataFrame:
+    if st.session_state.get("_cal_seed") != seed or "obligations" not in st.session_state:
+        st.session_state.obligations = _sample_obligations(seed)
+        st.session_state._cal_seed = seed
+    return st.session_state.obligations
 
-    horizon = int(st.session_state.get('_calendar_horizon', 60))
-    cutoff = datetime.datetime.now() + timedelta(days=horizon)
-    upcoming = [
-        e for e in st.session_state.compliance_events
-        if e['start_date'] <= cutoff and e['start_date'] >= datetime.datetime.now() - timedelta(days=1)
-    ]
-    st.caption(f"Look-ahead window: {horizon} days · {len(upcoming)} upcoming events")
-    if upcoming:
-        peek = pd.DataFrame(upcoming)[['title', 'start_date', 'priority', 'status']].copy()
-        peek['start_date'] = peek['start_date'].astype(str)
-        st.dataframe(peek, use_container_width=True, hide_index=True)
 
-    # Calendar controls
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        view_type = st.selectbox("View Type", ["Monthly", "Weekly", "Daily"])
-    
-    with col2:
-        selected_month = st.selectbox("Month", range(1, 13), index=datetime.datetime.now().month - 1)
-    
-    with col3:
-        selected_year = st.selectbox("Year", range(2024, 2026), index=0)
-    
-    # Get current date
-    current_date = datetime.datetime.now()
-    selected_date = datetime.datetime(selected_year, selected_month, 1)
-    
-    # Display calendar
-    if view_type == "Monthly":
-        show_monthly_calendar(selected_date)
-    elif view_type == "Weekly":
-        show_weekly_calendar(selected_date)
-    else:
-        show_daily_calendar(selected_date)
+def _save(df: pd.DataFrame) -> None:
+    st.session_state.obligations = df.reset_index(drop=True)
 
-def show_monthly_calendar(selected_date):
-    st.subheader(f"{selected_date.strftime('%B %Y')}")
-    
-    # Create calendar grid
-    cal = calendar.monthcalendar(selected_date.year, selected_date.month)
-    
-    # Get events for the month
-    month_events = [e for e in st.session_state.compliance_events 
-                   if e['start_date'].month == selected_date.month and e['start_date'].year == selected_date.year]
-    
-    # Create calendar display
-    days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    
-    # Header
-    cols = st.columns(7)
-    for i, day in enumerate(days):
-        cols[i].write(f"**{day}**")
-    
-    # Calendar body
-    for week in cal:
-        cols = st.columns(7)
-        for i, day in enumerate(week):
-            if day == 0:
-                cols[i].write("")
-            else:
-                # Check for events on this day
-                day_events = [e for e in month_events if e['start_date'].day == day]
-                
-                # Display day number
-                day_text = f"**{day}**"
-                
-                # Add event indicators
-                if day_events:
-                    event_indicators = []
-                    for event in day_events:
-                        if event['priority'] == 'Critical':
-                            event_indicators.append("")
-                        elif event['priority'] == 'High':
-                            event_indicators.append("")
-                        elif event['priority'] == 'Medium':
-                            event_indicators.append("")
-                        else:
-                            event_indicators.append("")
-                    
-                    day_text += f" {' '.join(event_indicators)}"
-                
-                cols[i].write(day_text)
-                
-                # Show event details on hover/click
-                if day_events:
-                    with cols[i].expander(f"Events ({len(day_events)})"):
-                        for event in day_events:
-                            st.write(f"**{event['title']}**")
-                            st.write(f"Type: {event['event_type']}")
-                            st.write(f"Priority: {event['priority']}")
-                            st.write(f"Assigned: {event['assigned_to']}")
 
-def show_weekly_calendar(selected_date):
-    st.subheader(f"Week of {selected_date.strftime('%B %d, %Y')}")
-    
-    # Get week start (Monday)
-    week_start = selected_date - timedelta(days=selected_date.weekday())
-    
-    # Create weekly view
-    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    
-    for i, day_name in enumerate(days):
-        current_date = week_start + timedelta(days=i)
-        
-        # Get events for this day
-        day_events = [e for e in st.session_state.compliance_events 
-                     if e['start_date'].date() == current_date.date()]
-        
-        with st.expander(f"{day_name} - {current_date.strftime('%B %d')} ({len(day_events)} events)"):
-            if day_events:
-                for event in day_events:
-                    col1, col2 = st.columns([3, 1])
-                    with col1:
-                        st.write(f"**{event['title']}**")
-                        st.write(f"Type: {event['event_type']} | Framework: {event['framework']}")
-                        st.write(f"Time: {event['start_date'].strftime('%H:%M')} - {event['end_date'].strftime('%H:%M')}")
-                        st.write(f"Location: {event['location']}")
-                    with col2:
-                        if event['priority'] == 'Critical':
-                            st.write("Critical")
-                        elif event['priority'] == 'High':
-                            st.write("High")
-                        elif event['priority'] == 'Medium':
-                            st.write("Medium")
-                        else:
-                            st.write("Low")
-                    st.divider()
-            else:
-                st.write("No events scheduled")
+def _patch(oid: str, **fields) -> None:
+    df = st.session_state.obligations.copy()
+    loc = df.index[df["obligation_id"] == oid]
+    if len(loc) == 0:
+        return
+    i = loc[0]
+    for k, v in fields.items():
+        df.at[i, k] = v
+    _save(df)
 
-def show_daily_calendar(selected_date):
-    st.subheader(f"{selected_date.strftime('%A, %B %d, %Y')}")
-    
-    # Get events for this day
-    day_events = [e for e in st.session_state.compliance_events 
-                 if e['start_date'].date() == selected_date.date()]
-    
-    # Get deadlines for this day
-    day_deadlines = [d for d in st.session_state.regulatory_deadlines 
-                    if d['deadline'].date() == selected_date.date()]
-    
-    # Display events
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Events")
-        if day_events:
-            for event in day_events:
-                with st.expander(f"{event['start_date'].strftime('%H:%M')} - {event['title']}"):
-                    st.write(f"**Type:** {event['event_type']}")
-                    st.write(f"**Framework:** {event['framework']}")
-                    st.write(f"**Priority:** {event['priority']}")
-                    st.write(f"**Assigned To:** {event['assigned_to']}")
-                    st.write(f"**Location:** {event['location']}")
-                    st.write(f"**Description:** {event['description']}")
-        else:
-            st.write("No events scheduled")
-    
-    with col2:
-        st.subheader("Deadlines")
-        if day_deadlines:
-            for deadline in day_deadlines:
-                with st.expander(f"{deadline['title']}"):
-                    st.write(f"**Regulation:** {deadline['regulation']}")
-                    st.write(f"**Priority:** {deadline['priority']}")
-                    st.write(f"**Responsible:** {deadline['responsible_party']}")
-                    st.write(f"**Description:** {deadline['description']}")
-                    st.write(f"**Consequences:** {deadline['consequences']}")
-        else:
-            st.write("No deadlines today")
 
-def show_compliance_events():
-    st.header("Compliance Events")
-    
-    # Add new event
-    with st.expander("Add New Compliance Event"):
-        with st.form("new_event"):
-            col1, col2 = st.columns(2)
-            with col1:
-                title = st.text_input("Event Title")
-                event_type = st.selectbox("Event Type", ["Audit", "Assessment", "Review", "Training", "Meeting", "Deadline", "Other"])
-                framework = st.selectbox("Framework", ["SOC 2", "ISO 27001", "PCI DSS", "GDPR", "HIPAA", "SOX", "NIST CSF", "General"])
-                priority = st.selectbox("Priority", ["Critical", "High", "Medium", "Low"])
-            
-            with col2:
-                start_date = st.date_input("Start Date")
-                end_date = st.date_input("End Date")
-                assigned_to = st.text_input("Assigned To")
-                location = st.text_input("Location")
-            
-            description = st.text_area("Description")
-            reminder_days = st.number_input("Reminder (days before)", min_value=0, max_value=365, value=7)
-            
-            if st.form_submit_button("Add Event"):
-                new_event = {
-                    'id': f'CE-{datetime.datetime.now().year}-{len(st.session_state.compliance_events)+1:03d}',
-                    'title': title,
-                    'event_type': event_type,
-                    'framework': framework,
-                    'start_date': datetime.datetime.combine(start_date, datetime.time(9, 0)),
-                    'end_date': datetime.datetime.combine(end_date, datetime.time(17, 0)),
-                    'priority': priority,
-                    'assigned_to': assigned_to,
-                    'description': description,
-                    'location': location,
-                    'status': 'Scheduled',
-                    'reminder_days': reminder_days
-                }
-                st.session_state.compliance_events.append(new_event)
-                st.success("Compliance event added successfully!")
-    
-    # Display events
-    df = pd.DataFrame(st.session_state.compliance_events)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        type_filter = st.selectbox("Filter by Type", ["All"] + list(df['event_type'].unique()))
-    with col2:
-        priority_filter = st.selectbox("Filter by Priority", ["All"] + list(df['priority'].unique()))
-    with col3:
-        framework_filter = st.selectbox("Filter by Framework", ["All"] + list(df['framework'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if type_filter != "All":
-        filtered_df = filtered_df[filtered_df['event_type'] == type_filter]
-    if priority_filter != "All":
-        filtered_df = filtered_df[filtered_df['priority'] == priority_filter]
-    if framework_filter != "All":
-        filtered_df = filtered_df[filtered_df['framework'] == framework_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
+def _metrics(df: pd.DataFrame) -> dict:
+    e = _enrich(df)
+    return {
+        "overdue": int(e["is_overdue"].sum()),
+        "due_7": int(e["due_7"].sum()),
+        "due_30": int(e["due_30"].sum()),
+        "in_flight": int((e["status"] == "In progress").sum()),
+        "in_window": int(e["in_window"].sum()),
+        "done_q": int(
+            e["status"].eq("Complete")
+            & e["last_done"].notna()
+            & (e["last_done"] >= _today() - timedelta(days=90))
+        ),
+    }
 
-    if not filtered_df.empty:
-        pick = st.selectbox("Advance event status for", filtered_df['id'].tolist())
-        if st.button("Advance selected event status"):
-            for i, event in enumerate(st.session_state.compliance_events):
-                if event['id'] == pick:
-                    st.session_state.compliance_events[i]['status'] = _advance_event_status(
-                        event['status']
-                    )
-                    break
+
+def _fmt(ts) -> str:
+    if pd.isna(ts):
+        return "—"
+    return pd.Timestamp(ts).strftime("%Y-%m-%d")
+
+
+def _detail(row: pd.Series) -> None:
+    c1, c2 = st.columns(2)
+    with c1:
+        st.write(f"**Type / program:** {row['obligation_type']} · {row['program']}")
+        st.write(f"**Cadence:** {row['cadence']}")
+        st.write(f"**Status:** {row['display_status']}")
+        st.write(f"**Owner:** {row['owner']}")
+        st.write(f"**Ticket:** {row['ticket_ref'] or '—'}")
+        st.write(f"**Slips:** {int(row['slip_count'])}")
+    with c2:
+        st.write(f"**Due:** {_fmt(row['due'])} ({int(row['days_to_due'])}d)")
+        st.write(f"**Window:** {_fmt(row['window_start'])} → {_fmt(row['window_end'])}")
+        st.write(f"**Last completed:** {_fmt(row['last_done'])}")
+        st.write(f"**Work product:** {row['work_product']}")
+    st.write(f"**Notes:** {row['notes']}")
+
+
+def _actions(row: pd.Series, *, key: str) -> None:
+    oid = row["obligation_id"]
+    today = _today()
+    a1, a2, a3 = st.columns(3)
+    with a1:
+        if row["status"] in {"Not started", "Evidence due"} and st.button(
+            "Start / in progress", key=f"ip_{key}", use_container_width=True
+        ):
+            _patch(oid, status="In progress")
+            st.rerun()
+    with a2:
+        if row["status"] != "Complete" and st.button(
+            "Mark complete", key=f"done_{key}", use_container_width=True
+        ):
+            _patch(oid, status="Complete", last_done=today)
+            st.rerun()
+    with a3:
+        if row["status"] != "Complete" and st.button(
+            "Slip 14 days", key=f"slip_{key}", use_container_width=True
+        ):
+            new_due = pd.Timestamp(row["due"]) + timedelta(days=14)
+            fields = {"due": new_due, "slip_count": int(row["slip_count"]) + 1}
+            if pd.notna(row["window_end"]):
+                fields["window_end"] = pd.Timestamp(row["window_end"]) + timedelta(days=14)
+            _patch(oid, **fields)
             st.rerun()
 
-    # Event overview
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Events by Type")
-        type_counts = df['event_type'].value_counts()
-        fig = px.pie(values=type_counts.values, names=type_counts.index, 
-                    title="Compliance Events by Type")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Events by Priority")
-        priority_counts = df['priority'].value_counts()
-        fig = px.bar(x=priority_counts.index, y=priority_counts.values, 
-                    title="Events by Priority",
-                    color=priority_counts.index,
-                    color_discrete_map={'Critical': 'red', 'High': 'orange', 'Medium': 'yellow', 'Low': 'green'})
-        st.plotly_chart(fig, use_container_width=True)
 
-def show_regulatory_deadlines():
-    st.header("Regulatory Deadlines")
-    
-    # Add new deadline
-    with st.expander("Add New Regulatory Deadline"):
-        with st.form("new_deadline"):
-            col1, col2 = st.columns(2)
-            with col1:
-                title = st.text_input("Deadline Title")
-                regulation = st.selectbox("Regulation", ["SOX", "PCI DSS", "GDPR", "HIPAA", "ISO 27001", "NIST CSF", "CCPA", "Other"])
-                deadline = st.date_input("Deadline Date")
-                frequency = st.selectbox("Frequency", ["One-time", "Monthly", "Quarterly", "Semi-Annual", "Annual"])
-            
-            with col2:
-                responsible_party = st.text_input("Responsible Party")
-                priority = st.selectbox("Priority", ["Critical", "High", "Medium", "Low"])
-                status = st.selectbox("Status", ["Pending", "In Progress", "Completed", "Overdue"])
-            
-            description = st.text_area("Description")
-            consequences = st.text_area("Consequences of Non-Compliance")
-            
-            if st.form_submit_button("Add Deadline"):
-                new_deadline = {
-                    'id': f'RD-{datetime.datetime.now().year}-{len(st.session_state.regulatory_deadlines)+1:03d}',
-                    'title': title,
-                    'regulation': regulation,
-                    'deadline': datetime.datetime.combine(deadline, datetime.time(17, 0)),
-                    'frequency': frequency,
-                    'description': description,
-                    'responsible_party': responsible_party,
-                    'status': status,
-                    'priority': priority,
-                    'consequences': consequences
-                }
-                st.session_state.regulatory_deadlines.append(new_deadline)
-                st.success("Regulatory deadline added successfully!")
-    
-    # Display deadlines
-    df = pd.DataFrame(st.session_state.regulatory_deadlines)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        regulation_filter = st.selectbox("Filter by Regulation", ["All"] + list(df['regulation'].unique()))
-    with col2:
-        priority_filter = st.selectbox("Filter by Priority", ["All"] + list(df['priority'].unique()))
-    with col3:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if regulation_filter != "All":
-        filtered_df = filtered_df[filtered_df['regulation'] == regulation_filter]
-    if priority_filter != "All":
-        filtered_df = filtered_df[filtered_df['priority'] == priority_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Deadline overview
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Deadlines by Regulation")
-        regulation_counts = df['regulation'].value_counts()
-        fig = px.pie(values=regulation_counts.values, names=regulation_counts.index, 
-                    title="Regulatory Deadlines by Framework")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Deadlines by Status")
-        status_counts = df['status'].value_counts()
-        fig = px.bar(x=status_counts.index, y=status_counts.values, 
-                    title="Deadlines by Status")
-        st.plotly_chart(fig, use_container_width=True)
+def _queue(title: str, subset: pd.DataFrame, empty: str, key_prefix: str) -> None:
+    st.markdown(f"**{title} ({len(subset)})**")
+    if subset.empty:
+        st.info(empty)
+        return
+    for _, row in subset.iterrows():
+        due_txt = f"{int(row['days_to_due'])}d" if row["days_to_due"] >= 0 else f"{abs(int(row['days_to_due']))}d overdue"
+        with st.expander(
+            f"{row['obligation_id']} · {row['title']} · {row['display_status']} · {due_txt}"
+        ):
+            _detail(row)
+            _actions(row, key=f"{key_prefix}_{row['obligation_id']}")
 
-def show_audit_schedules():
-    st.header("Audit Schedules")
-    
-    # Add new audit schedule
-    with st.expander("Add New Audit Schedule"):
-        with st.form("new_schedule"):
-            col1, col2 = st.columns(2)
-            with col1:
-                audit_name = st.text_input("Audit Name")
-                auditor = st.text_input("Auditor")
-                start_date = st.date_input("Start Date")
-                end_date = st.date_input("End Date")
-            
-            with col2:
-                scope = st.text_area("Scope")
-                lead_auditor = st.text_input("Lead Auditor")
-                status = st.selectbox("Status", ["Scheduled", "In Progress", "Completed", "Cancelled"])
-            
-            prep_meeting = st.date_input("Preparation Meeting Date")
-            kickoff_meeting = st.date_input("Kickoff Meeting Date")
-            exit_meeting = st.date_input("Exit Meeting Date")
-            
-            if st.form_submit_button("Add Schedule"):
-                new_schedule = {
-                    'id': f'AS-{datetime.datetime.now().year}-{len(st.session_state.audit_schedules)+1:03d}',
-                    'audit_name': audit_name,
-                    'auditor': auditor,
-                    'start_date': datetime.datetime.combine(start_date, datetime.time(9, 0)),
-                    'end_date': datetime.datetime.combine(end_date, datetime.time(17, 0)),
-                    'scope': scope,
-                    'status': status,
-                    'lead_auditor': lead_auditor,
-                    'prep_meeting': datetime.datetime.combine(prep_meeting, datetime.time(10, 0)),
-                    'kickoff_meeting': datetime.datetime.combine(kickoff_meeting, datetime.time(9, 0)),
-                    'exit_meeting': datetime.datetime.combine(exit_meeting, datetime.time(14, 0))
-                }
-                st.session_state.audit_schedules.append(new_schedule)
-                st.success("Audit schedule added successfully!")
-    
-    # Display schedules
-    df = pd.DataFrame(st.session_state.audit_schedules)
-    st.dataframe(df, use_container_width=True)
-    
-    # Schedule overview
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Audits by Status")
-        status_counts = df['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="Audit Schedules by Status")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Audit Timeline")
-        if not df.empty:
-            df_timeline = df.copy()
-            df_timeline['duration_days'] = (df_timeline['end_date'] - df_timeline['start_date']).dt.days
-            
-            fig = px.bar(df_timeline, x='audit_name', y='duration_days', 
-                        title="Audit Duration (Days)",
-                        labels={'duration_days': 'Duration (Days)', 'audit_name': 'Audit'})
-            fig.update_layout(xaxis_tickangle=-45)
-            st.plotly_chart(fig, use_container_width=True)
 
-def show_reminders():
-    st.header("Reminders")
-    
-    # Add new reminder
-    with st.expander("Add New Reminder"):
-        with st.form("new_reminder"):
-            col1, col2 = st.columns(2)
-            with col1:
-                event_id = st.selectbox("Event", [e['id'] for e in st.session_state.compliance_events])
-                title = st.text_input("Reminder Title")
-                reminder_date = st.date_input("Reminder Date")
-                reminder_type = st.selectbox("Reminder Type", ["Email", "SMS", "Calendar", "Slack"])
-            
-            with col2:
-                recipients = st.text_area("Recipients (comma-separated)")
-                message = st.text_area("Message")
-                status = st.selectbox("Status", ["Pending", "Sent", "Cancelled"])
-            
-            if st.form_submit_button("Add Reminder"):
-                new_reminder = {
-                    'id': f'REM-{datetime.datetime.now().year}-{len(st.session_state.reminders)+1:03d}',
-                    'event_id': event_id,
-                    'title': title,
-                    'reminder_date': datetime.datetime.combine(reminder_date, datetime.time(9, 0)),
-                    'reminder_type': reminder_type,
-                    'recipients': [r.strip() for r in recipients.split(',') if r.strip()],
-                    'message': message,
-                    'status': status
-                }
-                st.session_state.reminders.append(new_reminder)
-                st.success("Reminder added successfully!")
-    
-    # Display reminders
-    df = pd.DataFrame(st.session_state.reminders)
-    st.dataframe(df, use_container_width=True)
-    
-    # Reminder overview
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Reminders by Type")
-        type_counts = df['reminder_type'].value_counts()
-        fig = px.pie(values=type_counts.values, names=type_counts.index, 
-                    title="Reminders by Type")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Reminders by Status")
-        status_counts = df['status'].value_counts()
-        fig = px.bar(x=status_counts.index, y=status_counts.values, 
-                    title="Reminders by Status")
-        st.plotly_chart(fig, use_container_width=True)
+def main() -> None:
+    portfolio_skin.page_header(
+        title="Compliance Calendar",
+        lede="Obligation look-ahead: what's due, who owns it, what 'done' looks like. Club demo — not a system of record.",
+        kicker="Compliance",
+    )
 
-def show_holidays():
-    st.header("Holidays")
-    
-    # Add new holiday
-    with st.expander("Add New Holiday"):
-        with st.form("new_holiday"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Holiday Name")
-                holiday_date = st.date_input("Holiday Date")
-                holiday_type = st.selectbox("Holiday Type", ["Federal Holiday", "Company Holiday", "Observance", "Other"])
-            
-            with col2:
-                description = st.text_area("Description")
-            
-            if st.form_submit_button("Add Holiday"):
-                new_holiday = {
-                    'id': f'HOL-{datetime.datetime.now().year}-{len(st.session_state.holidays)+1:03d}',
-                    'name': name,
-                    'date': datetime.datetime.combine(holiday_date, datetime.time()),
-                    'type': holiday_type,
-                    'description': description
-                }
-                st.session_state.holidays.append(new_holiday)
-                st.success("Holiday added successfully!")
-    
-    # Display holidays
-    df = pd.DataFrame(st.session_state.holidays)
-    st.dataframe(df, use_container_width=True)
-    
-    # Holiday overview
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Holidays by Type")
-        type_counts = df['type'].value_counts()
-        fig = px.pie(values=type_counts.values, names=type_counts.index, 
-                    title="Holidays by Type")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Holidays by Month")
-        if not df.empty:
-            df['month'] = df['date'].dt.month
-            month_counts = df['month'].value_counts().sort_index()
-            month_names = [calendar.month_name[i] for i in month_counts.index]
-            
-            fig = px.bar(x=month_names, y=month_counts.values, 
-                        title="Holidays by Month",
-                        labels={'x': 'Month', 'y': 'Number of Holidays'})
-            st.plotly_chart(fig, use_container_width=True)
+    seed = demo_kit.seed_controls()
+    df = _sync(seed)
+    enriched = _enrich(df)
+    m = _metrics(df)
 
-def show_reports():
-    st.header("Reports & Analytics")
-    
-    # Report options
-    report_type = st.selectbox("Select Report Type", [
-        "Compliance Calendar Summary",
-        "Upcoming Deadlines Report",
-        "Audit Schedule Report",
-        "Event Distribution Report",
-        "Reminder Status Report"
-    ])
-    
-    if report_type == "Compliance Calendar Summary":
-        st.subheader("Compliance Calendar Summary Report")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("**Event Summary**")
-            st.write(f"• Total Events: {len(st.session_state.compliance_events)}")
-            st.write(f"• Upcoming Events: {len([e for e in st.session_state.compliance_events if e['start_date'] > datetime.datetime.now()])}")
-            st.write(f"• Critical Events: {len([e for e in st.session_state.compliance_events if e['priority'] == 'Critical'])}")
-            st.write(f"• High Priority Events: {len([e for e in st.session_state.compliance_events if e['priority'] == 'High'])}")
-        
-        with col2:
-            st.write("**Deadline Summary**")
-            st.write(f"• Total Deadlines: {len(st.session_state.regulatory_deadlines)}")
-            st.write(f"• Upcoming Deadlines: {len([d for d in st.session_state.regulatory_deadlines if d['deadline'] > datetime.datetime.now()])}")
-            st.write(f"• Overdue Deadlines: {len([d for d in st.session_state.regulatory_deadlines if d['deadline'] < datetime.datetime.now() and d['status'] != 'Completed'])}")
-            st.write(f"• Completed Deadlines: {len([d for d in st.session_state.regulatory_deadlines if d['status'] == 'Completed'])}")
-    
-    elif report_type == "Upcoming Deadlines Report":
-        st.subheader("Upcoming Deadlines Report")
-        
-        upcoming_deadlines = [d for d in st.session_state.regulatory_deadlines 
-                            if d['deadline'] > datetime.datetime.now()]
-        upcoming_deadlines.sort(key=lambda x: x['deadline'])
-        
-        if upcoming_deadlines:
-            for deadline in upcoming_deadlines[:10]:  # Show next 10
-                days_until = (deadline['deadline'] - datetime.datetime.now()).days
-                st.write(f"**{deadline['title']}** - {days_until} days until due")
-                st.write(f"Regulation: {deadline['regulation']} | Priority: {deadline['priority']}")
-                st.write(f"Responsible: {deadline['responsible_party']}")
-                st.divider()
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Filters")
+    status_f = st.sidebar.multiselect(
+        "Status",
+        ["Overdue"] + STATUSES,
+        default=["Overdue"] + STATUSES,
+    )
+    type_f = st.sidebar.multiselect("Type", TYPES, default=TYPES)
+    program_f = st.sidebar.multiselect("Program", PROGRAMS, default=PROGRAMS)
+    horizon = st.sidebar.slider("Look-ahead (days)", 14, 180, 60, 7)
+
+    filtered = enriched[
+        enriched["display_status"].isin(status_f)
+        & enriched["obligation_type"].isin(type_f)
+        & enriched["program"].isin(program_f)
+    ]
+
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Overdue", m["overdue"], help="Past due and not complete — this is the Monday list.")
+    k2.metric("Due in 7 days", m["due_7"])
+    k3.metric("Due in 30 days", m["due_30"])
+    k4.metric("In-flight windows", m["in_window"], help="External audit / campaign currently in its fieldwork window.")
+    st.caption(f"In progress: {m['in_flight']} · Completed in last 90 days: {m['done_q']}")
+
+    work, register, ahead, intake, export = st.tabs(
+        ["Workbench", "Register", "Look-ahead", "Intake", "Export"]
+    )
+
+    with work:
+        st.subheader("This week's GRC list")
+        st.caption(
+            "A compliance calendar is an obligation register with dates — not a month grid. "
+            "Overdue first, then this week, then evidence sitting with owners."
+        )
+        overdue = enriched[enriched["is_overdue"]].sort_values("days_to_due")
+        week = enriched[enriched["due_7"]].sort_values("days_to_due")
+        evidence = enriched[enriched["status"].eq("Evidence due") & ~enriched["is_overdue"]].sort_values(
+            "days_to_due"
+        )
+        windows = enriched[enriched["in_window"]].sort_values("due")
+
+        _queue("Overdue", overdue, "Nothing past due. Rare, enjoy it.", "od")
+        _queue("Due in 7 days", week, "Clear week.", "wk")
+        _queue(
+            "Evidence sitting with owners",
+            evidence,
+            "No open evidence requests outside the overdue/week lists.",
+            "ev",
+        )
+        _queue("In a live window (audit / campaign)", windows, "No fieldwork windows open today.", "win")
+
+    with register:
+        st.subheader("Obligation register")
+        show = filtered[
+            [
+                "obligation_id",
+                "title",
+                "obligation_type",
+                "program",
+                "cadence",
+                "display_status",
+                "owner",
+                "due",
+                "days_to_due",
+                "ticket_ref",
+                "slip_count",
+            ]
+        ].copy()
+        show["due"] = show["due"].apply(_fmt)
+        st.dataframe(show, use_container_width=True, hide_index=True)
+        ids = filtered["obligation_id"].tolist()
+        if ids:
+            pick = st.selectbox("Open a record", ids)
+            row = enriched[enriched["obligation_id"] == pick].iloc[0]
+            _detail(row)
+            _actions(row, key=f"reg_{pick}")
+
+    with ahead:
+        st.subheader(f"Next {horizon} days")
+        st.caption("Point-in-time dues plus any multi-day audit/campaign windows.")
+        cutoff = _today() + timedelta(days=horizon)
+        floor = _today() - timedelta(days=14)
+        horizon_df = filtered[
+            (filtered["due"] <= cutoff) & (filtered["due"] >= floor) & ~filtered["status"].eq("Complete")
+        ].sort_values("due")
+
+        if horizon_df.empty:
+            st.info("Nothing open in this look-ahead. Widen the slider or clear filters.")
         else:
-            st.write("No upcoming deadlines")
-    
-    # Export functionality
-    st.subheader("Export Data")
-    export_df = pd.DataFrame(st.session_state.compliance_events).copy()
-    for col in ('start_date', 'end_date'):
-        if col in export_df.columns:
-            export_df[col] = export_df[col].astype(str)
-    demo_kit.csv_download(export_df, "compliance_events.csv", label="Download events CSV")
+            by_day = horizon_df.copy()
+            by_day["due_day"] = by_day["due"].dt.strftime("%Y-%m-%d (%a)")
+            for day, grp in by_day.groupby("due_day", sort=True):
+                st.markdown(f"**{day}**")
+                st.dataframe(
+                    grp[["obligation_id", "title", "owner", "display_status", "program"]],
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
-    export_format = st.selectbox("Export Format", ["CSV", "JSON", "Excel"])
-    
-    if st.button("Export Data"):
-        if export_format == "CSV":
-            # Export to CSV
-            df_events = pd.DataFrame(st.session_state.compliance_events)
-            csv = df_events.to_csv(index=False)
-            st.download_button(
-                label="Download CSV",
-                data=csv,
-                file_name="compliance_events.csv",
-                mime="text/csv"
+            plot_df = filtered[~filtered["status"].eq("Complete")].copy()
+            fig = px.scatter(
+                plot_df,
+                x="days_to_due",
+                y="obligation_type",
+                color="display_status",
+                hover_name="obligation_id",
+                hover_data=["title", "owner", "program"],
+                color_discrete_map=STATUS_COLOR,
+                category_orders={"obligation_type": TYPES, "display_status": ["Overdue"] + STATUSES},
+                title="Days to due (negative = overdue)",
             )
-        elif export_format == "JSON":
-            # Export to JSON
-            json_data = json.dumps(st.session_state.compliance_events, default=str, indent=2)
-            st.download_button(
-                label="Download JSON",
-                data=json_data,
-                file_name="compliance_events.json",
-                mime="application/json"
-            )
+            fig.add_vline(x=0, line_dash="dash", line_color="#ff6b6b")
+            fig.add_vline(x=7, line_dash="dot", line_color="#f2b84b")
+            fig.add_vline(x=30, line_dash="dot", line_color="#91aa9b")
+            st.plotly_chart(fig, use_container_width=True)
 
-def show_analytics():
-    st.header("Analytics & Insights")
-    
-    # Calculate metrics
-    total_events = len(st.session_state.compliance_events)
-    upcoming_events = len([e for e in st.session_state.compliance_events if e['start_date'] > datetime.datetime.now()])
-    critical_events = len([e for e in st.session_state.compliance_events if e['priority'] == 'Critical'])
-    
-    total_deadlines = len(st.session_state.regulatory_deadlines)
-    upcoming_deadlines = len([d for d in st.session_state.regulatory_deadlines if d['deadline'] > datetime.datetime.now()])
-    overdue_deadlines = len([d for d in st.session_state.regulatory_deadlines if d['deadline'] < datetime.datetime.now() and d['status'] != 'Completed'])
-    
-    # Display metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Total Events", total_events)
-        st.metric("Upcoming Events", upcoming_events)
-    
-    with col2:
-        st.metric("Critical Events", critical_events)
-        st.metric("Total Deadlines", total_deadlines)
-    
-    with col3:
-        st.metric("Upcoming Deadlines", upcoming_deadlines)
-        st.metric("Overdue Deadlines", overdue_deadlines)
-    
-    with col4:
-        st.metric("Active Audits", len([a for a in st.session_state.audit_schedules if a['status'] == 'In Progress']))
-        st.metric("Pending Reminders", len([r for r in st.session_state.reminders if r['status'] == 'Pending']))
-    
-    # Event trends
-    st.subheader("Event Trends")
-    df_events = pd.DataFrame(st.session_state.compliance_events)
-    if not df_events.empty:
-        df_events['start_date'] = pd.to_datetime(df_events['start_date'])
-        df_events['month'] = df_events['start_date'].dt.to_period('M')
-        
-        monthly_events = df_events.groupby('month').size().reset_index(name='count')
-        monthly_events['month'] = monthly_events['month'].astype(str)
-        
-        fig = px.line(monthly_events, x='month', y='count', 
-                      title="Monthly Compliance Events",
-                      labels={'count': 'Number of Events', 'month': 'Month'})
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Framework distribution
-    st.subheader("Events by Framework")
-    if not df_events.empty:
-        framework_counts = df_events['framework'].value_counts()
-        fig = px.pie(values=framework_counts.values, names=framework_counts.index, 
-                    title="Compliance Events by Framework")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Priority distribution
-    st.subheader("Events by Priority")
-    if not df_events.empty:
-        priority_counts = df_events['priority'].value_counts()
-        fig = px.bar(x=priority_counts.index, y=priority_counts.values, 
-                    title="Events by Priority",
-                    color=priority_counts.index,
-                    color_discrete_map={'Critical': 'red', 'High': 'orange', 'Medium': 'yellow', 'Low': 'green'})
-        st.plotly_chart(fig, use_container_width=True)
+            windows = filtered[filtered["window_start"].notna() & ~filtered["status"].eq("Complete")]
+            if not windows.empty:
+                gantt = windows.copy()
+                gantt["start"] = gantt["window_start"]
+                gantt["finish"] = gantt["window_end"].fillna(gantt["due"])
+                fig_g = px.timeline(
+                    gantt,
+                    x_start="start",
+                    x_end="finish",
+                    y="title",
+                    color="display_status",
+                    color_discrete_map=STATUS_COLOR,
+                    hover_data=["obligation_id", "owner"],
+                    title="Fieldwork / campaign windows",
+                )
+                fig_g.add_vline(x=_today(), line_dash="dash", line_color="#e8f4ec")
+                st.plotly_chart(fig_g, use_container_width=True)
+
+    with intake:
+        st.subheader("Add an obligation")
+        st.caption("Name the work product. A date without 'what done looks like' is a meeting, not an obligation.")
+        with st.form("intake"):
+            c1, c2 = st.columns(2)
+            with c1:
+                title = st.text_input("Title", placeholder="e.g. Q4 privileged access recert")
+                obligation_type = st.selectbox("Type", TYPES)
+                program = st.selectbox("Program", PROGRAMS)
+                cadence = st.selectbox(
+                    "Cadence",
+                    ["Ad hoc", "Monthly", "Quarterly", "Semi-annual", "Annual"],
+                    index=2,
+                )
+            with c2:
+                owner = st.text_input("Owner", placeholder="e.g. IAM")
+                due = st.date_input("Due date", value=(_today() + timedelta(days=30)).date())
+                ticket_ref = st.text_input("Ticket / ref", placeholder="GRC-…")
+                work_product = st.text_area("Work product (definition of done)")
+            notes = st.text_input("Notes", placeholder="Optional context")
+            submitted = st.form_submit_button("Add to register")
+        if submitted:
+            if not title.strip() or not owner.strip() or not work_product.strip():
+                st.error("Title, owner, and work product are required.")
+            else:
+                n = len(st.session_state.obligations) + 1
+                new_id = f"OBL-2026-{n:03d}"
+                add = {
+                    "obligation_id": new_id,
+                    "title": title.strip(),
+                    "obligation_type": obligation_type,
+                    "program": program,
+                    "cadence": cadence,
+                    "owner": owner.strip(),
+                    "work_product": work_product.strip(),
+                    "status": "Not started",
+                    "ticket_ref": ticket_ref.strip(),
+                    "notes": notes.strip(),
+                    "due": pd.Timestamp(due),
+                    "window_start": pd.NaT,
+                    "window_end": pd.NaT,
+                    "last_done": pd.NaT,
+                    "slip_count": 0,
+                }
+                _save(pd.concat([st.session_state.obligations, pd.DataFrame([add])], ignore_index=True))
+                st.success(f"{new_id} is on the register.")
+                st.rerun()
+
+    with export:
+        st.subheader("Filtered obligations")
+        out = filtered.copy()
+        for col in ("due", "window_start", "window_end", "last_done"):
+            out[col] = out[col].apply(_fmt)
+        demo_kit.csv_download(out, "compliance_obligations.csv")
+        st.caption("Resample rebuilds the demo set. Edits live in this browser session only.")
+
 
 if __name__ == "__main__":
     main()

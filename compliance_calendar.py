@@ -488,9 +488,11 @@ def _metrics(df: pd.DataFrame) -> dict:
         "in_flight": int((e["status"] == "In progress").sum()),
         "in_window": int(e["in_window"].sum()),
         "done_q": int(
-            e["status"].eq("Complete")
-            & e["last_done"].notna()
-            & (e["last_done"] >= _today() - timedelta(days=90))
+            (
+                e["status"].eq("Complete")
+                & e["last_done"].notna()
+                & (e["last_done"] >= _today() - timedelta(days=90))
+            ).sum()
         ),
     }
 

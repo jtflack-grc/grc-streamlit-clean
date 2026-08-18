@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
-"""Audit PBC / evidence-trail workbench — club teaching toy.
-
-The unit of work is not 'an audit.' It is a request that must stay tied to
-a control, an owner, the evidence submitted, the auditor's response, and next.
-"""
+"""Audit PBC / evidence-trail workbench — club teaching toy."""
 
 from __future__ import annotations
 
@@ -49,7 +45,7 @@ STATUS_COLOR = {
     "Accepted": "#38e881",
     "Deficiency": "#ff6b6b",
 }
-READINESS = ["Existing trail", "Scramble"]
+PACK_SOURCE = ["On file", "Built for request"]
 
 
 def _today() -> pd.Timestamp:
@@ -74,7 +70,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2026-02-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "Auditor questions",
-            "readiness": "Scramble",
+            "readiness": "Built for request",
             "due": today + timedelta(days=3 + j(-1, 2)),
             "issued": today - timedelta(days=18),
             "auditor_response": "v1 covered Q2 only and omitted the Citrix VDI cohort. Population is incomplete.",
@@ -90,7 +86,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2025-08-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "Accepted",
-            "readiness": "Existing trail",
+            "readiness": "On file",
             "due": today - timedelta(days=6),
             "issued": today - timedelta(days=22),
             "auditor_response": "Accepted. IBM i 5250 gap is covered by approved waiver EXC-2026-001 with compensating QAUDJRN monitoring.",
@@ -106,7 +102,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2026-05-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "Deficiency",
-            "readiness": "Scramble",
+            "readiness": "Built for request",
             "due": today - timedelta(days=2 + j(0, 3)),
             "issued": today - timedelta(days=16),
             "auditor_response": "Control test CT-2026-006 failed: 6 DMZ jump hosts not forwarding. Evidence does not support operating effectiveness.",
@@ -122,7 +118,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2025-08-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "Accepted",
-            "readiness": "Existing trail",
+            "readiness": "On file",
             "due": today - timedelta(days=10),
             "issued": today - timedelta(days=20),
             "auditor_response": "Accepted. Drill pack from 2026-06-04 already in GRC — retrieved, not created.",
@@ -138,7 +134,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2026-05-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "Not started",
-            "readiness": "Scramble",
+            "readiness": "Built for request",
             "due": today - timedelta(days=4 + j(0, 3)),
             "issued": today - timedelta(days=14),
             "auditor_response": "",
@@ -154,7 +150,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2026-02-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "Submitted",
-            "readiness": "Existing trail",
+            "readiness": "On file",
             "due": today + timedelta(days=5 + j(-1, 2)),
             "issued": today - timedelta(days=12),
             "auditor_response": "",
@@ -170,7 +166,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2026-05-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "Accepted",
-            "readiness": "Existing trail",
+            "readiness": "On file",
             "due": today - timedelta(days=8),
             "issued": today - timedelta(days=19),
             "auditor_response": "Accepted. 40-change sample already tested in CT-2026-003.",
@@ -186,7 +182,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2025-08-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "Auditor questions",
-            "readiness": "Scramble",
+            "readiness": "Built for request",
             "due": today + timedelta(days=2 + j(-1, 2)),
             "issued": today - timedelta(days=11),
             "auditor_response": "Payroll SaaS bridge letter expired last month. Report does not cover the full period.",
@@ -202,7 +198,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2026-01-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "Submitted",
-            "readiness": "Existing trail",
+            "readiness": "On file",
             "due": today + timedelta(days=8 + j(-2, 3)),
             "issued": today - timedelta(days=9),
             "auditor_response": "",
@@ -218,7 +214,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2026-05-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "Submitted",
-            "readiness": "Existing trail",
+            "readiness": "On file",
             "due": today + timedelta(days=6 + j(-1, 2)),
             "issued": today - timedelta(days=10),
             "auditor_response": "",
@@ -234,7 +230,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2025-08-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "Accepted",
-            "readiness": "Existing trail",
+            "readiness": "On file",
             "due": today - timedelta(days=12),
             "issued": today - timedelta(days=21),
             "auditor_response": "Accepted. Tabletop 2026-07-09 pack was already filed.",
@@ -250,7 +246,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2026-05-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "Auditor questions",
-            "readiness": "Scramble",
+            "readiness": "Built for request",
             "due": today + timedelta(days=4 + j(-1, 2)),
             "issued": today - timedelta(days=8),
             "auditor_response": "Screenshot of one bucket is not a population. Does not show the control operated across in-scope stores.",
@@ -266,7 +262,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2026-02-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "With owner",
-            "readiness": "Scramble",
+            "readiness": "Built for request",
             "due": today + timedelta(days=7 + j(-2, 3)),
             "issued": today - timedelta(days=7),
             "auditor_response": "v1 was last year's standard PDF. A policy is not operating evidence.",
@@ -282,7 +278,7 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
             "period_from": pd.Timestamp("2026-05-01"),
             "period_to": pd.Timestamp("2026-07-31"),
             "status": "With owner",
-            "readiness": "Existing trail",
+            "readiness": "On file",
             "due": today + timedelta(days=9 + j(-2, 3)),
             "issued": today - timedelta(days=5),
             "auditor_response": "",
@@ -484,6 +480,16 @@ def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
     return req, art
 
 
+def _covers(art_from, art_to, req_from, req_to) -> str:
+    if pd.isna(art_from) or pd.isna(art_to) or pd.isna(req_from) or pd.isna(req_to):
+        return "—"
+    if art_from <= req_from and art_to >= req_to:
+        return "Covers"
+    if art_to < req_from or art_from > req_to:
+        return "Misses"
+    return "Partial"
+
+
 def _enrich(req: pd.DataFrame, art: pd.DataFrame) -> pd.DataFrame:
     out = req.copy()
     today = _today()
@@ -492,10 +498,14 @@ def _enrich(req: pd.DataFrame, art: pd.DataFrame) -> pd.DataFrame:
     out["is_overdue"] = open_row & (out["days_to_due"] < 0)
     counts = art.groupby("request_id").size().rename("artifact_count")
     versions = art.groupby("request_id")["version"].max().rename("latest_version")
+    first_filed = art.groupby("request_id")["submitted"].min().rename("first_filed")
     out = out.merge(counts, left_on="request_id", right_index=True, how="left")
     out = out.merge(versions, left_on="request_id", right_index=True, how="left")
+    out = out.merge(first_filed, left_on="request_id", right_index=True, how="left")
     out["artifact_count"] = out["artifact_count"].fillna(0).astype(int)
     out["latest_version"] = out["latest_version"].fillna(0).astype(int)
+    out["first_filed"] = pd.to_datetime(out["first_filed"], errors="coerce")
+    out["filed_lag_days"] = (out["first_filed"] - out["issued"]).dt.days
     return out
 
 
@@ -529,17 +539,31 @@ def _patch_req(request_id: str, **fields) -> None:
 
 def _metrics(req: pd.DataFrame, art: pd.DataFrame) -> dict:
     e = _enrich(req, art)
-    open_n = int((~e["status"].isin(["Accepted", "Deficiency"])).sum())
-    existing = int((e["readiness"] == "Existing trail").sum())
-    scramble = int((e["readiness"] == "Scramble").sum())
     return {
-        "open": open_n,
+        "open": int((~e["status"].isin(["Accepted", "Deficiency"])).sum()),
         "overdue": int(e["is_overdue"].sum()),
         "questions": int((e["status"] == "Auditor questions").sum()),
         "accepted": int((e["status"] == "Accepted").sum()),
-        "existing": existing,
-        "scramble": scramble,
+        "on_file": int((e["readiness"] == "On file").sum()),
+        "built": int((e["readiness"] == "Built for request").sum()),
         "resubmits": int((e["latest_version"] >= 2).sum()),
+        "period_gaps": int(
+            art.merge(
+                req[["request_id", "period_from", "period_to"]],
+                on="request_id",
+                suffixes=("", "_req"),
+            )
+            .apply(
+                lambda r: _covers(
+                    r["period_from"], r["period_to"], r["period_from_req"], r["period_to_req"]
+                )
+                != "Covers",
+                axis=1,
+            )
+            .sum()
+        )
+        if not art.empty
+        else 0,
     }
 
 
@@ -551,29 +575,47 @@ def _fmt(ts) -> str:
 
 def _trail(row: pd.Series, art: pd.DataFrame) -> None:
     st.markdown(f"### {row['request_id']} · {row['title']}")
-    st.caption(f"{ENGAGEMENT['name']} · review period {ENGAGEMENT['period']}")
-    st.write(f"**Auditor asked:** {row['auditor_ask']}")
 
-    c1, c2 = st.columns(2)
-    with c1:
-        st.write(f"**Control:** {row['control']}")
-        st.write(f"**Owner:** {row['owner']}")
-        st.write(f"**System of record:** {row['system_of_record']}")
-        st.write(f"**Readiness:** {row['readiness']}")
-    with c2:
-        st.write(f"**Period requested:** {_fmt(row['period_from'])} → {_fmt(row['period_to'])}")
-        st.write(f"**Status:** {row['status']}")
-        st.write(f"**Due:** {_fmt(row['due'])} ({int(row['days_to_due'])}d)")
-        st.write(f"**Issued:** {_fmt(row['issued'])} · artifacts: {int(row['artifact_count'])} · v{int(row['latest_version'])}")
+    ctrl, own, per, evid, disp = st.columns(5)
+    ctrl.caption("Control")
+    ctrl.write(row["control"])
+    own.caption("Owner")
+    own.write(row["owner"])
+    per.caption("Period asked")
+    per.write(f"{_fmt(row['period_from'])} → {_fmt(row['period_to'])}")
+    evid.metric("Evidence", f"v{int(row['latest_version'])}", help=f"{int(row['artifact_count'])} artifact(s)")
+    disp.caption("Status")
+    disp.write(row["status"])
+
+    st.info(row["auditor_ask"])
+
+    c1, c2, c3 = st.columns(3)
+    c1.write(f"**System:** {row['system_of_record']}")
+    c1.write(f"**Pack:** {row['readiness']}")
+    c2.write(f"**Period asked:** {_fmt(row['period_from'])} → {_fmt(row['period_to'])}")
+    lag = row.get("filed_lag_days")
+    lag_txt = "—" if pd.isna(lag) else f"{int(lag)}d after request"
+    c2.write(f"**First filed:** {_fmt(row.get('first_filed'))} ({lag_txt})")
+    c3.write(f"**Due:** {_fmt(row['due'])} ({int(row['days_to_due'])}d)")
+    c3.write(f"**Issued:** {_fmt(row['issued'])}")
 
     linked = art[art["request_id"] == row["request_id"]].sort_values("version")
-    st.markdown("**Evidence submitted**")
+    st.markdown("**Evidence**")
     if linked.empty:
-        st.warning("Nothing on the trail yet. That is the archaeological expedition.")
+        st.warning("No artifacts.")
     else:
         show = linked.copy()
+        show["covers"] = [
+            _covers(a, b, row["period_from"], row["period_to"])
+            for a, b in zip(show["period_from"], show["period_to"])
+        ]
         show["period"] = show["period_from"].apply(_fmt) + " → " + show["period_to"].apply(_fmt)
         show["submitted"] = show["submitted"].apply(_fmt)
+        chain = " → ".join(
+            f"v{int(r.version)} {_fmt(r.submitted)} · {r.disposition} · {c}"
+            for r, c in zip(show.itertuples(), show["covers"])
+        )
+        st.caption(chain)
         st.dataframe(
             show[
                 [
@@ -582,6 +624,7 @@ def _trail(row: pd.Series, art: pd.DataFrame) -> None:
                     "name",
                     "source",
                     "period",
+                    "covers",
                     "submitted",
                     "submitted_by",
                     "disposition",
@@ -591,17 +634,14 @@ def _trail(row: pd.Series, art: pd.DataFrame) -> None:
             use_container_width=True,
             hide_index=True,
         )
-        bad = linked[linked["disposition"].isin(["Insufficient", "Wrong period", "Duplicate"])]
-        if not bad.empty:
-            st.caption(
-                "Insufficient / wrong period / duplicate means the artifact did not support the control "
-                "for the period asked — not that a file failed to attach."
-            )
 
-    st.markdown("**Auditor response**")
-    st.write(row["auditor_response"] or "— (none yet)")
-    st.markdown("**Next**")
-    st.write(row["next_action"] or "—")
+    r1, r2 = st.columns(2)
+    with r1:
+        st.markdown("**Auditor response**")
+        st.write(row["auditor_response"] or "—")
+    with r2:
+        st.markdown("**Next**")
+        st.write(row["next_action"] or "—")
 
 
 def _actions(row: pd.Series, *, key: str) -> None:
@@ -651,7 +691,7 @@ def _queue(title: str, subset: pd.DataFrame, art: pd.DataFrame, empty: str, key_
     for _, row in subset.iterrows():
         due = f"{int(row['days_to_due'])}d" if row["days_to_due"] >= 0 else f"{abs(int(row['days_to_due']))}d overdue"
         with st.expander(
-            f"{row['request_id']} · {row['title']} · {row['status']} · {due} · {row['readiness']}"
+            f"{row['request_id']} · {row['title']} · {row['owner']} · {row['status']} · {due}"
         ):
             _trail(row, art)
             _actions(row, key=f"{key_prefix}_{row['request_id']}")
@@ -660,8 +700,8 @@ def _queue(title: str, subset: pd.DataFrame, art: pd.DataFrame, empty: str, key_
 def main() -> None:
     portfolio_skin.page_header(
         title="Audit Management System",
-        lede="A request is a sentence. The work is the trail: control, owner, evidence, period, auditor response, next. Club demo — not a system of record.",
-        kicker="Audit readiness",
+        lede="SOC 2 Type II FY26 PBC desk — request, control, owner, evidence, response. Club demo — not a system of record.",
+        kicker="Audit",
     )
 
     seed = demo_kit.seed_controls()
@@ -675,7 +715,7 @@ def main() -> None:
     st.sidebar.caption(f"Period {ENGAGEMENT['period']}")
     st.sidebar.subheader("Filters")
     status_f = st.sidebar.multiselect("Status", STATUSES, default=STATUSES)
-    ready_f = st.sidebar.multiselect("Readiness", READINESS, default=READINESS)
+    ready_f = st.sidebar.multiselect("Pack source", PACK_SOURCE, default=PACK_SOURCE)
     owners = sorted(req["owner"].astype(str).unique())
     owner_f = st.sidebar.multiselect("Owner", owners, default=owners)
 
@@ -691,8 +731,8 @@ def main() -> None:
     k3.metric("Auditor questions", m["questions"])
     k4.metric("Accepted", m["accepted"])
     st.caption(
-        f"Existing trail: {m['existing']} · Scramble after the request: {m['scramble']} · "
-        f"Resubmits (v2+): {m['resubmits']}"
+        f"On file: {m['on_file']} · Built for request: {m['built']} · "
+        f"Resubmits: {m['resubmits']} · Artifacts not covering the asked period: {m['period_gaps']}"
     )
 
     work, trail, register, intake, export = st.tabs(
@@ -700,33 +740,19 @@ def main() -> None:
     )
 
     with work:
-        st.subheader("What still needs a human")
-        st.caption(
-            "Audit readiness is whether the trail already existed. "
-            "Overdue and 'auditor questions' are where scramble shows."
-        )
+        st.subheader("Open work")
         overdue = enriched[enriched["is_overdue"]].sort_values("days_to_due")
         questions = enriched[enriched["status"].eq("Auditor questions")].sort_values("due")
         with_owner = enriched[enriched["status"].isin(["Not started", "With owner"])].sort_values("due")
         sitting = enriched[enriched["status"].eq("Submitted")].sort_values("due")
 
         _queue("Overdue", overdue, art, "Nothing past due.", "od")
-        _queue(
-            "Auditor questions — evidence did not support the ask",
-            questions,
-            art,
-            "No open follow-ups.",
-            "q",
-        )
-        _queue("Not submitted (not started / with owner)", with_owner, art, "Owners have sent their packs.", "own")
-        _queue("Submitted — waiting on the auditor", sitting, art, "Nothing in the auditor's inbox.", "sit")
+        _queue("Auditor questions", questions, art, "No open follow-ups.", "q")
+        _queue("Not submitted", with_owner, art, "Nothing waiting on owners.", "own")
+        _queue("With auditor", sitting, art, "Nothing in review.", "sit")
 
     with trail:
-        st.subheader("Reconstruct one request")
-        st.caption(
-            "If another person cannot follow this without the employee who remembers where the file lives, "
-            "you do not have a trail — you have folklore."
-        )
+        st.subheader("Request")
         ids = filtered["request_id"].tolist()
         if not ids:
             st.info("Nothing in the current filter.")
@@ -791,6 +817,7 @@ def main() -> None:
             ]
         ].copy()
         show["due"] = show["due"].apply(_fmt)
+        show = show.rename(columns={"readiness": "pack_source"})
         st.dataframe(show, use_container_width=True, hide_index=True)
 
         fig = px.scatter(
@@ -801,15 +828,15 @@ def main() -> None:
             hover_name="request_id",
             hover_data=["title", "owner", "control"],
             color_discrete_map=STATUS_COLOR,
-            category_orders={"status": STATUSES, "readiness": READINESS},
-            title="Days to due vs whether the trail already existed",
+            category_orders={"status": STATUSES, "readiness": PACK_SOURCE},
+            title="Due date vs pack source",
+            labels={"days_to_due": "Days to due", "readiness": "Pack source"},
         )
         fig.add_vline(x=0, line_dash="dash", line_color="#ff6b6b")
         st.plotly_chart(fig, use_container_width=True)
 
     with intake:
         st.subheader("Log a request")
-        st.caption("Capture the sentence, the control, the owner, and the period — before anyone hunts for a file.")
         with st.form("intake"):
             c1, c2 = st.columns(2)
             with c1:
@@ -821,14 +848,14 @@ def main() -> None:
                 due = st.date_input("Due", value=(_today() + timedelta(days=14)).date())
                 p_from = st.date_input("Period from", value=pd.Timestamp("2026-02-01").date())
                 p_to = st.date_input("Period to", value=pd.Timestamp("2026-07-31").date())
-                readiness = st.selectbox("Readiness (honest)", READINESS, index=1)
+                readiness = st.selectbox("Pack source", PACK_SOURCE, index=1)
             auditor_ask = st.text_area(
                 "Auditor request",
-                placeholder="Please provide evidence that this control operated during the review period.",
+                placeholder="e.g. CAB sample for production changes May–Jul, including backout notes.",
             )
             if st.form_submit_button("Add request"):
                 if not title.strip() or not control.strip() or not owner.strip() or not auditor_ask.strip():
-                    st.error("Title, control, owner, and the auditor's sentence are required.")
+                    st.error("Title, control, owner, and request text are required.")
                 else:
                     n = len(st.session_state.pbc) + 1
                     add = {
@@ -845,7 +872,7 @@ def main() -> None:
                         "due": pd.Timestamp(due),
                         "issued": _today(),
                         "auditor_response": "",
-                        "next_action": "Identify the system of record and whether a pack already exists.",
+                        "next_action": "Confirm system of record and attach the pack.",
                     }
                     _save_req(pd.concat([st.session_state.pbc, pd.DataFrame([add])], ignore_index=True))
                     st.success(f"PBC-2026-{n:03d} is on the workbench.")

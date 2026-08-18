@@ -568,9 +568,22 @@ def _metrics(req: pd.DataFrame, art: pd.DataFrame) -> dict:
 
 
 def _fmt(ts) -> str:
-    if pd.isna(ts):
+    if ts is None:
         return "—"
-    return pd.Timestamp(ts).strftime("%Y-%m-%d")
+    if isinstance(ts, str) and ts.strip() in {"", "—", "-", "NaT", "nat", "None", "NaN"}:
+        return "—"
+    try:
+        if pd.isna(ts):
+            return "—"
+    except (TypeError, ValueError):
+        pass
+    try:
+        parsed = pd.Timestamp(ts)
+        if pd.isna(parsed):
+            return "—"
+        return parsed.strftime("%Y-%m-%d")
+    except (ValueError, TypeError, OverflowError):
+        return "—"
 
 
 def _trail(row: pd.Series, art: pd.DataFrame) -> None:
@@ -609,11 +622,17 @@ def _trail(row: pd.Series, art: pd.DataFrame) -> None:
             _covers(a, b, row["period_from"], row["period_to"])
             for a, b in zip(show["period_from"], show["period_to"])
         ]
-        show["period"] = show["period_from"].apply(_fmt) + " → " + show["period_to"].apply(_fmt)
-        show["submitted"] = show["submitted"].apply(_fmt)
+        show["period"] = [
+            f"{_fmt(a)} → {_fmt(b)}"
+            for a, b in zip(show["period_from"], show["period_to"])
+        ]
+        submitted_txt = [_fmt(v) for v in show["submitted"]]
+        show["submitted"] = submitted_txt
         chain = " → ".join(
-            f"v{int(r.version)} {_fmt(r.submitted)} · {r.disposition} · {c}"
-            for r, c in zip(show.itertuples(), show["covers"])
+            f"v{int(v)} {s} · {d} · {c}"
+            for v, s, d, c in zip(
+                show["version"], submitted_txt, show["disposition"], show["covers"]
+            )
         )
         st.caption(chain)
         st.dataframe(

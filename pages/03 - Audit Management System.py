@@ -1,17 +1,22 @@
+#!/usr/bin/env python3
+"""Audit PBC / evidence-trail workbench — club teaching toy.
+
+The unit of work is not 'an audit.' It is a request that must stay tied to
+a control, an owner, the evidence submitted, the auditor's response, and next.
+"""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
+import numpy as np
+import pandas as pd
+import plotly.express as px
 import streamlit as st
+
 import demo_kit
 import portfolio_skin
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import datetime
-from datetime import timedelta
-import random
-import json
 
-# Page configuration
 st.set_page_config(
     page_title="Audit Management System · i on GRC",
     page_icon="assets/favicon.svg",
@@ -21,1078 +26,843 @@ st.set_page_config(
 
 portfolio_skin.apply(hide_sidebar=False)
 
+ENGAGEMENT = {
+    "id": "ENG-SOC2-FY26",
+    "name": "SOC 2 Type II FY26",
+    "auditor": "Deloitte · fieldwork in progress",
+    "period": "2025-08-01 → 2026-07-31",
+}
+
+STATUSES = [
+    "Not started",
+    "With owner",
+    "Submitted",
+    "Auditor questions",
+    "Accepted",
+    "Deficiency",
+]
+STATUS_COLOR = {
+    "Not started": "#91aa9b",
+    "With owner": "#f2b84b",
+    "Submitted": "#7fffb2",
+    "Auditor questions": "#ffb347",
+    "Accepted": "#38e881",
+    "Deficiency": "#ff6b6b",
+}
+READINESS = ["Existing trail", "Scramble"]
 
 
-# Initialize session state
-if 'audits' not in st.session_state:
-    st.session_state.audits = []
-if 'findings' not in st.session_state:
-    st.session_state.findings = []
-if 'auditors' not in st.session_state:
-    st.session_state.auditors = []
-if 'audit_plans' not in st.session_state:
-    st.session_state.audit_plans = []
-if 'evidence' not in st.session_state:
-    st.session_state.evidence = []
+def _today() -> pd.Timestamp:
+    return pd.Timestamp.now().normalize()
 
-def generate_sample_data(seed: int = 42):
-    """Generate sample audit management data"""
+
+def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    today = _today()
     rng = np.random.default_rng(seed)
-    audits = [
+
+    def j(lo: int, hi: int) -> int:
+        return int(rng.integers(lo, hi))
+
+    requests = [
         {
-            'id': 'AUD-2024-001',
-            'name': 'SOC 2 Type II Audit',
-            'type': 'External',
-            'framework': 'SOC 2',
-            'scope': 'Information Security Controls',
-            'start_date': datetime.datetime.now() - timedelta(days=60),
-            'end_date': datetime.datetime.now() - timedelta(days=30),
-            'status': 'Completed',
-            'auditor': 'Deloitte',
-            'lead_auditor': 'Sarah Johnson',
-            'rating': 'Clean Opinion',
-            'findings_count': 3,
-            'critical_findings': 0,
-            'high_findings': 1,
-            'medium_findings': 2,
-            'low_findings': 0
+            "request_id": "PBC-2026-001",
+            "control": "CC6.2 / AC-02 Privileged access review",
+            "title": "Privileged access operated during the review period",
+            "auditor_ask": "Please provide evidence that privileged access was reviewed during the review period, including population completeness.",
+            "owner": "IAM",
+            "system_of_record": "GRC register + AD / Citrix",
+            "period_from": pd.Timestamp("2026-02-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "Auditor questions",
+            "readiness": "Scramble",
+            "due": today + timedelta(days=3 + j(-1, 2)),
+            "issued": today - timedelta(days=18),
+            "auditor_response": "v1 covered Q2 only and omitted the Citrix VDI cohort. Population is incomplete.",
+            "next_action": "Attach Citrix campaign pack or EXC-2026-002 close-out; resubmit full-period extract.",
         },
         {
-            'id': 'AUD-2024-002',
-            'name': 'ISO 27001 Internal Audit',
-            'type': 'Internal',
-            'framework': 'ISO 27001',
-            'scope': 'Information Security Management System',
-            'start_date': datetime.datetime.now() - timedelta(days=30),
-            'end_date': datetime.datetime.now() - timedelta(days=15),
-            'status': 'In Progress',
-            'auditor': 'Internal Audit Team',
-            'lead_auditor': 'Mike Chen',
-            'rating': 'In Progress',
-            'findings_count': 8,
-            'critical_findings': 1,
-            'high_findings': 3,
-            'medium_findings': 3,
-            'low_findings': 1
+            "request_id": "PBC-2026-002",
+            "control": "CC6.1 / AC-07 MFA",
+            "title": "MFA enforced on remote and admin access",
+            "auditor_ask": "Provide evidence MFA operated for remote access and privileged consoles during the period.",
+            "owner": "IAM / SecOps",
+            "system_of_record": "IdP + exception register",
+            "period_from": pd.Timestamp("2025-08-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "Accepted",
+            "readiness": "Existing trail",
+            "due": today - timedelta(days=6),
+            "issued": today - timedelta(days=22),
+            "auditor_response": "Accepted. IBM i 5250 gap is covered by approved waiver EXC-2026-001 with compensating QAUDJRN monitoring.",
+            "next_action": "None — trail already existed (control test CT-2026-009 + waiver).",
         },
         {
-            'id': 'AUD-2024-003',
-            'name': 'PCI DSS Compliance Audit',
-            'type': 'External',
-            'framework': 'PCI DSS',
-            'scope': 'Payment Card Data Security',
-            'start_date': datetime.datetime.now() - timedelta(days=90),
-            'end_date': datetime.datetime.now() - timedelta(days=45),
-            'status': 'Completed',
-            'auditor': 'KPMG',
-            'lead_auditor': 'David Wilson',
-            'rating': 'Compliant',
-            'findings_count': 5,
-            'critical_findings': 0,
-            'high_findings': 2,
-            'medium_findings': 2,
-            'low_findings': 1
+            "request_id": "PBC-2026-003",
+            "control": "CC7.2 / MON-02 Logging",
+            "title": "Security logging coverage for in-scope systems",
+            "auditor_ask": "Provide evidence in-scope hosts forwarded auth and privileged activity logs to the SIEM during the period.",
+            "owner": "SecOps",
+            "system_of_record": "SIEM source list vs asset inventory",
+            "period_from": pd.Timestamp("2026-05-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "Deficiency",
+            "readiness": "Scramble",
+            "due": today - timedelta(days=2 + j(0, 3)),
+            "issued": today - timedelta(days=16),
+            "auditor_response": "Control test CT-2026-006 failed: 6 DMZ jump hosts not forwarding. Evidence does not support operating effectiveness.",
+            "next_action": "Corrective onboarding + re-test. Finding will land unless coverage is evidenced before exit.",
         },
         {
-            'id': 'AUD-2024-004',
-            'name': 'GDPR Compliance Review',
-            'type': 'Internal',
-            'framework': 'GDPR',
-            'scope': 'Data Protection and Privacy',
-            'start_date': datetime.datetime.now() - timedelta(days=15),
-            'end_date': datetime.datetime.now() + timedelta(days=15),
-            'status': 'Planned',
-            'auditor': 'Internal Audit Team',
-            'lead_auditor': 'Lisa Rodriguez',
-            'rating': 'Not Started',
-            'findings_count': 0,
-            'critical_findings': 0,
-            'high_findings': 0,
-            'medium_findings': 0,
-            'low_findings': 0
+            "request_id": "PBC-2026-004",
+            "control": "CC6.1 / BC-05 Backup restore",
+            "title": "Restore test within the review period",
+            "auditor_ask": "Provide evidence a production-relevant restore was tested and met RTO during the period.",
+            "owner": "Infrastructure",
+            "system_of_record": "GRC evidence library / BC-05",
+            "period_from": pd.Timestamp("2025-08-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "Accepted",
+            "readiness": "Existing trail",
+            "due": today - timedelta(days=10),
+            "issued": today - timedelta(days=20),
+            "auditor_response": "Accepted. Drill pack from 2026-06-04 already in GRC — retrieved, not created.",
+            "next_action": "None.",
         },
         {
-            'id': 'AUD-2024-005',
-            'name': 'HITRUST CSF Assessment',
-            'type': 'External',
-            'framework': 'HITRUST CSF',
-            'scope': 'Healthcare Information Security',
-            'start_date': datetime.datetime.now() + timedelta(days=30),
-            'end_date': datetime.datetime.now() + timedelta(days=90),
-            'status': 'Planned',
-            'auditor': 'Coalfire',
-            'lead_auditor': 'Robert Thompson',
-            'rating': 'Not Started',
-            'findings_count': 0,
-            'critical_findings': 0,
-            'high_findings': 0,
-            'medium_findings': 0,
-            'low_findings': 0
+            "request_id": "PBC-2026-005",
+            "control": "CC6.2 / RACF standard",
+            "title": "RACF SPECIAL / OPERATIONS recertification",
+            "auditor_ask": "Provide the period recertification of RACF SPECIAL and OPERATIONS, including contractor TSO IDs.",
+            "owner": "Mainframe Security",
+            "system_of_record": "RACF / SMF extracts — owner knows the library",
+            "period_from": pd.Timestamp("2026-05-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "Not started",
+            "readiness": "Scramble",
+            "due": today - timedelta(days=4 + j(0, 3)),
+            "issued": today - timedelta(days=14),
+            "auditor_response": "",
+            "next_action": "Start the extract. EXC-2026-012 (contractor SPECIAL) lapsed — do not recertify as-is.",
         },
         {
-            'id': 'AUD-2024-006',
-            'name': 'Mainframe & Midrange Security Audit',
-            'type': 'Internal',
-            'framework': 'SOX / ISO 27001',
-            'scope': 'IBM Z (RACF), IBM i (QSECURITY / *ALLOBJ), AIX hosts',
-            'start_date': datetime.datetime.now() - timedelta(days=20),
-            'end_date': datetime.datetime.now() + timedelta(days=10),
-            'status': 'In Progress',
-            'auditor': 'Internal Audit Team',
-            'lead_auditor': 'Mike Chen',
-            'rating': 'In Progress',
-            'findings_count': 3,
-            'critical_findings': 1,
-            'high_findings': 2,
-            'medium_findings': 0,
-            'low_findings': 0
+            "request_id": "PBC-2026-006",
+            "control": "CC6.1 / SAP access standard",
+            "title": "SAP Firefighter / SAP_ALL usage in the period",
+            "auditor_ask": "Provide Firefighter (or equivalent) logs and dual-control evidence for emergency SU01 / SAP_ALL use.",
+            "owner": "ERP Security",
+            "system_of_record": "SAP ST01 / GRC Firefighter",
+            "period_from": pd.Timestamp("2026-02-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "Submitted",
+            "readiness": "Existing trail",
+            "due": today + timedelta(days=5 + j(-1, 2)),
+            "issued": today - timedelta(days=12),
+            "auditor_response": "",
+            "next_action": "Awaiting auditor. Waiver EXC-2026-013 still In Review — disclose if asked.",
         },
         {
-            'id': 'AUD-2024-007',
-            'name': 'ERP Access Controls Audit (SAP ECC / JD Edwards)',
-            'type': 'External',
-            'framework': 'SOX',
-            'scope': 'SAP ECC SAP_ALL / SU01; JD Edwards IFS and World security',
-            'start_date': datetime.datetime.now() - timedelta(days=40),
-            'end_date': datetime.datetime.now() - timedelta(days=10),
-            'status': 'Completed',
-            'auditor': 'KPMG',
-            'lead_auditor': 'David Wilson',
-            'rating': 'Qualified',
-            'findings_count': 2,
-            'critical_findings': 0,
-            'high_findings': 2,
-            'medium_findings': 0,
-            'low_findings': 0
-        }
-    ]
-    
-    findings = [
-        {
-            'id': 'FND-2024-001',
-            'audit_id': 'AUD-2024-001',
-            'title': 'Access Review Not Performed Quarterly',
-            'description': 'Quarterly access reviews were not performed for all privileged accounts',
-            'severity': 'High',
-            'category': 'Access Control',
-            'control_id': 'CC6.1',
-            'status': 'Open',
-            'assigned_to': 'IT Security Team',
-            'due_date': datetime.datetime.now() + timedelta(days=30),
-            'remediation_plan': 'Implement automated quarterly access review process',
-            'evidence_required': 'Access review reports, approval documentation'
+            "request_id": "PBC-2026-007",
+            "control": "CC8.1 / CM-03 Change control",
+            "title": "Production change sample with CAB evidence",
+            "auditor_ask": "For a sample of production changes in the period, provide approval, backout, and post-implementation notes.",
+            "owner": "IT Operations",
+            "system_of_record": "ServiceNow CHG",
+            "period_from": pd.Timestamp("2026-05-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "Accepted",
+            "readiness": "Existing trail",
+            "due": today - timedelta(days=8),
+            "issued": today - timedelta(days=19),
+            "auditor_response": "Accepted. 40-change sample already tested in CT-2026-003.",
+            "next_action": "None.",
         },
         {
-            'id': 'FND-2024-002',
-            'audit_id': 'AUD-2024-001',
-            'title': 'Vendor Risk Assessment Incomplete',
-            'description': 'Vendor risk assessments missing for 3 critical vendors',
-            'severity': 'Medium',
-            'category': 'Vendor Management',
-            'control_id': 'CC9.1',
-            'status': 'In Progress',
-            'assigned_to': 'Procurement Team',
-            'due_date': datetime.datetime.now() + timedelta(days=45),
-            'remediation_plan': 'Complete vendor risk assessments for all critical vendors',
-            'evidence_required': 'Vendor assessment reports, risk treatment plans'
+            "request_id": "PBC-2026-008",
+            "control": "CC9.2 / TPRM",
+            "title": "Tier-1 vendor SOC reports on file",
+            "auditor_ask": "Provide current SOC reports (or bridge letters) for Tier-1 vendors in the CUEC population.",
+            "owner": "TPRM",
+            "system_of_record": "TPRM repository",
+            "period_from": pd.Timestamp("2025-08-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "Auditor questions",
+            "readiness": "Scramble",
+            "due": today + timedelta(days=2 + j(-1, 2)),
+            "issued": today - timedelta(days=11),
+            "auditor_response": "Payroll SaaS bridge letter expired last month. Report does not cover the full period.",
+            "next_action": "Obtain updated SOC / bridge or document as CUEC gap.",
         },
         {
-            'id': 'FND-2024-003',
-            'audit_id': 'AUD-2024-001',
-            'title': 'Security Awareness Training Overdue',
-            'description': 'Annual security awareness training not completed for 15% of employees',
-            'severity': 'Medium',
-            'category': 'Training',
-            'control_id': 'CC2.1',
-            'status': 'Open',
-            'assigned_to': 'HR Team',
-            'due_date': datetime.datetime.now() + timedelta(days=20),
-            'remediation_plan': 'Schedule and complete training for remaining employees',
-            'evidence_required': 'Training completion reports, attendance records'
+            "request_id": "PBC-2026-009",
+            "control": "CC1.4 / AT-01 Awareness",
+            "title": "Security awareness completion for the period",
+            "auditor_ask": "Provide completion evidence for the annual campaign and contractor coverage.",
+            "owner": "People Ops",
+            "system_of_record": "LMS",
+            "period_from": pd.Timestamp("2026-01-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "Submitted",
+            "readiness": "Existing trail",
+            "due": today + timedelta(days=8 + j(-2, 3)),
+            "issued": today - timedelta(days=9),
+            "auditor_response": "",
+            "next_action": "Campaign still closing (~88%). Expect a follow-up on contractor cohorts.",
         },
         {
-            'id': 'FND-2024-004',
-            'audit_id': 'AUD-2024-002',
-            'title': 'Critical Security Patch Missing',
-            'description': 'Critical security patch CVE-2024-1234 not applied to production systems',
-            'severity': 'Critical',
-            'category': 'System Security',
-            'control_id': 'A.12.6.1',
-            'status': 'In Progress',
-            'assigned_to': 'IT Operations',
-            'due_date': datetime.datetime.now() + timedelta(days=7),
-            'remediation_plan': 'Apply critical security patch during next maintenance window',
-            'evidence_required': 'Patch deployment logs, system scan results'
+            "request_id": "PBC-2026-010",
+            "control": "CC6.1 / IBM i Security Standard",
+            "title": "*ALLOBJ and QSECOFR day-use in the period",
+            "auditor_ask": "Provide DSPUSRPRF (or equivalent) of special authorities on production LPARs for the period.",
+            "owner": "IBM i Ops",
+            "system_of_record": "IBM i PRODBOX / QAUDJRN",
+            "period_from": pd.Timestamp("2026-05-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "Submitted",
+            "readiness": "Existing trail",
+            "due": today + timedelta(days=6 + j(-1, 2)),
+            "issued": today - timedelta(days=10),
+            "auditor_response": "",
+            "next_action": "Extract is in. Waiver EXC-2026-011 must travel with it or this becomes a finding.",
         },
         {
-            'id': 'FND-2024-005',
-            'audit_id': 'AUD-2024-002',
-            'title': 'Incident Response Plan Not Tested',
-            'description': 'Incident response plan has not been tested in the last 12 months',
-            'severity': 'High',
-            'category': 'Incident Response',
-            'control_id': 'A.16.1.5',
-            'status': 'Open',
-            'assigned_to': 'Security Team',
-            'due_date': datetime.datetime.now() + timedelta(days=60),
-            'remediation_plan': 'Schedule and conduct incident response tabletop exercise',
-            'evidence_required': 'Exercise documentation, lessons learned report'
+            "request_id": "PBC-2026-011",
+            "control": "CC7.3 / IR-01 Incident response",
+            "title": "IR plan tested during the period",
+            "auditor_ask": "Provide evidence the incident response plan was exercised in the review period.",
+            "owner": "SecOps",
+            "system_of_record": "GRC / IR-01 evidence folder",
+            "period_from": pd.Timestamp("2025-08-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "Accepted",
+            "readiness": "Existing trail",
+            "due": today - timedelta(days=12),
+            "issued": today - timedelta(days=21),
+            "auditor_response": "Accepted. Tabletop 2026-07-09 pack was already filed.",
+            "next_action": "None.",
         },
         {
-            'id': 'FND-2024-006',
-            'audit_id': 'AUD-2024-006',
-            'title': 'IBM i *ALLOBJ granted outside break-glass process',
-            'description': 'Production IBM i profiles retain *ALLOBJ without documented exception or removal date',
-            'severity': 'Critical',
-            'category': 'Access Control',
-            'control_id': 'A.9.2.3',
-            'status': 'Open',
-            'assigned_to': 'IBM i Ops',
-            'due_date': datetime.datetime.now() + timedelta(days=14),
-            'remediation_plan': 'Revoke non-essential *ALLOBJ; require ticketed temporary grants',
-            'evidence_required': 'DSPUSRPRF extracts, exception tickets'
+            "request_id": "PBC-2026-012",
+            "control": "CC6.1 / CR-01 Encryption",
+            "title": "Encryption at rest for confidential stores",
+            "auditor_ask": "Provide evidence confidential / restricted storage is encrypted at rest for the period.",
+            "owner": "Security Engineering",
+            "system_of_record": "CSPM",
+            "period_from": pd.Timestamp("2026-05-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "Auditor questions",
+            "readiness": "Scramble",
+            "due": today + timedelta(days=4 + j(-1, 2)),
+            "issued": today - timedelta(days=8),
+            "auditor_response": "Screenshot of one bucket is not a population. Does not show the control operated across in-scope stores.",
+            "next_action": "CSPM query for the period + exception list. One screenshot is not the control.",
         },
         {
-            'id': 'FND-2024-007',
-            'audit_id': 'AUD-2024-006',
-            'title': 'RACF SPECIAL over-assigned on IBM Z',
-            'description': 'RACF SPECIAL attribute present on contractor and CICS region IDs beyond documented need',
-            'severity': 'High',
-            'category': 'Access Control',
-            'control_id': 'A.9.2.5',
-            'status': 'In Progress',
-            'assigned_to': 'Mainframe Security',
-            'due_date': datetime.datetime.now() + timedelta(days=21),
-            'remediation_plan': 'Recertify RACF special attributes; automate LEAVE revoke',
-            'evidence_required': 'RACF LISTUSER reports, recert evidence'
+            "request_id": "PBC-2026-013",
+            "control": "CC6.1 / IA-05 Authenticators",
+            "title": "Authenticator standard operating in the period",
+            "auditor_ask": "Provide evidence the authenticator / password standard was in force (not merely published).",
+            "owner": "IAM",
+            "system_of_record": "IdP policy export + AD",
+            "period_from": pd.Timestamp("2026-02-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "With owner",
+            "readiness": "Scramble",
+            "due": today + timedelta(days=7 + j(-2, 3)),
+            "issued": today - timedelta(days=7),
+            "auditor_response": "v1 was last year's standard PDF. A policy is not operating evidence.",
+            "next_action": "Export live IdP / AD password policy as of period dates. Do not resubmit the PDF.",
         },
         {
-            'id': 'FND-2024-008',
-            'audit_id': 'AUD-2024-006',
-            'title': 'QSECURITY level below corporate standard',
-            'description': 'IBM i production LPAR QSECURITY not meeting minimum level required by security standard',
-            'severity': 'High',
-            'category': 'System Security',
-            'control_id': 'A.8.2.3',
-            'status': 'Open',
-            'assigned_to': 'IBM i Ops',
-            'due_date': datetime.datetime.now() + timedelta(days=30),
-            'remediation_plan': 'Raise QSECURITY with impact assessment and change window',
-            'evidence_required': 'DSPSYSVAL QSECURITY, change record'
+            "request_id": "PBC-2026-014",
+            "control": "PCI 8.3.1 / AC-07",
+            "title": "MFA on PCI CDE jump hosts",
+            "auditor_ask": "Provide evidence MFA operated on CDE administrative access during the period.",
+            "owner": "PCI Lead",
+            "system_of_record": "PAM + exception register",
+            "period_from": pd.Timestamp("2026-05-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "status": "With owner",
+            "readiness": "Existing trail",
+            "due": today + timedelta(days=9 + j(-2, 3)),
+            "issued": today - timedelta(days=5),
+            "auditor_response": "",
+            "next_action": "Disclose EXC-2026-018 (break-glass without MFA) with PAM checkout logs. Do not imply 100% coverage.",
         },
-        {
-            'id': 'FND-2024-009',
-            'audit_id': 'AUD-2024-007',
-            'title': 'SAP ECC SAP_ALL on dual-control IDs unmonitored',
-            'description': 'SAP_ALL assigned to emergency IDs without continuous monitoring or inclusion in access reviews',
-            'severity': 'High',
-            'category': 'Access Control',
-            'control_id': 'CC6.1',
-            'status': 'Open',
-            'assigned_to': 'SAP Basis',
-            'due_date': datetime.datetime.now() + timedelta(days=30),
-            'remediation_plan': 'Wire SAP_ALL usage to SIEM; include in quarterly SOX review',
-            'evidence_required': 'SUIM reports, SIEM alert config'
-        },
-        {
-            'id': 'FND-2024-010',
-            'audit_id': 'AUD-2024-007',
-            'title': 'JD Edwards IFS share permits anonymous read',
-            'description': 'IFS paths hosting World data libraries allow unauthenticated read access',
-            'severity': 'High',
-            'category': 'Data Protection',
-            'control_id': 'CC6.6',
-            'status': 'In Progress',
-            'assigned_to': 'ERP Security',
-            'due_date': datetime.datetime.now() + timedelta(days=25),
-            'remediation_plan': 'Remove anonymous IFS shares; enforce authenticated access',
-            'evidence_required': 'IFS authority listings, remediation CAB'
-        }
-    ]
-    
-    auditors = [
-        {
-            'id': 'AUD-001',
-            'name': 'Sarah Johnson',
-            'firm': 'Deloitte',
-            'specialization': 'SOC 2, ISO 27001',
-            'experience_years': 8,
-            'certifications': ['CISA', 'CISSP', 'ISO 27001 Lead Auditor'],
-            'contact': 'sarah.johnson@deloitte.com',
-            'status': 'Active'
-        },
-        {
-            'id': 'AUD-002',
-            'name': 'Mike Chen',
-            'firm': 'Internal Audit Team',
-            'specialization': 'Internal Audits, Risk Management',
-            'experience_years': 5,
-            'certifications': ['CIA', 'CRMA'],
-            'contact': 'mike.chen@company.com',
-            'status': 'Active'
-        },
-        {
-            'id': 'AUD-003',
-            'name': 'David Wilson',
-            'firm': 'KPMG',
-            'specialization': 'PCI DSS, Financial Audits',
-            'experience_years': 12,
-            'certifications': ['CISA', 'QSA', 'CISM'],
-            'contact': 'david.wilson@kpmg.com',
-            'status': 'Active'
-        },
-        {
-            'id': 'AUD-004',
-            'name': 'Lisa Rodriguez',
-            'firm': 'Internal Audit Team',
-            'specialization': 'Privacy, GDPR, Data Protection',
-            'experience_years': 6,
-            'certifications': ['CIPP/E', 'CIA'],
-            'contact': 'lisa.rodriguez@company.com',
-            'status': 'Active'
-        },
-        {
-            'id': 'AUD-005',
-            'name': 'Robert Thompson',
-            'firm': 'Coalfire',
-            'specialization': 'HITRUST, Healthcare Security',
-            'experience_years': 10,
-            'certifications': ['HITRUST CCSFP', 'CISSP', 'HCISPP'],
-            'contact': 'robert.thompson@coalfire.com',
-            'status': 'Active'
-        }
-    ]
-    
-    audit_plans = [
-        {
-            'id': 'AP-2024-001',
-            'name': '2024 Annual Audit Plan',
-            'year': 2024,
-            'status': 'Approved',
-            'total_audits': 12,
-            'completed_audits': 3,
-            'in_progress_audits': 1,
-            'planned_audits': 8,
-            'budget': 250000,
-            'spent': 75000,
-            'owner': 'Chief Audit Executive'
-        },
-        {
-            'id': 'AP-2024-002',
-            'name': 'Q2 2024 Audit Plan',
-            'year': 2024,
-            'status': 'In Progress',
-            'total_audits': 4,
-            'completed_audits': 1,
-            'in_progress_audits': 2,
-            'planned_audits': 1,
-            'budget': 80000,
-            'spent': 45000,
-            'owner': 'Audit Manager'
-        },
-        {
-            'id': 'AP-2024-003',
-            'name': 'Compliance Audit Plan',
-            'year': 2024,
-            'status': 'Draft',
-            'total_audits': 6,
-            'completed_audits': 2,
-            'in_progress_audits': 0,
-            'planned_audits': 4,
-            'budget': 120000,
-            'spent': 40000,
-            'owner': 'Compliance Director'
-        }
-    ]
-    
-    evidence = [
-        {
-            'id': 'EVD-2024-001',
-            'audit_id': 'AUD-2024-001',
-            'finding_id': 'FND-2024-001',
-            'type': 'Documentation',
-            'name': 'Access Review Policy',
-            'description': 'Updated access review policy with quarterly review requirements',
-            'upload_date': datetime.datetime.now() - timedelta(days=5),
-            'uploaded_by': 'IT Security Team',
-            'status': 'Approved',
-            'file_size': '2.5 MB'
-        },
-        {
-            'id': 'EVD-2024-002',
-            'audit_id': 'AUD-2024-001',
-            'finding_id': 'FND-2024-002',
-            'type': 'Report',
-            'name': 'Vendor Risk Assessment Report',
-            'description': 'Completed vendor risk assessment for Vendor A',
-            'upload_date': datetime.datetime.now() - timedelta(days=3),
-            'uploaded_by': 'Procurement Team',
-            'status': 'Under Review',
-            'file_size': '1.8 MB'
-        },
-        {
-            'id': 'EVD-2024-003',
-            'audit_id': 'AUD-2024-002',
-            'finding_id': 'FND-2024-004',
-            'type': 'Screenshot',
-            'name': 'Patch Deployment Log',
-            'description': 'Screenshot showing successful patch deployment',
-            'upload_date': datetime.datetime.now() - timedelta(days=1),
-            'uploaded_by': 'IT Operations',
-            'status': 'Approved',
-            'file_size': '0.5 MB'
-        }
     ]
 
-    audit_statuses = ['Planned', 'In Progress', 'Completed', 'On Hold']
-    finding_statuses = ['Open', 'In Progress', 'Closed', 'Deferred']
-    for audit in audits:
-        audit['findings_count'] = max(0, int(audit['findings_count']) + int(rng.integers(-2, 3)))
-        if int(rng.integers(0, 3)) == 0:
-            audit['status'] = str(rng.choice(audit_statuses))
-    for finding in findings:
-        if int(rng.integers(0, 2)) == 0:
-            finding['status'] = str(rng.choice(finding_statuses))
+    artifacts = [
+        {
+            "artifact_id": "EVD-2026-001",
+            "request_id": "PBC-2026-001",
+            "version": 1,
+            "name": "Q2 privileged recert export",
+            "source": "GRC-REC-318",
+            "period_from": pd.Timestamp("2026-04-01"),
+            "period_to": pd.Timestamp("2026-06-30"),
+            "submitted": today - timedelta(days=9),
+            "submitted_by": "IAM",
+            "disposition": "Wrong period",
+            "note": "Q2 only. Citrix VDI not in population.",
+        },
+        {
+            "artifact_id": "EVD-2026-002",
+            "request_id": "PBC-2026-001",
+            "version": 2,
+            "name": "Feb–Jul extract (still missing Citrix)",
+            "source": "GRC-REC-331",
+            "period_from": pd.Timestamp("2026-02-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "submitted": today - timedelta(days=2),
+            "submitted_by": "IAM",
+            "disposition": "Insufficient",
+            "note": "Period fixed. Population still incomplete.",
+        },
+        {
+            "artifact_id": "EVD-2026-003",
+            "request_id": "PBC-2026-002",
+            "version": 1,
+            "name": "IdP MFA enforcement report + EXC-2026-001",
+            "source": "CT-2026-009 / exception register",
+            "period_from": pd.Timestamp("2025-08-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "submitted": today - timedelta(days=21),
+            "submitted_by": "IAM",
+            "disposition": "Sufficient",
+            "note": "Already in GRC from the quarterly test. Waiver attached.",
+        },
+        {
+            "artifact_id": "EVD-2026-004",
+            "request_id": "PBC-2026-003",
+            "version": 1,
+            "name": "SIEM source list (current)",
+            "source": "SIEM admin",
+            "period_from": pd.Timestamp("2026-07-22"),
+            "period_to": pd.Timestamp("2026-07-22"),
+            "submitted": today - timedelta(days=8),
+            "submitted_by": "SecOps",
+            "disposition": "Insufficient",
+            "note": "Point-in-time list, not period coverage. Failed test already on file.",
+        },
+        {
+            "artifact_id": "EVD-2026-005",
+            "request_id": "PBC-2026-004",
+            "version": 1,
+            "name": "ERP restore drill pack",
+            "source": "GRC/Evidence/BC-05/2026-Q2",
+            "period_from": pd.Timestamp("2026-06-04"),
+            "period_to": pd.Timestamp("2026-06-04"),
+            "submitted": today - timedelta(days=19),
+            "submitted_by": "Infrastructure",
+            "disposition": "Sufficient",
+            "note": "Filed when the drill ran. Retrieved for the PBC.",
+        },
+        {
+            "artifact_id": "EVD-2026-006",
+            "request_id": "PBC-2026-006",
+            "version": 1,
+            "name": "Firefighter / ST01 extract Feb–Jul",
+            "source": "SAP GRC",
+            "period_from": pd.Timestamp("2026-02-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "submitted": today - timedelta(days=3),
+            "submitted_by": "ERP Security",
+            "disposition": "Pending",
+            "note": "Includes dual-control tickets. SAP_ALL waiver still open.",
+        },
+        {
+            "artifact_id": "EVD-2026-007",
+            "request_id": "PBC-2026-007",
+            "version": 1,
+            "name": "40-change CAB sample",
+            "source": "CT-2026-003 / ServiceNow",
+            "period_from": pd.Timestamp("2026-05-01"),
+            "period_to": pd.Timestamp("2026-06-30"),
+            "submitted": today - timedelta(days=18),
+            "submitted_by": "IT Operations",
+            "disposition": "Sufficient",
+            "note": "Same pack used for the control test.",
+        },
+        {
+            "artifact_id": "EVD-2026-008",
+            "request_id": "PBC-2026-008",
+            "version": 1,
+            "name": "Tier-1 SOC zip (incl. expired payroll bridge)",
+            "source": "TPRM-T1-26",
+            "period_from": pd.Timestamp("2025-08-01"),
+            "period_to": pd.Timestamp("2026-06-15"),
+            "submitted": today - timedelta(days=6),
+            "submitted_by": "TPRM",
+            "disposition": "Wrong period",
+            "note": "Payroll SaaS coverage ended before period end.",
+        },
+        {
+            "artifact_id": "EVD-2026-009",
+            "request_id": "PBC-2026-009",
+            "version": 1,
+            "name": "LMS completion export",
+            "source": "AWR-2026",
+            "period_from": pd.Timestamp("2026-01-01"),
+            "period_to": pd.Timestamp("2026-08-01"),
+            "submitted": today - timedelta(days=4),
+            "submitted_by": "People Ops",
+            "disposition": "Pending",
+            "note": "88% complete; contractors flagged.",
+        },
+        {
+            "artifact_id": "EVD-2026-010",
+            "request_id": "PBC-2026-010",
+            "version": 1,
+            "name": "DSPUSRPRF special authorities + EXC-2026-011",
+            "source": "IBMi-Q3-REV",
+            "period_from": pd.Timestamp("2026-05-01"),
+            "period_to": pd.Timestamp("2026-07-31"),
+            "submitted": today - timedelta(days=1),
+            "submitted_by": "IBM i Ops",
+            "disposition": "Pending",
+            "note": "Waiver must stay attached.",
+        },
+        {
+            "artifact_id": "EVD-2026-011",
+            "request_id": "PBC-2026-011",
+            "version": 1,
+            "name": "Ransomware tabletop after-action",
+            "source": "GRC/Evidence/IR-01/2026-Q3",
+            "period_from": pd.Timestamp("2026-07-09"),
+            "period_to": pd.Timestamp("2026-07-09"),
+            "submitted": today - timedelta(days=20),
+            "submitted_by": "SecOps",
+            "disposition": "Sufficient",
+            "note": "Already on the evidence shelf.",
+        },
+        {
+            "artifact_id": "EVD-2026-012",
+            "request_id": "PBC-2026-012",
+            "version": 1,
+            "name": "Screenshot — one confidential bucket",
+            "source": "Console screenshot",
+            "period_from": pd.Timestamp("2026-08-12"),
+            "period_to": pd.Timestamp("2026-08-12"),
+            "submitted": today - timedelta(days=5),
+            "submitted_by": "Security Engineering",
+            "disposition": "Insufficient",
+            "note": "Does not support the control. Not a population, not the period.",
+        },
+        {
+            "artifact_id": "EVD-2026-013",
+            "request_id": "PBC-2026-013",
+            "version": 1,
+            "name": "Authenticator Standard v4.0 PDF",
+            "source": "Policy library STD-2026-006",
+            "period_from": pd.Timestamp("2026-04-01"),
+            "period_to": pd.Timestamp("2026-04-01"),
+            "submitted": today - timedelta(days=6),
+            "submitted_by": "IAM",
+            "disposition": "Duplicate",
+            "note": "Publishing a standard is not evidence it operated. Auditor sent it back.",
+        },
+        {
+            "artifact_id": "EVD-2026-014",
+            "request_id": "PBC-2026-014",
+            "version": 1,
+            "name": "PAM checkout log + EXC-2026-018",
+            "source": "PAM / exception register",
+            "period_from": pd.Timestamp("2026-07-01"),
+            "period_to": pd.Timestamp("2026-08-17"),
+            "submitted": pd.NaT,
+            "submitted_by": "PCI Lead",
+            "disposition": "Pending",
+            "note": "Staged, not yet sent. Period starts late vs request.",
+        },
+    ]
 
-    return audits, findings, auditors, audit_plans, evidence
+    req = pd.DataFrame(requests)
+    art = pd.DataFrame(artifacts)
+    for col in ("period_from", "period_to", "due", "issued"):
+        req[col] = pd.to_datetime(req[col], errors="coerce")
+    for col in ("period_from", "period_to", "submitted"):
+        art[col] = pd.to_datetime(art[col], errors="coerce")
+    return req, art
 
 
-_FINDING_STATUS_ORDER = ['Open', 'In Progress', 'Closed']
+def _enrich(req: pd.DataFrame, art: pd.DataFrame) -> pd.DataFrame:
+    out = req.copy()
+    today = _today()
+    out["days_to_due"] = (out["due"] - today).dt.days
+    open_row = ~out["status"].isin(["Accepted", "Deficiency"])
+    out["is_overdue"] = open_row & (out["days_to_due"] < 0)
+    counts = art.groupby("request_id").size().rename("artifact_count")
+    versions = art.groupby("request_id")["version"].max().rename("latest_version")
+    out = out.merge(counts, left_on="request_id", right_index=True, how="left")
+    out = out.merge(versions, left_on="request_id", right_index=True, how="left")
+    out["artifact_count"] = out["artifact_count"].fillna(0).astype(int)
+    out["latest_version"] = out["latest_version"].fillna(0).astype(int)
+    return out
 
 
-def _advance_finding_status(status: str) -> str:
-    if status not in _FINDING_STATUS_ORDER or status == _FINDING_STATUS_ORDER[-1]:
-        return status
-    return _FINDING_STATUS_ORDER[_FINDING_STATUS_ORDER.index(status) + 1]
-
-
-def _sync_audits(seed: int) -> None:
-    if st.session_state.get('_audit_seed') != seed or not st.session_state.get('audits'):
-        audits, findings, auditors, audit_plans, evidence = generate_sample_data(seed)
-        st.session_state.audits = audits
-        st.session_state.findings = findings
-        st.session_state.auditors = auditors
-        st.session_state.audit_plans = audit_plans
-        st.session_state.evidence = evidence
+def _sync(seed: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    if st.session_state.get("_audit_seed") != seed or "pbc" not in st.session_state:
+        req, art = _sample(seed)
+        st.session_state.pbc = req
+        st.session_state.artifacts = art
         st.session_state._audit_seed = seed
+    return st.session_state.pbc, st.session_state.artifacts
 
 
-def main():
-    portfolio_skin.page_header(
-        title="Audit Management System",
-        lede="Interactive GRC tool — #RUNGRCRaleigh build-in-public.",
-        kicker="Audit",
-    )
-    st.markdown("Comprehensive audit planning, execution, and findings management platform")
+def _save_req(df: pd.DataFrame) -> None:
+    st.session_state.pbc = df.reset_index(drop=True)
 
-    with st.sidebar:
-        st.title("Navigation")
-        seed = demo_kit.seed_controls()
-        st.markdown("---")
-        page = st.selectbox(
-            "Select Module",
-            ["Dashboard", "Audits", "Findings", "Auditors", "Audit Plans", "Evidence", "Reports", "Analytics"]
+
+def _save_art(df: pd.DataFrame) -> None:
+    st.session_state.artifacts = df.reset_index(drop=True)
+
+
+def _patch_req(request_id: str, **fields) -> None:
+    df = st.session_state.pbc.copy()
+    loc = df.index[df["request_id"] == request_id]
+    if len(loc) == 0:
+        return
+    i = loc[0]
+    for k, v in fields.items():
+        df.at[i, k] = v
+    _save_req(df)
+
+
+def _metrics(req: pd.DataFrame, art: pd.DataFrame) -> dict:
+    e = _enrich(req, art)
+    open_n = int((~e["status"].isin(["Accepted", "Deficiency"])).sum())
+    existing = int((e["readiness"] == "Existing trail").sum())
+    scramble = int((e["readiness"] == "Scramble").sum())
+    return {
+        "open": open_n,
+        "overdue": int(e["is_overdue"].sum()),
+        "questions": int((e["status"] == "Auditor questions").sum()),
+        "accepted": int((e["status"] == "Accepted").sum()),
+        "existing": existing,
+        "scramble": scramble,
+        "resubmits": int((e["latest_version"] >= 2).sum()),
+    }
+
+
+def _fmt(ts) -> str:
+    if pd.isna(ts):
+        return "—"
+    return pd.Timestamp(ts).strftime("%Y-%m-%d")
+
+
+def _trail(row: pd.Series, art: pd.DataFrame) -> None:
+    st.markdown(f"### {row['request_id']} · {row['title']}")
+    st.caption(f"{ENGAGEMENT['name']} · review period {ENGAGEMENT['period']}")
+    st.write(f"**Auditor asked:** {row['auditor_ask']}")
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.write(f"**Control:** {row['control']}")
+        st.write(f"**Owner:** {row['owner']}")
+        st.write(f"**System of record:** {row['system_of_record']}")
+        st.write(f"**Readiness:** {row['readiness']}")
+    with c2:
+        st.write(f"**Period requested:** {_fmt(row['period_from'])} → {_fmt(row['period_to'])}")
+        st.write(f"**Status:** {row['status']}")
+        st.write(f"**Due:** {_fmt(row['due'])} ({int(row['days_to_due'])}d)")
+        st.write(f"**Issued:** {_fmt(row['issued'])} · artifacts: {int(row['artifact_count'])} · v{int(row['latest_version'])}")
+
+    linked = art[art["request_id"] == row["request_id"]].sort_values("version")
+    st.markdown("**Evidence submitted**")
+    if linked.empty:
+        st.warning("Nothing on the trail yet. That is the archaeological expedition.")
+    else:
+        show = linked.copy()
+        show["period"] = show["period_from"].apply(_fmt) + " → " + show["period_to"].apply(_fmt)
+        show["submitted"] = show["submitted"].apply(_fmt)
+        st.dataframe(
+            show[
+                [
+                    "artifact_id",
+                    "version",
+                    "name",
+                    "source",
+                    "period",
+                    "submitted",
+                    "submitted_by",
+                    "disposition",
+                    "note",
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True,
         )
-        st.caption("Sample / mock data only.")
-    _sync_audits(seed)
-    
-    if page == "Dashboard":
-        show_dashboard()
-    elif page == "Audits":
-        show_audits()
-    elif page == "Findings":
-        show_findings()
-    elif page == "Auditors":
-        show_auditors()
-    elif page == "Audit Plans":
-        show_audit_plans()
-    elif page == "Evidence":
-        show_evidence()
-    elif page == "Reports":
-        show_reports()
-    elif page == "Analytics":
-        show_analytics()
+        bad = linked[linked["disposition"].isin(["Insufficient", "Wrong period", "Duplicate"])]
+        if not bad.empty:
+            st.caption(
+                "Insufficient / wrong period / duplicate means the artifact did not support the control "
+                "for the period asked — not that a file failed to attach."
+            )
 
-def show_dashboard():
-    st.header("Audit Management Dashboard")
-    
-    # Key metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        total_audits = len(st.session_state.audits)
-        completed_audits = len([a for a in st.session_state.audits if a['status'] == 'Completed'])
-        st.metric(
-            label="Total Audits",
-            value=total_audits,
-            delta=f"{completed_audits} completed"
-        )
-    
-    with col2:
-        total_findings = len(st.session_state.findings)
-        open_findings = len([f for f in st.session_state.findings if f['status'] == 'Open'])
-        st.metric(
-            label="Total Findings",
-            value=total_findings,
-            delta=f"{open_findings} open"
-        )
-    
-    with col3:
-        critical_findings = len([f for f in st.session_state.findings if f['severity'] == 'Critical'])
-        high_findings = len([f for f in st.session_state.findings if f['severity'] == 'High'])
-        st.metric(
-            label="Critical/High Findings",
-            value=critical_findings + high_findings,
-            delta=f"{critical_findings} critical"
-        )
-    
-    with col4:
-        avg_completion_time = np.mean([30, 45, 60, 90])  # Sample completion times
-        st.metric(
-            label="Avg Completion (days)",
-            value=f"{avg_completion_time:.0f}",
-            delta="-5 days"
-        )
-    
-    # Charts
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Audit Status Distribution")
-        status_counts = pd.DataFrame(st.session_state.audits)['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="Audit Status")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Findings by Severity")
-        severity_counts = pd.DataFrame(st.session_state.findings)['severity'].value_counts()
-        fig = px.bar(x=severity_counts.index, y=severity_counts.values, 
-                    title="Findings by Severity",
-                    color=severity_counts.index,
-                    color_discrete_map={'Critical': 'red', 'High': 'orange', 'Medium': 'yellow', 'Low': 'green'})
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Recent activity
-    st.subheader("Recent Activity")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("**Recent Audits**")
-        recent_audits = sorted(st.session_state.audits, 
-                             key=lambda x: x['start_date'], reverse=True)[:5]
-        for audit in recent_audits:
-            st.write(f"• {audit['name']} - {audit['status']} ({audit['start_date'].strftime('%Y-%m-%d')})")
-    
-    with col2:
-        st.write("**Recent Findings**")
-        recent_findings = sorted(st.session_state.findings, 
-                               key=lambda x: x.get('due_date', datetime.datetime.now()), reverse=True)[:5]
-        for finding in recent_findings:
-            st.write(f"• {finding['title']} - {finding['severity']} ({finding['status']})")
+    st.markdown("**Auditor response**")
+    st.write(row["auditor_response"] or "— (none yet)")
+    st.markdown("**Next**")
+    st.write(row["next_action"] or "—")
 
-def show_audits():
-    st.header("Audits")
-    
-    # Add new audit
-    with st.expander("Add New Audit"):
-        with st.form("new_audit"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Audit Name")
-                audit_type = st.selectbox("Audit Type", ["Internal", "External", "Third Party"])
-                framework = st.selectbox("Framework", ["SOC 2", "ISO 27001", "PCI DSS", "GDPR", "HITRUST CSF", "NIST CSF", "Other"])
-                scope = st.text_area("Scope")
-            
-            with col2:
-                start_date = st.date_input("Start Date")
-                end_date = st.date_input("End Date")
-                auditor = st.text_input("Auditor")
-                lead_auditor = st.text_input("Lead Auditor")
-            
-            if st.form_submit_button("Add Audit"):
-                new_audit = {
-                    'id': f'AUD-{datetime.datetime.now().year}-{len(st.session_state.audits)+1:03d}',
-                    'name': name,
-                    'type': audit_type,
-                    'framework': framework,
-                    'scope': scope,
-                    'start_date': datetime.datetime.combine(start_date, datetime.time()),
-                    'end_date': datetime.datetime.combine(end_date, datetime.time()),
-                    'status': 'Planned',
-                    'auditor': auditor,
-                    'lead_auditor': lead_auditor,
-                    'rating': 'Not Started',
-                    'findings_count': 0,
-                    'critical_findings': 0,
-                    'high_findings': 0,
-                    'medium_findings': 0,
-                    'low_findings': 0
-                }
-                st.session_state.audits.append(new_audit)
-                st.success("Audit added successfully!")
-    
-    # Display audits
-    df = pd.DataFrame(st.session_state.audits)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        type_filter = st.selectbox("Filter by Type", ["All"] + list(df['type'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col3:
-        framework_filter = st.selectbox("Filter by Framework", ["All"] + list(df['framework'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if type_filter != "All":
-        filtered_df = filtered_df[filtered_df['type'] == type_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    if framework_filter != "All":
-        filtered_df = filtered_df[filtered_df['framework'] == framework_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Audit details
-    if st.checkbox("Show Audit Details"):
-        selected_audit = st.selectbox("Select Audit", df['name'].tolist())
-        audit = next((a for a in st.session_state.audits if a['name'] == selected_audit), None)
-        
-        if audit:
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write(f"**Audit ID:** {audit['id']}")
-                st.write(f"**Type:** {audit['type']}")
-                st.write(f"**Framework:** {audit['framework']}")
-                st.write(f"**Status:** {audit['status']}")
-                st.write(f"**Rating:** {audit['rating']}")
-            
-            with col2:
-                st.write(f"**Auditor:** {audit['auditor']}")
-                st.write(f"**Lead Auditor:** {audit['lead_auditor']}")
-                st.write(f"**Start Date:** {audit['start_date'].strftime('%Y-%m-%d')}")
-                st.write(f"**End Date:** {audit['end_date'].strftime('%Y-%m-%d')}")
-                st.write(f"**Findings:** {audit['findings_count']} total")
-            
-            st.write("**Scope:**")
-            st.write(audit['scope'])
 
-def show_findings():
-    st.header("Findings")
-    
-    # Add new finding
-    with st.expander("Add New Finding"):
-        with st.form("new_finding"):
-            col1, col2 = st.columns(2)
-            with col1:
-                audit_id = st.selectbox("Audit", [a['id'] for a in st.session_state.audits])
-                title = st.text_input("Finding Title")
-                severity = st.selectbox("Severity", ["Critical", "High", "Medium", "Low"])
-                category = st.selectbox("Category", ["Access Control", "Vendor Management", "Training", "System Security", "Incident Response", "Data Protection", "Network Security", "Physical Security"])
-            
-            with col2:
-                control_id = st.text_input("Control ID")
-                status = st.selectbox("Status", ["Open", "In Progress", "Resolved", "Closed"])
-                assigned_to = st.text_input("Assigned To")
-                due_date = st.date_input("Due Date")
-            
-            description = st.text_area("Description")
-            remediation_plan = st.text_area("Remediation Plan")
-            evidence_required = st.text_area("Evidence Required")
-            
-            if st.form_submit_button("Add Finding"):
-                new_finding = {
-                    'id': f'FND-{datetime.datetime.now().year}-{len(st.session_state.findings)+1:03d}',
-                    'audit_id': audit_id,
-                    'title': title,
-                    'description': description,
-                    'severity': severity,
-                    'category': category,
-                    'control_id': control_id,
-                    'status': status,
-                    'assigned_to': assigned_to,
-                    'due_date': datetime.datetime.combine(due_date, datetime.time()),
-                    'remediation_plan': remediation_plan,
-                    'evidence_required': evidence_required
-                }
-                st.session_state.findings.append(new_finding)
-                st.success("Finding added successfully!")
-    
-    # Display findings
-    df = pd.DataFrame(st.session_state.findings)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        severity_filter = st.selectbox("Filter by Severity", ["All"] + list(df['severity'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col3:
-        category_filter = st.selectbox("Filter by Category", ["All"] + list(df['category'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if severity_filter != "All":
-        filtered_df = filtered_df[filtered_df['severity'] == severity_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    if category_filter != "All":
-        filtered_df = filtered_df[filtered_df['category'] == category_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-
-    if not filtered_df.empty:
-        pick = st.selectbox("Advance finding status for", filtered_df['id'].tolist())
-        if st.button("Advance selected finding status"):
-            for i, finding in enumerate(st.session_state.findings):
-                if finding['id'] == pick:
-                    st.session_state.findings[i]['status'] = _advance_finding_status(
-                        finding['status']
-                    )
-                    break
+def _actions(row: pd.Series, *, key: str) -> None:
+    rid = row["request_id"]
+    a1, a2, a3, a4 = st.columns(4)
+    with a1:
+        if row["status"] == "Not started" and st.button(
+            "Send to owner", key=f"own_{key}", use_container_width=True
+        ):
+            _patch_req(rid, status="With owner")
+            st.rerun()
+    with a2:
+        if row["status"] in {"Not started", "With owner", "Auditor questions"} and st.button(
+            "Submit to auditor", key=f"sub_{key}", use_container_width=True
+        ):
+            _patch_req(rid, status="Submitted")
+            st.rerun()
+    with a3:
+        if row["status"] in {"Submitted", "Auditor questions"} and st.button(
+            "Mark accepted", key=f"ok_{key}", use_container_width=True
+        ):
+            _patch_req(
+                rid,
+                status="Accepted",
+                auditor_response=row["auditor_response"] or "Accepted (demo).",
+                next_action="None.",
+            )
+            st.rerun()
+    with a4:
+        if row["status"] not in {"Accepted", "Deficiency"} and st.button(
+            "Flag questions", key=f"q_{key}", use_container_width=True
+        ):
+            _patch_req(
+                rid,
+                status="Auditor questions",
+                auditor_response=row["auditor_response"]
+                or "Follow-up: period, population, or support for the control is unclear.",
+            )
             st.rerun()
 
-    # Finding details
-    if st.checkbox("Show Finding Details"):
-        selected_finding = st.selectbox("Select Finding", df['title'].tolist())
-        finding = next((f for f in st.session_state.findings if f['title'] == selected_finding), None)
-        
-        if finding:
-            col1, col2 = st.columns(2)
-            with col1:
-                st.write(f"**Finding ID:** {finding['id']}")
-                st.write(f"**Audit ID:** {finding['audit_id']}")
-                st.write(f"**Severity:** {finding['severity']}")
-                st.write(f"**Category:** {finding['category']}")
-                st.write(f"**Control ID:** {finding['control_id']}")
-            
-            with col2:
-                st.write(f"**Status:** {finding['status']}")
-                st.write(f"**Assigned To:** {finding['assigned_to']}")
-                st.write(f"**Due Date:** {finding['due_date'].strftime('%Y-%m-%d')}")
-            
-            st.write("**Description:**")
-            st.write(finding['description'])
-            st.write("**Remediation Plan:**")
-            st.write(finding['remediation_plan'])
-            st.write("**Evidence Required:**")
-            st.write(finding['evidence_required'])
 
-def show_auditors():
-    st.header("Auditors")
-    
-    # Add new auditor
-    with st.expander("Add New Auditor"):
-        with st.form("new_auditor"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Auditor Name")
-                firm = st.text_input("Firm")
-                specialization = st.text_input("Specialization")
-                experience_years = st.number_input("Experience (years)", min_value=0, max_value=50, value=5)
-            
-            with col2:
-                certifications = st.text_area("Certifications (comma-separated)")
-                contact = st.text_input("Contact Email")
-                status = st.selectbox("Status", ["Active", "Inactive", "Retired"])
-            
-            if st.form_submit_button("Add Auditor"):
-                new_auditor = {
-                    'id': f'AUD-{len(st.session_state.auditors)+1:03d}',
-                    'name': name,
-                    'firm': firm,
-                    'specialization': specialization,
-                    'experience_years': experience_years,
-                    'certifications': [c.strip() for c in certifications.split(',') if c.strip()],
-                    'contact': contact,
-                    'status': status
-                }
-                st.session_state.auditors.append(new_auditor)
-                st.success("Auditor added successfully!")
-    
-    # Display auditors
-    df = pd.DataFrame(st.session_state.auditors)
-    st.dataframe(df, use_container_width=True)
-    
-    # Auditor overview
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Auditors by Firm")
-        firm_counts = df['firm'].value_counts()
-        fig = px.pie(values=firm_counts.values, names=firm_counts.index, 
-                    title="Auditors by Firm")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Experience Distribution")
-        fig = px.histogram(df, x='experience_years', nbins=10,
-                          title="Auditor Experience Distribution",
-                          labels={'experience_years': 'Years of Experience'})
-        st.plotly_chart(fig, use_container_width=True)
+def _queue(title: str, subset: pd.DataFrame, art: pd.DataFrame, empty: str, key_prefix: str) -> None:
+    st.markdown(f"**{title} ({len(subset)})**")
+    if subset.empty:
+        st.info(empty)
+        return
+    for _, row in subset.iterrows():
+        due = f"{int(row['days_to_due'])}d" if row["days_to_due"] >= 0 else f"{abs(int(row['days_to_due']))}d overdue"
+        with st.expander(
+            f"{row['request_id']} · {row['title']} · {row['status']} · {due} · {row['readiness']}"
+        ):
+            _trail(row, art)
+            _actions(row, key=f"{key_prefix}_{row['request_id']}")
 
-def show_audit_plans():
-    st.header("Audit Plans")
-    
-    # Add new audit plan
-    with st.expander("Add New Audit Plan"):
-        with st.form("new_plan"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Plan Name")
-                year = st.number_input("Year", min_value=2020, max_value=2030, value=datetime.datetime.now().year)
-                total_audits = st.number_input("Total Audits", min_value=1, max_value=100, value=12)
-                budget = st.number_input("Budget ($)", min_value=0, max_value=1000000, value=100000)
-            
-            with col2:
-                owner = st.text_input("Plan Owner")
-                status = st.selectbox("Status", ["Draft", "Under Review", "Approved", "In Progress", "Completed"])
-            
-            if st.form_submit_button("Add Plan"):
-                new_plan = {
-                    'id': f'AP-{year}-{len(st.session_state.audit_plans)+1:03d}',
-                    'name': name,
-                    'year': year,
-                    'status': status,
-                    'total_audits': total_audits,
-                    'completed_audits': 0,
-                    'in_progress_audits': 0,
-                    'planned_audits': total_audits,
-                    'budget': budget,
-                    'spent': 0,
-                    'owner': owner
-                }
-                st.session_state.audit_plans.append(new_plan)
-                st.success("Audit plan added successfully!")
-    
-    # Display plans
-    df = pd.DataFrame(st.session_state.audit_plans)
-    st.dataframe(df, use_container_width=True)
-    
-    # Plan overview
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Plan Status Distribution")
-        status_counts = df['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="Audit Plan Status")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Budget vs Spent")
-        fig = px.bar(df, x='name', y=['budget', 'spent'], 
-                    title="Budget vs Spent by Plan",
-                    barmode='group')
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
 
-def show_evidence():
-    st.header("Evidence")
-    
-    # Add new evidence
-    with st.expander("Add New Evidence"):
-        with st.form("new_evidence"):
-            col1, col2 = st.columns(2)
-            with col1:
-                audit_id = st.selectbox("Audit", [a['id'] for a in st.session_state.audits])
-                finding_id = st.selectbox("Finding", [f['id'] for f in st.session_state.findings])
-                evidence_type = st.selectbox("Evidence Type", ["Documentation", "Report", "Screenshot", "Log", "Policy", "Procedure", "Training Record", "Other"])
-                name = st.text_input("Evidence Name")
-            
-            with col2:
-                uploaded_by = st.text_input("Uploaded By")
-                status = st.selectbox("Status", ["Under Review", "Approved", "Rejected", "Pending"])
-                file_size = st.text_input("File Size", value="1.0 MB")
-            
-            description = st.text_area("Description")
-            
-            if st.form_submit_button("Add Evidence"):
-                new_evidence = {
-                    'id': f'EVD-{datetime.datetime.now().year}-{len(st.session_state.evidence)+1:03d}',
-                    'audit_id': audit_id,
-                    'finding_id': finding_id,
-                    'type': evidence_type,
-                    'name': name,
-                    'description': description,
-                    'upload_date': datetime.datetime.now(),
-                    'uploaded_by': uploaded_by,
-                    'status': status,
-                    'file_size': file_size
-                }
-                st.session_state.evidence.append(new_evidence)
-                st.success("Evidence added successfully!")
-    
-    # Display evidence
-    df = pd.DataFrame(st.session_state.evidence)
-    st.dataframe(df, use_container_width=True)
-    
-    # Evidence overview
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Evidence by Type")
-        type_counts = df['type'].value_counts()
-        fig = px.pie(values=type_counts.values, names=type_counts.index, 
-                    title="Evidence by Type")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Evidence Status")
-        status_counts = df['status'].value_counts()
-        fig = px.bar(x=status_counts.index, y=status_counts.values, 
-                    title="Evidence Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-
-def show_reports():
-    st.header("Reports & Analytics")
-    
-    # Report options
-    report_type = st.selectbox("Select Report Type", [
-        "Audit Summary Report",
-        "Findings Report",
-        "Compliance Report",
-        "Auditor Performance Report",
-        "Budget Report"
-    ])
-    
-    if report_type == "Audit Summary Report":
-        st.subheader("Audit Summary Report")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("**Executive Summary**")
-            st.write(f"• Total Audits: {len(st.session_state.audits)}")
-            st.write(f"• Completed Audits: {len([a for a in st.session_state.audits if a['status'] == 'Completed'])}")
-            st.write(f"• In Progress Audits: {len([a for a in st.session_state.audits if a['status'] == 'In Progress'])}")
-            st.write(f"• Planned Audits: {len([a for a in st.session_state.audits if a['status'] == 'Planned'])}")
-        
-        with col2:
-            st.write("**Key Metrics**")
-            st.write(f"• Total Findings: {len(st.session_state.findings)}")
-            st.write(f"• Critical Findings: {len([f for f in st.session_state.findings if f['severity'] == 'Critical'])}")
-            st.write(f"• High Findings: {len([f for f in st.session_state.findings if f['severity'] == 'High'])}")
-            st.write(f"• Open Findings: {len([f for f in st.session_state.findings if f['status'] == 'Open'])}")
-    
-    elif report_type == "Findings Report":
-        st.subheader("Findings Report")
-        
-        df_findings = pd.DataFrame(st.session_state.findings)
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("**Findings Statistics**")
-            st.write(f"• Total Findings: {len(df_findings)}")
-            st.write(f"• Open Findings: {len(df_findings[df_findings['status'] == 'Open'])}")
-            st.write(f"• In Progress: {len(df_findings[df_findings['status'] == 'In Progress'])}")
-            st.write(f"• Resolved: {len(df_findings[df_findings['status'] == 'Resolved'])}")
-        
-        with col2:
-            st.write("**Severity Breakdown**")
-            severity_counts = df_findings['severity'].value_counts()
-            for severity, count in severity_counts.items():
-                st.write(f"• {severity}: {count}")
-    
-    # Export functionality
-    st.subheader("Export Data")
-    export_audits = pd.DataFrame(st.session_state.audits).copy()
-    for col in ('start_date', 'end_date'):
-        if col in export_audits.columns:
-            export_audits[col] = export_audits[col].astype(str)
-    demo_kit.csv_download(export_audits, "audits.csv", label="Download audits CSV")
-    export_findings = pd.DataFrame(st.session_state.findings).copy()
-    if 'due_date' in export_findings.columns:
-        export_findings['due_date'] = export_findings['due_date'].astype(str)
-    demo_kit.csv_download(
-        export_findings, "audit_findings.csv", label="Download findings CSV", key="audit_findings_csv"
+def main() -> None:
+    portfolio_skin.page_header(
+        title="Audit Management System",
+        lede="A request is a sentence. The work is the trail: control, owner, evidence, period, auditor response, next. Club demo — not a system of record.",
+        kicker="Audit readiness",
     )
 
-    export_format = st.selectbox("Export Format", ["CSV", "JSON", "Excel"])
-    
-    if st.button("Export Data"):
-        if export_format == "CSV":
-            # Export to CSV
-            df_audits = pd.DataFrame(st.session_state.audits)
-            csv = df_audits.to_csv(index=False)
-            st.download_button(
-                label="Download CSV",
-                data=csv,
-                file_name="audits.csv",
-                mime="text/csv"
-            )
-        elif export_format == "JSON":
-            # Export to JSON
-            json_data = json.dumps(st.session_state.audits, default=str, indent=2)
-            st.download_button(
-                label="Download JSON",
-                data=json_data,
-                file_name="audits.json",
-                mime="application/json"
-            )
+    seed = demo_kit.seed_controls()
+    req, art = _sync(seed)
+    enriched = _enrich(req, art)
+    m = _metrics(req, art)
 
-def show_analytics():
-    st.header("Analytics & Insights")
-    
-    # Calculate metrics
-    total_audits = len(st.session_state.audits)
-    completed_audits = len([a for a in st.session_state.audits if a['status'] == 'Completed'])
-    completion_rate = (completed_audits / total_audits * 100) if total_audits > 0 else 0
-    
-    total_findings = len(st.session_state.findings)
-    open_findings = len([f for f in st.session_state.findings if f['status'] == 'Open'])
-    resolution_rate = ((total_findings - open_findings) / total_findings * 100) if total_findings > 0 else 0
-    
-    # Display metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Audit Completion Rate", f"{completion_rate:.1f}%")
-        st.metric("Total Audits", total_audits)
-    
-    with col2:
-        st.metric("Findings Resolution Rate", f"{resolution_rate:.1f}%")
-        st.metric("Total Findings", total_findings)
-    
-    with col3:
-        st.metric("Critical Findings", len([f for f in st.session_state.findings if f['severity'] == 'Critical']))
-        st.metric("High Findings", len([f for f in st.session_state.findings if f['severity'] == 'High']))
-    
-    with col4:
-        st.metric("Active Auditors", len([a for a in st.session_state.auditors if a['status'] == 'Active']))
-        st.metric("Evidence Items", len(st.session_state.evidence))
-    
-    # Trend analysis
-    st.subheader("Audit Trends")
-    df_audits = pd.DataFrame(st.session_state.audits)
-    df_audits['start_date'] = pd.to_datetime(df_audits['start_date'])
-    df_audits['month'] = df_audits['start_date'].dt.to_period('M')
-    
-    monthly_audits = df_audits.groupby('month').size().reset_index(name='count')
-    monthly_audits['month'] = monthly_audits['month'].astype(str)
-    
-    fig = px.line(monthly_audits, x='month', y='count', 
-                  title="Monthly Audit Volume",
-                  labels={'count': 'Number of Audits', 'month': 'Month'})
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Framework analysis
-    st.subheader("Audits by Framework")
-    framework_counts = df_audits['framework'].value_counts()
-    fig = px.bar(x=framework_counts.index, y=framework_counts.values, 
-                title="Audits by Framework")
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Findings analysis
-    st.subheader("Findings by Category")
-    df_findings = pd.DataFrame(st.session_state.findings)
-    category_counts = df_findings['category'].value_counts()
-    fig = px.pie(values=category_counts.values, names=category_counts.index, 
-                title="Findings by Category")
-    st.plotly_chart(fig, use_container_width=True)
+    st.sidebar.markdown("---")
+    st.sidebar.caption(f"{ENGAGEMENT['name']}")
+    st.sidebar.caption(ENGAGEMENT["auditor"])
+    st.sidebar.caption(f"Period {ENGAGEMENT['period']}")
+    st.sidebar.subheader("Filters")
+    status_f = st.sidebar.multiselect("Status", STATUSES, default=STATUSES)
+    ready_f = st.sidebar.multiselect("Readiness", READINESS, default=READINESS)
+    owners = sorted(req["owner"].astype(str).unique())
+    owner_f = st.sidebar.multiselect("Owner", owners, default=owners)
+
+    filtered = enriched[
+        enriched["status"].isin(status_f)
+        & enriched["readiness"].isin(ready_f)
+        & enriched["owner"].isin(owner_f)
+    ]
+
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Open requests", m["open"])
+    k2.metric("Overdue", m["overdue"])
+    k3.metric("Auditor questions", m["questions"])
+    k4.metric("Accepted", m["accepted"])
+    st.caption(
+        f"Existing trail: {m['existing']} · Scramble after the request: {m['scramble']} · "
+        f"Resubmits (v2+): {m['resubmits']}"
+    )
+
+    work, trail, register, intake, export = st.tabs(
+        ["Workbench", "Request trail", "Register", "Intake", "Export"]
+    )
+
+    with work:
+        st.subheader("What still needs a human")
+        st.caption(
+            "Audit readiness is whether the trail already existed. "
+            "Overdue and 'auditor questions' are where scramble shows."
+        )
+        overdue = enriched[enriched["is_overdue"]].sort_values("days_to_due")
+        questions = enriched[enriched["status"].eq("Auditor questions")].sort_values("due")
+        with_owner = enriched[enriched["status"].isin(["Not started", "With owner"])].sort_values("due")
+        sitting = enriched[enriched["status"].eq("Submitted")].sort_values("due")
+
+        _queue("Overdue", overdue, art, "Nothing past due.", "od")
+        _queue(
+            "Auditor questions — evidence did not support the ask",
+            questions,
+            art,
+            "No open follow-ups.",
+            "q",
+        )
+        _queue("Not submitted (not started / with owner)", with_owner, art, "Owners have sent their packs.", "own")
+        _queue("Submitted — waiting on the auditor", sitting, art, "Nothing in the auditor's inbox.", "sit")
+
+    with trail:
+        st.subheader("Reconstruct one request")
+        st.caption(
+            "If another person cannot follow this without the employee who remembers where the file lives, "
+            "you do not have a trail — you have folklore."
+        )
+        ids = filtered["request_id"].tolist()
+        if not ids:
+            st.info("Nothing in the current filter.")
+        else:
+            pick = st.selectbox("Request", ids)
+            row = enriched[enriched["request_id"] == pick].iloc[0]
+            _trail(row, art)
+            _actions(row, key=f"trail_{pick}")
+
+            with st.expander("Attach another artifact version"):
+                with st.form(f"art_{pick}"):
+                    name = st.text_input("Artifact name", placeholder="e.g. Citrix recert extract v3")
+                    source = st.text_input("Source system / ticket")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        p_from = st.date_input("Period from", value=row["period_from"].date())
+                    with c2:
+                        p_to = st.date_input("Period to", value=row["period_to"].date())
+                    note = st.text_input("Note")
+                    if st.form_submit_button("Add to trail"):
+                        if not name.strip():
+                            st.error("Name is required.")
+                        else:
+                            n = len(st.session_state.artifacts) + 1
+                            ver = int(row["latest_version"]) + 1
+                            add = {
+                                "artifact_id": f"EVD-2026-{n:03d}",
+                                "request_id": pick,
+                                "version": ver,
+                                "name": name.strip(),
+                                "source": source.strip() or "—",
+                                "period_from": pd.Timestamp(p_from),
+                                "period_to": pd.Timestamp(p_to),
+                                "submitted": _today(),
+                                "submitted_by": "Demo user",
+                                "disposition": "Pending",
+                                "note": note.strip(),
+                            }
+                            _save_art(
+                                pd.concat(
+                                    [st.session_state.artifacts, pd.DataFrame([add])],
+                                    ignore_index=True,
+                                )
+                            )
+                            _patch_req(pick, status="Submitted")
+                            st.rerun()
+
+    with register:
+        st.subheader("PBC register")
+        show = filtered[
+            [
+                "request_id",
+                "title",
+                "control",
+                "owner",
+                "status",
+                "readiness",
+                "due",
+                "days_to_due",
+                "artifact_count",
+                "latest_version",
+            ]
+        ].copy()
+        show["due"] = show["due"].apply(_fmt)
+        st.dataframe(show, use_container_width=True, hide_index=True)
+
+        fig = px.scatter(
+            filtered,
+            x="days_to_due",
+            y="readiness",
+            color="status",
+            hover_name="request_id",
+            hover_data=["title", "owner", "control"],
+            color_discrete_map=STATUS_COLOR,
+            category_orders={"status": STATUSES, "readiness": READINESS},
+            title="Days to due vs whether the trail already existed",
+        )
+        fig.add_vline(x=0, line_dash="dash", line_color="#ff6b6b")
+        st.plotly_chart(fig, use_container_width=True)
+
+    with intake:
+        st.subheader("Log a request")
+        st.caption("Capture the sentence, the control, the owner, and the period — before anyone hunts for a file.")
+        with st.form("intake"):
+            c1, c2 = st.columns(2)
+            with c1:
+                title = st.text_input("Short title", placeholder="e.g. Quarterly access recert evidence")
+                control = st.text_input("Control", placeholder="e.g. CC6.2 / AC-02")
+                owner = st.text_input("Owner", placeholder="e.g. IAM")
+                system_of_record = st.text_input("System of record", placeholder="e.g. GRC + AD")
+            with c2:
+                due = st.date_input("Due", value=(_today() + timedelta(days=14)).date())
+                p_from = st.date_input("Period from", value=pd.Timestamp("2026-02-01").date())
+                p_to = st.date_input("Period to", value=pd.Timestamp("2026-07-31").date())
+                readiness = st.selectbox("Readiness (honest)", READINESS, index=1)
+            auditor_ask = st.text_area(
+                "Auditor request",
+                placeholder="Please provide evidence that this control operated during the review period.",
+            )
+            if st.form_submit_button("Add request"):
+                if not title.strip() or not control.strip() or not owner.strip() or not auditor_ask.strip():
+                    st.error("Title, control, owner, and the auditor's sentence are required.")
+                else:
+                    n = len(st.session_state.pbc) + 1
+                    add = {
+                        "request_id": f"PBC-2026-{n:03d}",
+                        "control": control.strip(),
+                        "title": title.strip(),
+                        "auditor_ask": auditor_ask.strip(),
+                        "owner": owner.strip(),
+                        "system_of_record": system_of_record.strip() or "TBD",
+                        "period_from": pd.Timestamp(p_from),
+                        "period_to": pd.Timestamp(p_to),
+                        "status": "Not started",
+                        "readiness": readiness,
+                        "due": pd.Timestamp(due),
+                        "issued": _today(),
+                        "auditor_response": "",
+                        "next_action": "Identify the system of record and whether a pack already exists.",
+                    }
+                    _save_req(pd.concat([st.session_state.pbc, pd.DataFrame([add])], ignore_index=True))
+                    st.success(f"PBC-2026-{n:03d} is on the workbench.")
+                    st.rerun()
+
+    with export:
+        st.subheader("Requests and artifacts")
+        out_r = filtered.copy()
+        for col in ("period_from", "period_to", "due", "issued"):
+            out_r[col] = out_r[col].apply(_fmt)
+        demo_kit.csv_download(out_r, "pbc_requests.csv", label="Download requests")
+        out_a = art[art["request_id"].isin(filtered["request_id"])].copy()
+        for col in ("period_from", "period_to", "submitted"):
+            out_a[col] = out_a[col].apply(_fmt)
+        demo_kit.csv_download(out_a, "pbc_artifacts.csv", label="Download artifacts", key="art_csv")
+        st.caption("Resample rebuilds the demo set. Edits live in this browser session only.")
+
 
 if __name__ == "__main__":
     main()

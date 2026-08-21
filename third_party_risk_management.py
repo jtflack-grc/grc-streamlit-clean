@@ -28,10 +28,180 @@ ASSURANCE = ["HITRUST r2", "HITRUST i1", "SOC 2 Type II", "ISO 27001", "SIG Lite
 ISSUE_STATUS = ["Open", "With vendor", "Accepted risk", "Closed"]
 
 FEATURED = {"VND-2026-001", "VND-2026-002", "VND-2026-003"}
+QUESTIONNAIRE_VENDOR = "VND-2026-003"  # Orbit AMS — dense SIG-Lite demo
 
 
 def _today() -> pd.Timestamp:
     return pd.Timestamp.now().normalize()
+
+
+def _orbit_sig_lite() -> dict:
+    """Faux modern SIG-Lite / CAIQ-energy questionnaire for Orbit AMS."""
+    return {
+        "instrument": "SIG Lite (customized) · AMS / privileged ops addendum",
+        "vendor_id": QUESTIONNAIRE_VENDOR,
+        "vendor_name": "Orbit AMS (JD Edwards)",
+        "assessment_id": "ASM-2026-003",
+        "submitted": "2026-06-12",
+        "analyst": "A. Nguyen",
+        "review_status": "Partial — insufficient on privileged access & IFS",
+        "score_pct": 61,
+        "domains_pass": 4,
+        "domains_partial": 3,
+        "domains_fail": 3,
+        "items": [
+            {
+                "q_id": "AC-01",
+                "domain": "Access control",
+                "question": "Is access to customer systems granted only via named accounts under MFA, with no shared privileged IDs?",
+                "answer": "Yes — all AMS engineers use named IDs. MFA via our IdP for VPN; customer PAM for IBM i sign-on.",
+                "evidence": "PAM checkout log sample (redacted); IdP MFA policy screenshot",
+                "rating": "Partial",
+                "analyst_note": "PAM covers interactive sign-on. Batch / IFS service profiles not evidenced. See ISS-2026-006.",
+                "linked_issue": "ISS-2026-006",
+            },
+            {
+                "q_id": "AC-02",
+                "domain": "Access control",
+                "question": "Are privileged / *ALLOBJ-equivalent authorities time-boxed and logged?",
+                "answer": "Privileged work is performed only during approved change windows. Logs retained 90 days.",
+                "evidence": "Change calendar excerpt; 'we follow customer PAM'",
+                "rating": "Insufficient",
+                "analyst_note": "No evidence of *ALLOBJ / special-authority inventory or 90-day log export. Tier-2 AMS requires this.",
+                "linked_issue": "ISS-2026-005",
+            },
+            {
+                "q_id": "AC-03",
+                "domain": "Access control",
+                "question": "Is joiner/mover/leaver for customer-facing staff completed within 24 hours of role change?",
+                "answer": "Yes. HR ticket drives AD disable same day; customer access request closed within 24h.",
+                "evidence": "JML SOP v1.4; sample ticket",
+                "rating": "Adequate",
+                "analyst_note": "",
+                "linked_issue": "",
+            },
+            {
+                "q_id": "CR-01",
+                "domain": "Cryptography",
+                "question": "Is data in transit to/from customer environments encrypted (TLS 1.2+)?",
+                "answer": "Yes — TLS 1.2 minimum on VPN and SFTP. TLS 1.3 preferred.",
+                "evidence": "VPN config export",
+                "rating": "Adequate",
+                "analyst_note": "",
+                "linked_issue": "",
+            },
+            {
+                "q_id": "CR-02",
+                "domain": "Cryptography",
+                "question": "Are credentials / secrets stored in a vault (not shared spreadsheets or chat)?",
+                "answer": "Customer PAM for IBM i. Internal secrets in 1Password Business.",
+                "evidence": "1Password org screenshot",
+                "rating": "Adequate",
+                "analyst_note": "",
+                "linked_issue": "",
+            },
+            {
+                "q_id": "IR-01",
+                "domain": "Incident response",
+                "question": "Will you notify the customer within 24 hours of a suspected security incident affecting their environment?",
+                "answer": "Yes — per MSA security addendum, notify security contact within 24 hours.",
+                "evidence": "MSA §8.2",
+                "rating": "Adequate",
+                "analyst_note": "",
+                "linked_issue": "",
+            },
+            {
+                "q_id": "IR-02",
+                "domain": "Incident response",
+                "question": "Do you maintain an IR plan tested at least annually?",
+                "answer": "Tabletop annually. Last: 2025-11. Full technical test not applicable (AMS, not SaaS host).",
+                "evidence": "Tabletop attendance sheet",
+                "rating": "Partial",
+                "analyst_note": "Acceptable for AMS model, but customer-impact runbook (who to call, evidence hold) not attached.",
+                "linked_issue": "",
+            },
+            {
+                "q_id": "BC-01",
+                "domain": "Business continuity",
+                "question": "Can AMS services continue if your primary delivery site is unavailable (RTO ≤ 24h)?",
+                "answer": "Yes — dual-site staff; remote-first. Offshore L2 can cover.",
+                "evidence": "BC one-pager",
+                "rating": "Partial",
+                "analyst_note": "Relies on offshore L2 — sub-processor notice just received (SIG-008). Concentration risk.",
+                "linked_issue": "",
+            },
+            {
+                "q_id": "OP-01",
+                "domain": "Operations / change",
+                "question": "Are IFS / file-share permission changes peer-reviewed and logged before promotion?",
+                "answer": "Changes follow customer CAB. Permission reviews are customer's responsibility.",
+                "evidence": "None attached",
+                "rating": "Insufficient",
+                "analyst_note": "Fails post INC-2026-005. AMS touches IFS; 'customer owns permissions' is not acceptable without dual control. → ISS-2026-006.",
+                "linked_issue": "ISS-2026-006",
+            },
+            {
+                "q_id": "OP-02",
+                "domain": "Operations / change",
+                "question": "Is production change activity prohibited outside approved windows without emergency ticket?",
+                "answer": "Yes — emergency path documented.",
+                "evidence": "Emergency change SOP",
+                "rating": "Adequate",
+                "analyst_note": "",
+                "linked_issue": "",
+            },
+            {
+                "q_id": "VM-01",
+                "domain": "Vulnerability mgmt",
+                "question": "Are laptops / jump endpoints used for customer access patched within 14 days for critical CVEs?",
+                "answer": "Monthly patch cycle. Critical within 30 days.",
+                "evidence": "Intune compliance % screenshot (87%)",
+                "rating": "Partial",
+                "analyst_note": "30-day critical SLA weaker than our Tier-2 standard (14d). Accept with compensating VPN posture check.",
+                "linked_issue": "",
+            },
+            {
+                "q_id": "SP-01",
+                "domain": "Subprocessors",
+                "question": "List all subprocessors with access to customer systems or data; notify 30 days before add.",
+                "answer": "Offshore L2 desk (India). Ticketing SaaS. Will notify on material changes.",
+                "evidence": "Subprocessor list v2",
+                "rating": "Partial",
+                "analyst_note": "New sub-processor notice arrived after this answer (SIG-008). List stale — chase update.",
+                "linked_issue": "",
+            },
+            {
+                "q_id": "LG-01",
+                "domain": "Logging / monitoring",
+                "question": "Are privileged session logs for customer systems retained ≥ 1 year and available to customer on request?",
+                "answer": "We retain our side 90 days. Customer PAM is system of record.",
+                "evidence": "None",
+                "rating": "Insufficient",
+                "analyst_note": "For AMS with privileged IBM i access, 90 days on vendor side is thin if PAM gaps exist. Open a dedicated logging retention issue.",
+                "linked_issue": "",
+            },
+            {
+                "q_id": "EX-01",
+                "domain": "Exit / data return",
+                "question": "On contract end, will you certify destruction / return of customer data and revoke all access within 10 business days?",
+                "answer": "We will cooperate on access revoke. Data return process not in current MSA.",
+                "evidence": "MSA (no exit schedule)",
+                "rating": "Insufficient",
+                "analyst_note": "Matches ISS-2026-007 — exit clause amendment required.",
+                "linked_issue": "ISS-2026-007",
+            },
+            {
+                "q_id": "AS-01",
+                "domain": "Assurance",
+                "question": "Provide current SOC 2 Type II, ISO 27001, or HITRUST i1/r2 covering services in scope.",
+                "answer": "SIG Lite completed. SOC 2 Type II kickoff planned for next FY.",
+                "evidence": "Kickoff email (soft date)",
+                "rating": "Insufficient",
+                "analyst_note": "Core Tier-2 failure. ISS-2026-005.",
+                "linked_issue": "ISS-2026-005",
+            },
+        ],
+    }
 
 
 def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -595,7 +765,10 @@ def _sync(seed: int):
         st.session_state.tprm_asm = a
         st.session_state.tprm_issues = i
         st.session_state.tprm_signals = s
+        st.session_state.tprm_questionnaire = _orbit_sig_lite()
         st.session_state._tprm_seed = seed
+    if "tprm_questionnaire" not in st.session_state:
+        st.session_state.tprm_questionnaire = _orbit_sig_lite()
     return (
         st.session_state.tprm_vendors,
         st.session_state.tprm_asm,
@@ -677,6 +850,106 @@ def _metrics(v, a, i, s):
     }
 
 
+def _render_questionnaire(*, expanded: bool = False, key_prefix: str = "q") -> None:
+    q = st.session_state.get("tprm_questionnaire") or _orbit_sig_lite()
+    items = q["items"]
+    n_fail = sum(1 for x in items if x["rating"] == "Insufficient")
+    n_part = sum(1 for x in items if x["rating"] == "Partial")
+    n_ok = sum(1 for x in items if x["rating"] == "Adequate")
+
+    with st.expander(
+        f"Questionnaire · {q['instrument']} · {q['score_pct']}% · "
+        f"{n_fail} insufficient / {n_part} partial / {n_ok} adequate",
+        expanded=expanded,
+    ):
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Score", f"{q['score_pct']}%")
+        m2.metric("Insufficient", n_fail)
+        m3.metric("Partial", n_part)
+        m4.metric("Review", q["review_status"].split("—")[0].strip())
+        st.caption(
+            f"Submitted {q['submitted']} · Assessor {q['analyst']} · "
+            f"Linked assessment {q['assessment_id']}"
+        )
+        st.write(f"**Status:** {q['review_status']}")
+
+        # Domain rollup
+        dom = {}
+        for it in items:
+            d = it["domain"]
+            dom.setdefault(d, {"Adequate": 0, "Partial": 0, "Insufficient": 0})
+            dom[d][it["rating"]] = dom[d].get(it["rating"], 0) + 1
+        roll = pd.DataFrame(
+            [{"domain": k, **v} for k, v in dom.items()]
+        )
+        st.dataframe(roll, use_container_width=True, hide_index=True)
+
+        show_f = st.checkbox(
+            "Show insufficient / partial only",
+            value=True,
+            key=f"{key_prefix}_filter_fail",
+        )
+        view = [
+            x
+            for x in items
+            if (not show_f) or x["rating"] in {"Insufficient", "Partial"}
+        ]
+
+        for it in view:
+            badge = it["rating"]
+            title = f"{it['q_id']} · {it['domain']} · {badge}"
+            with st.container():
+                st.markdown(f"**{title}**")
+                st.write(it["question"])
+                st.write(f"**Vendor:** {it['answer']}")
+                st.caption(f"Evidence cited: {it['evidence']}")
+                if it["analyst_note"]:
+                    if badge == "Insufficient":
+                        st.error(f"Analyst: {it['analyst_note']}")
+                    else:
+                        st.warning(f"Analyst: {it['analyst_note']}")
+                if it["linked_issue"]:
+                    st.caption(f"→ {it['linked_issue']}")
+                st.markdown("---")
+
+        orphans = [x for x in items if x["rating"] == "Insufficient" and not x["linked_issue"]]
+        if orphans:
+            st.markdown("**Open issue from questionnaire**")
+            pick = st.selectbox(
+                "Insufficient item",
+                [f"{x['q_id']} — {x['question'][:60]}…" for x in orphans],
+                key=f"{key_prefix}_orphan_pick",
+            )
+            if st.button("Create issue from selection", key=f"{key_prefix}_mk_issue"):
+                qid = pick.split(" — ")[0]
+                src = next(x for x in orphans if x["q_id"] == qid)
+                n = len(st.session_state.tprm_issues) + 1
+                iid = f"ISS-2026-{n:03d}"
+                add = {
+                    "issue_id": iid,
+                    "vendor_id": QUESTIONNAIRE_VENDOR,
+                    "title": f"Questionnaire {qid}: {src['domain']} insufficient",
+                    "severity": "High",
+                    "status": "Open",
+                    "opened": _today(),
+                    "due": _today() + timedelta(days=30),
+                    "owner": "Orbit AMS / TPRM",
+                    "source": f"SIG Lite · {qid}",
+                    "detail": f"Q: {src['question']}\nA: {src['answer']}\nAnalyst: {src['analyst_note']}",
+                }
+                _save_i(
+                    pd.concat(
+                        [st.session_state.tprm_issues, pd.DataFrame([add])],
+                        ignore_index=True,
+                    )
+                )
+                for x in st.session_state.tprm_questionnaire["items"]:
+                    if x["q_id"] == qid:
+                        x["linked_issue"] = iid
+                st.success(f"{iid} opened from {qid}.")
+                st.rerun()
+
+
 def _vendor_detail(row, asm, issues, signals, *, expanded=False):
     st.markdown(f"### {row['vendor_id']} · {row['name']}")
     a, b, c, d = st.columns(4)
@@ -718,6 +991,9 @@ def _vendor_detail(row, asm, issues, signals, *, expanded=False):
         st.write(f"**Fourth parties / concentration:** {row['fourth_parties']}")
     if row["risk_refs"]:
         st.caption(f"Linked: {row['risk_refs']}")
+
+    if row["vendor_id"] == QUESTIONNAIRE_VENDOR:
+        _render_questionnaire(expanded=expanded, key_prefix=f"vq_{row['vendor_id']}")
 
     raw = st.session_state.tprm_vendors
     rr = raw[raw["vendor_id"] == row["vendor_id"]]
@@ -915,11 +1191,12 @@ def main() -> None:
         show["started"] = show["started"].apply(_fmt)
         st.dataframe(show, use_container_width=True, hide_index=True)
 
-        # Tier → diligence depth reminder
         st.caption(
             "Tier drives depth: Tier 1 = full assurance + on-site/rights as needed; "
             "Tier 2 = SOC 2 / HITRUST i1 or equivalent; Tier 3–4 = light questionnaire / cert check."
         )
+        st.markdown("**Featured questionnaire (Orbit AMS)**")
+        _render_questionnaire(expanded=True, key_prefix="dil_q")
 
     with mon_tab:
         st.subheader("Continuous monitoring (synthetic signals)")
@@ -1045,6 +1322,13 @@ def main() -> None:
         oi["opened"] = oi["opened"].apply(_fmt)
         oi["due"] = oi["due"].apply(_fmt)
         demo_kit.csv_download(oi, "issues.csv", label="Download issues", key="i_csv")
+        q = st.session_state.get("tprm_questionnaire") or _orbit_sig_lite()
+        demo_kit.csv_download(
+            pd.DataFrame(q["items"]),
+            "orbit_sig_lite.csv",
+            label="Download Orbit SIG Lite questionnaire",
+            key="q_csv",
+        )
         st.caption("Resample rebuilds the demo set. Edits live in this browser session only.")
 
 

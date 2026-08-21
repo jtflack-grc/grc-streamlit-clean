@@ -1,17 +1,18 @@
+#!/usr/bin/env python3
+"""Third-party risk workbench — club teaching toy."""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
+import numpy as np
+import pandas as pd
+import plotly.express as px
 import streamlit as st
+
 import demo_kit
 import portfolio_skin
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import datetime
-from datetime import timedelta
-import random
-import json
 
-# Page configuration
 st.set_page_config(
     page_title="Third-Party Risk Management · i on GRC",
     page_icon="assets/favicon.svg",
@@ -21,1050 +22,1031 @@ st.set_page_config(
 
 portfolio_skin.apply(hide_sidebar=False)
 
+TIERS = ["Tier 1 — Critical", "Tier 2 — High", "Tier 3 — Medium", "Tier 4 — Low"]
+LIFECYCLE = ["Intake", "Diligence", "Active", "Remediation", "Offboarding", "Terminated"]
+ASSURANCE = ["HITRUST r2", "HITRUST i1", "SOC 2 Type II", "ISO 27001", "SIG Lite", "Questionnaire only", "None on file"]
+ISSUE_STATUS = ["Open", "With vendor", "Accepted risk", "Closed"]
+
+FEATURED = {"VND-2026-001", "VND-2026-002", "VND-2026-003"}
 
 
-# Initialize session state
-if 'vendors' not in st.session_state:
-    st.session_state.vendors = []
-if 'vendor_assessments' not in st.session_state:
-    st.session_state.vendor_assessments = []
-if 'vendor_contracts' not in st.session_state:
-    st.session_state.vendor_contracts = []
-if 'vendor_incidents' not in st.session_state:
-    st.session_state.vendor_incidents = []
-if 'vendor_categories' not in st.session_state:
-    st.session_state.vendor_categories = []
-if 'vendor_contacts' not in st.session_state:
-    st.session_state.vendor_contacts = []
+def _today() -> pd.Timestamp:
+    return pd.Timestamp.now().normalize()
 
-def generate_sample_data(seed: int = 42):
-    """Generate sample third-party risk management data"""
+
+def _sample(seed: int) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    today = _today()
     rng = np.random.default_rng(seed)
+
+    def j(lo: int, hi: int) -> int:
+        return int(rng.integers(lo, hi))
+
     vendors = [
         {
-            'id': 'VND-001',
-            'name': 'CloudTech Solutions',
-            'category': 'Cloud Services',
-            'description': 'Cloud infrastructure and hosting services',
-            'risk_level': 'Medium',
-            'contract_value': 500000,
-            'contract_start': datetime.datetime.now() - timedelta(days=365),
-            'contract_end': datetime.datetime.now() + timedelta(days=730),
-            'status': 'Active',
-            'last_assessment': datetime.datetime.now() - timedelta(days=90)
+            "vendor_id": "VND-2026-001",
+            "name": "PayrollCo",
+            "service": "Payroll SaaS / tax filing (data processor)",
+            "category": "HR / Payroll SaaS",
+            "owner": "TPRM · A. Nguyen",
+            "business_owner": "Payroll Ops · T. Williams",
+            "lifecycle": "Remediation",
+            "tier": "Tier 1 — Critical",
+            "inherent": "Critical",
+            "residual": "High",
+            "data_access": "SSN, bank routing/account, salary, tax withholding — 1,820 employees",
+            "system_access": "SSO federation · API payroll sync · SFTP tax drop",
+            "criticality_note": "Mission-critical on pay calendar (BIA-2026-004). No easy swap mid-cycle.",
+            "outside_in": 62,
+            "outside_in_trend": "↓ 18 pts (7d)",
+            "assurance": "SOC 2 Type II",
+            "assurance_period": "2025-01-01 → 2025-12-31",
+            "assurance_gap": "Pen-test / scope excluded backup infrastructure — material to INC-2026-009.",
+            "dpa": True,
+            "security_addendum": True,
+            "right_to_audit": True,
+            "exit_clause": True,
+            "contract_end": today + timedelta(days=210),
+            "last_assessment": today - timedelta(days=120),
+            "next_assessment": today + timedelta(days=5),
+            "fourth_parties": "AWS (backup region) · tax e-file gateway · SMS OTP provider",
+            "monitoring_alert": "Vendor breach notification — backup environment; tenant impact unknown",
+            "risk_refs": "INC-2026-009 · BIA-2026-004 · DPA-2024-019 · PLN-2026-004",
+            "summary": "Active IR: processing suspended, credentials rotated, waiting on IOC/tenant confirmation. Residual elevated until forensics clears our tenant and backup-scope gap is remediated in next SOC 2.",
         },
         {
-            'id': 'VND-002',
-            'name': 'SecureSoft Inc',
-            'category': 'Software Vendor',
-            'description': 'Security software and tools',
-            'risk_level': 'High',
-            'contract_value': 250000,
-            'contract_start': datetime.datetime.now() - timedelta(days=180),
-            'contract_end': datetime.datetime.now() + timedelta(days=545),
-            'status': 'Active',
-            'last_assessment': datetime.datetime.now() - timedelta(days=60)
+            "vendor_id": "VND-2026-002",
+            "name": "NorthStack Colo (IBM Z)",
+            "service": "Managed IBM Z / z/OS colocation, HMC access, LPAR hosting",
+            "category": "Colocation / Mainframe",
+            "owner": "TPRM · A. Nguyen",
+            "business_owner": "Mainframe Security · Maya Chen",
+            "lifecycle": "Active",
+            "tier": "Tier 1 — Critical",
+            "inherent": "Critical",
+            "residual": "Medium",
+            "data_access": "Production CICS / DB2 workloads; physical + logical access to raised floor",
+            "system_access": "HMC · sysplex ops · escorted DC access · break-glass under PAM",
+            "criticality_note": "Underpins BIA-2026-001 core ledger. GDPS secondary also hosted here.",
+            "outside_in": 78,
+            "outside_in_trend": "→ flat",
+            "assurance": "SOC 2 Type II",
+            "assurance_period": "2025-04-01 → 2026-03-31",
+            "assurance_gap": "Two open findings from last diligence: visitor-log retention; HMC MFA exception for console ops.",
+            "dpa": False,
+            "security_addendum": True,
+            "right_to_audit": True,
+            "exit_clause": True,
+            "contract_end": today + timedelta(days=330),
+            "last_assessment": today - timedelta(days=75),
+            "next_assessment": today + timedelta(days=290),
+            "fourth_parties": "Power utility · cross-connect carrier · tape vault vendor",
+            "monitoring_alert": "",
+            "risk_refs": "BIA-2026-001 · PLN-2026-001 · EXR-2026-003",
+            "summary": "Tier-1 colo. Residual Medium after compensating controls on HMC. Re-test of GDPS path depends on their floor capacity — tied to REM-BC-014 narrative.",
         },
         {
-            'id': 'VND-003',
-            'name': 'DataFlow Systems',
-            'category': 'Data Processing',
-            'description': 'Data analytics and processing services',
-            'risk_level': 'Critical',
-            'contract_value': 750000,
-            'contract_start': datetime.datetime.now() - timedelta(days=90),
-            'contract_end': datetime.datetime.now() + timedelta(days=635),
-            'status': 'Active',
-            'last_assessment': datetime.datetime.now() - timedelta(days=30)
+            "vendor_id": "VND-2026-003",
+            "name": "Orbit AMS (JD Edwards)",
+            "service": "JD Edwards World AMS + IFS operations",
+            "category": "Application management",
+            "owner": "TPRM · A. Nguyen",
+            "business_owner": "ERP Finance · M. Hassan",
+            "lifecycle": "Remediation",
+            "tier": "Tier 2 — High",
+            "inherent": "High",
+            "residual": "High",
+            "data_access": "JDE World data libraries; IFS paths incl. customer master extracts",
+            "system_access": "Privileged IBM i profiles via PAM · IFS NetServer · change windows",
+            "criticality_note": "Supports BIA-2026-002 order-to-cash. Privileged ops on PRODBOX.",
+            "outside_in": 71,
+            "outside_in_trend": "↓ 4 pts (30d)",
+            "assurance": "SIG Lite",
+            "assurance_period": "2025-06-01 → 2026-05-31",
+            "assurance_gap": "No SOC 2. SIG Lite only — insufficient for Tier-2 data processor with *ALLOBJ-adjacent access patterns.",
+            "dpa": True,
+            "security_addendum": True,
+            "right_to_audit": True,
+            "exit_clause": False,
+            "contract_end": today + timedelta(days=510),
+            "last_assessment": today - timedelta(days=50),
+            "next_assessment": today + timedelta(days=40),
+            "fourth_parties": "Offshore L2 desk (India) · ticketing SaaS",
+            "monitoring_alert": "IFS *PUBLIC exposure context (INC-2026-005) — AMS change windows under review",
+            "risk_refs": "INC-2026-005 · BIA-2026-002 · EXC IFS *PUBLIC",
+            "summary": "High residual until SOC 2 delivered and IFS permission ops proven in DR checklist. Exit clause missing — legal tracking.",
         },
         {
-            'id': 'VND-004',
-            'name': 'IT Support Pro',
-            'category': 'IT Services',
-            'description': 'IT support and maintenance services',
-            'risk_level': 'Low',
-            'contract_value': 100000,
-            'contract_start': datetime.datetime.now() - timedelta(days=730),
-            'contract_end': datetime.datetime.now() + timedelta(days=365),
-            'status': 'Active',
-            'last_assessment': datetime.datetime.now() - timedelta(days=120)
+            "vendor_id": "VND-2026-004",
+            "name": "Azure AD B2C (Microsoft)",
+            "service": "Customer identity (B2C)",
+            "category": "Cloud / IdP",
+            "owner": "IAM · L. Torres",
+            "business_owner": "Platform Eng · R. Kim",
+            "lifecycle": "Active",
+            "tier": "Tier 1 — Critical",
+            "inherent": "Critical",
+            "residual": "Low",
+            "data_access": "Customer auth identities; email",
+            "system_access": "IdP admin · conditional access",
+            "criticality_note": "Portal auth path (BIA-2026-003). Post INC-2026-001 MFA rollout in flight.",
+            "outside_in": 92,
+            "outside_in_trend": "→ flat",
+            "assurance": "SOC 2 Type II",
+            "assurance_period": "Vendor public trust docs (rolling)",
+            "assurance_gap": "",
+            "dpa": True,
+            "security_addendum": True,
+            "right_to_audit": False,
+            "exit_clause": True,
+            "contract_end": today + timedelta(days=400),
+            "last_assessment": today - timedelta(days=200),
+            "next_assessment": today + timedelta(days=165),
+            "fourth_parties": "—",
+            "monitoring_alert": "",
+            "risk_refs": "INC-2026-001 · BIA-2026-003",
+            "summary": "Hyperscaler — residual Low. Diligence is inheritance + config review, not questionnaire theater.",
         },
         {
-            'id': 'VND-005',
-            'name': 'Managed IBM Z colo',
-            'category': 'Colocation',
-            'description': 'Managed IBM Z / z/OS colocation, HMC access, and LPAR hosting',
-            'risk_level': 'High',
-            'contract_value': 920000,
-            'contract_start': datetime.datetime.now() - timedelta(days=400),
-            'contract_end': datetime.datetime.now() + timedelta(days=330),
-            'status': 'Active',
-            'last_assessment': datetime.datetime.now() - timedelta(days=75)
+            "vendor_id": "VND-2026-005",
+            "name": "MailGuard Edge",
+            "service": "Secure email gateway",
+            "category": "Security tooling",
+            "owner": "SecOps · K. Patel",
+            "business_owner": "IT Service Desk",
+            "lifecycle": "Active",
+            "tier": "Tier 2 — High",
+            "inherent": "High",
+            "residual": "Medium",
+            "data_access": "Mail metadata + quarantine content",
+            "system_access": "Gateway admin · API",
+            "criticality_note": "BEC controls (INC-2026-007). Quarantine release policy dependency.",
+            "outside_in": 84,
+            "outside_in_trend": "↑ 3 pts",
+            "assurance": "ISO 27001",
+            "assurance_period": "2025-09-01 → 2026-08-31",
+            "assurance_gap": "",
+            "dpa": True,
+            "security_addendum": True,
+            "right_to_audit": True,
+            "exit_clause": True,
+            "contract_end": today + timedelta(days=280),
+            "last_assessment": today - timedelta(days=90),
+            "next_assessment": today + timedelta(days=275),
+            "fourth_parties": "Threat-intel feed vendor",
+            "monitoring_alert": "",
+            "risk_refs": "INC-2026-007",
+            "summary": "Stable. Next diligence light-touch unless score drops.",
         },
         {
-            'id': 'VND-006',
-            'name': 'JD Edwards AMS partner',
-            'category': 'Application Management',
-            'description': 'JD Edwards World / EnterpriseOne application management and IFS operations',
-            'risk_level': 'High',
-            'contract_value': 380000,
-            'contract_start': datetime.datetime.now() - timedelta(days=220),
-            'contract_end': datetime.datetime.now() + timedelta(days=510),
-            'status': 'Active',
-            'last_assessment': datetime.datetime.now() - timedelta(days=50)
-        }
-    ]
-    
-    vendor_assessments = [
-        {
-            'id': 'VA-001',
-            'vendor_id': 'VND-001',
-            'assessment_date': datetime.datetime.now() - timedelta(days=90),
-            'security_score': 85,
-            'compliance_score': 90,
-            'financial_score': 95,
-            'operational_score': 88,
-            'overall_score': 89.5,
-            'risk_level': 'Medium',
-            'status': 'Completed',
-            'next_assessment': datetime.datetime.now() + timedelta(days=275)
+            "vendor_id": "VND-2026-006",
+            "name": "PixelForge CMS",
+            "service": "Marketing website CMS",
+            "category": "Marketing SaaS",
+            "owner": "Marketing Ops",
+            "business_owner": "Marketing",
+            "lifecycle": "Active",
+            "tier": "Tier 4 — Low",
+            "inherent": "Low",
+            "residual": "Low",
+            "data_access": "Public web content; form leads (business email)",
+            "system_access": "CMS admin",
+            "criticality_note": "BIA-2026-008 — Medium process criticality, low data sensitivity.",
+            "outside_in": 80,
+            "outside_in_trend": "→ flat",
+            "assurance": "Questionnaire only",
+            "assurance_period": "2026-01 intake",
+            "assurance_gap": "",
+            "dpa": False,
+            "security_addendum": False,
+            "right_to_audit": False,
+            "exit_clause": True,
+            "contract_end": today + timedelta(days=100),
+            "last_assessment": today - timedelta(days=200),
+            "next_assessment": today + timedelta(days=165),
+            "fourth_parties": "CDN",
+            "monitoring_alert": "",
+            "risk_refs": "BIA-2026-008",
+            "summary": "Tier-4 — annual light review. Contract renews soon; no security blockers.",
         },
         {
-            'id': 'VA-002',
-            'vendor_id': 'VND-002',
-            'assessment_date': datetime.datetime.now() - timedelta(days=60),
-            'security_score': 92,
-            'compliance_score': 88,
-            'financial_score': 85,
-            'operational_score': 90,
-            'overall_score': 88.8,
-            'risk_level': 'High',
-            'status': 'Completed',
-            'next_assessment': datetime.datetime.now() + timedelta(days=305)
+            "vendor_id": "VND-2026-007",
+            "name": "FleetDesk IT Support",
+            "service": "Outsourced L1/L2 desk",
+            "category": "IT services",
+            "owner": "IT Service Desk · A. Nguyen",
+            "business_owner": "IT",
+            "lifecycle": "Offboarding",
+            "tier": "Tier 3 — Medium",
+            "inherent": "Medium",
+            "residual": "Medium",
+            "data_access": "Ticket content; limited AD helpdesk group",
+            "system_access": "ITSM · AD helpdesk (removing)",
+            "criticality_note": "Contract non-renewal — bringing L1 in-house.",
+            "outside_in": 76,
+            "outside_in_trend": "→ flat",
+            "assurance": "SOC 2 Type II",
+            "assurance_period": "2024-07-01 → 2025-06-30 (expired)",
+            "assurance_gap": "SOC 2 lapsed during offboarding — acceptable if access fully revoked.",
+            "dpa": True,
+            "security_addendum": True,
+            "right_to_audit": True,
+            "exit_clause": True,
+            "contract_end": today - timedelta(days=5),
+            "last_assessment": today - timedelta(days=400),
+            "next_assessment": today - timedelta(days=35),
+            "fourth_parties": "Offshore overflow partner",
+            "monitoring_alert": "Offboarding checklist incomplete — AD group still has 3 accounts",
+            "risk_refs": "",
+            "summary": "Offboarding in progress. Blocker: AD helpdesk accounts not revoked. Data return certificate pending.",
         },
         {
-            'id': 'VA-003',
-            'vendor_id': 'VND-003',
-            'assessment_date': datetime.datetime.now() - timedelta(days=30),
-            'security_score': 78,
-            'compliance_score': 82,
-            'financial_score': 88,
-            'operational_score': 85,
-            'overall_score': 83.3,
-            'risk_level': 'Critical',
-            'status': 'In Progress',
-            'next_assessment': datetime.datetime.now() + timedelta(days=335)
+            "vendor_id": "VND-2026-008",
+            "name": "LedgerLink Payments",
+            "service": "Payment gateway",
+            "category": "Payments",
+            "owner": "Finance · M. Hassan",
+            "business_owner": "Treasury",
+            "lifecycle": "Diligence",
+            "tier": "Tier 1 — Critical",
+            "inherent": "Critical",
+            "residual": "High",
+            "data_access": "PAN (tokenized) · transaction metadata",
+            "system_access": "API · webhook to portal / O2C",
+            "criticality_note": "Replacement evaluation for aging gateway. PCI scope.",
+            "outside_in": 88,
+            "outside_in_trend": "→ flat",
+            "assurance": "HITRUST i1",
+            "assurance_period": "Pending — shared draft report",
+            "assurance_gap": "HITRUST i1 in validation; SOC 2 also on file from prior year.",
+            "dpa": True,
+            "security_addendum": True,
+            "right_to_audit": True,
+            "exit_clause": True,
+            "contract_end": today + timedelta(days=45),
+            "last_assessment": pd.NaT,
+            "next_assessment": today + timedelta(days=14),
+            "fourth_parties": "Card network · tokenization vault",
+            "monitoring_alert": "",
+            "risk_refs": "BIA-2026-002",
+            "summary": "Pre-contract diligence. Tier-1 because of card data + O2C dependency. Waiting on final HITRUST letter.",
         },
-        {
-            'id': 'VA-004',
-            'vendor_id': 'VND-004',
-            'assessment_date': datetime.datetime.now() - timedelta(days=120),
-            'security_score': 95,
-            'compliance_score': 92,
-            'financial_score': 90,
-            'operational_score': 93,
-            'overall_score': 92.5,
-            'risk_level': 'Low',
-            'status': 'Completed',
-            'next_assessment': datetime.datetime.now() + timedelta(days=245)
-        },
-        {
-            'id': 'VA-005',
-            'vendor_id': 'VND-005',
-            'assessment_date': datetime.datetime.now() - timedelta(days=75),
-            'security_score': 72,
-            'compliance_score': 80,
-            'financial_score': 86,
-            'operational_score': 78,
-            'overall_score': 79.0,
-            'risk_level': 'High',
-            'status': 'Completed',
-            'next_assessment': datetime.datetime.now() + timedelta(days=290)
-        },
-        {
-            'id': 'VA-006',
-            'vendor_id': 'VND-006',
-            'assessment_date': datetime.datetime.now() - timedelta(days=50),
-            'security_score': 76,
-            'compliance_score': 74,
-            'financial_score': 88,
-            'operational_score': 82,
-            'overall_score': 80.0,
-            'risk_level': 'High',
-            'status': 'In Progress',
-            'next_assessment': datetime.datetime.now() + timedelta(days=315)
-        }
-    ]
-    
-    vendor_contracts = [
-        {
-            'id': 'VC-001',
-            'vendor_id': 'VND-001',
-            'contract_number': 'CTR-2024-001',
-            'contract_type': 'Service Agreement',
-            'start_date': datetime.datetime.now() - timedelta(days=365),
-            'end_date': datetime.datetime.now() + timedelta(days=730),
-            'value': 500000,
-            'currency': 'USD',
-            'auto_renewal': True,
-            'termination_notice': 90,
-            'status': 'Active'
-        },
-        {
-            'id': 'VC-002',
-            'vendor_id': 'VND-002',
-            'contract_number': 'CTR-2024-002',
-            'contract_type': 'License Agreement',
-            'start_date': datetime.datetime.now() - timedelta(days=180),
-            'end_date': datetime.datetime.now() + timedelta(days=545),
-            'value': 250000,
-            'currency': 'USD',
-            'auto_renewal': False,
-            'termination_notice': 60,
-            'status': 'Active'
-        },
-        {
-            'id': 'VC-003',
-            'vendor_id': 'VND-003',
-            'contract_number': 'CTR-2024-003',
-            'contract_type': 'Service Agreement',
-            'start_date': datetime.datetime.now() - timedelta(days=90),
-            'end_date': datetime.datetime.now() + timedelta(days=635),
-            'value': 750000,
-            'currency': 'USD',
-            'auto_renewal': True,
-            'termination_notice': 120,
-            'status': 'Active'
-        },
-        {
-            'id': 'VC-004',
-            'vendor_id': 'VND-004',
-            'contract_number': 'CTR-2023-004',
-            'contract_type': 'Service Agreement',
-            'start_date': datetime.datetime.now() - timedelta(days=730),
-            'end_date': datetime.datetime.now() + timedelta(days=365),
-            'value': 100000,
-            'currency': 'USD',
-            'auto_renewal': True,
-            'termination_notice': 30,
-            'status': 'Active'
-        }
-    ]
-    
-    vendor_incidents = [
-        {
-            'id': 'VI-001',
-            'vendor_id': 'VND-001',
-            'incident_date': datetime.datetime.now() - timedelta(days=45),
-            'incident_type': 'Service Outage',
-            'severity': 'Medium',
-            'description': 'Cloud service interruption affecting 2% of users',
-            'impact': 'Limited service disruption',
-            'resolution_time': 4,
-            'status': 'Resolved'
-        },
-        {
-            'id': 'VI-002',
-            'vendor_id': 'VND-002',
-            'incident_date': datetime.datetime.now() - timedelta(days=30),
-            'incident_type': 'Security Breach',
-            'severity': 'High',
-            'description': 'Unauthorized access to vendor systems',
-            'impact': 'Potential data exposure',
-            'resolution_time': 72,
-            'status': 'Under Investigation'
-        },
-        {
-            'id': 'VI-003',
-            'vendor_id': 'VND-003',
-            'incident_date': datetime.datetime.now() - timedelta(days=15),
-            'incident_type': 'Data Processing Error',
-            'severity': 'Low',
-            'description': 'Minor data processing delay',
-            'impact': 'Slight delay in reporting',
-            'resolution_time': 2,
-            'status': 'Resolved'
-        }
-    ]
-    
-    vendor_categories = [
-        {
-            'id': 'CAT-001',
-            'name': 'Cloud Services',
-            'description': 'Cloud infrastructure and hosting providers',
-            'risk_weight': 0.8,
-            'assessment_frequency': 'Quarterly',
-            'total_vendors': 1
-        },
-        {
-            'id': 'CAT-002',
-            'name': 'Software Vendor',
-            'description': 'Software and application providers',
-            'risk_weight': 0.9,
-            'assessment_frequency': 'Quarterly',
-            'total_vendors': 1
-        },
-        {
-            'id': 'CAT-003',
-            'name': 'Data Processing',
-            'description': 'Data analytics and processing services',
-            'risk_weight': 1.0,
-            'assessment_frequency': 'Monthly',
-            'total_vendors': 1
-        },
-        {
-            'id': 'CAT-004',
-            'name': 'IT Services',
-            'description': 'IT support and maintenance services',
-            'risk_weight': 0.6,
-            'assessment_frequency': 'Semi-annually',
-            'total_vendors': 1
-        },
-        {
-            'id': 'CAT-005',
-            'name': 'Colocation',
-            'description': 'Mainframe and midrange colocation / managed hosting',
-            'risk_weight': 0.95,
-            'assessment_frequency': 'Quarterly',
-            'total_vendors': 1
-        },
-        {
-            'id': 'CAT-006',
-            'name': 'Application Management',
-            'description': 'ERP AMS and application operations partners',
-            'risk_weight': 0.85,
-            'assessment_frequency': 'Quarterly',
-            'total_vendors': 1
-        }
-    ]
-    
-    vendor_contacts = [
-        {
-            'id': 'VCT-001',
-            'vendor_id': 'VND-001',
-            'name': 'John Smith',
-            'title': 'Account Manager',
-            'email': 'john.smith@cloudtech.com',
-            'phone': '+1-555-0101',
-            'primary_contact': True
-        },
-        {
-            'id': 'VCT-002',
-            'vendor_id': 'VND-002',
-            'name': 'Sarah Johnson',
-            'title': 'Security Officer',
-            'email': 'sarah.johnson@securesoft.com',
-            'phone': '+1-555-0102',
-            'primary_contact': True
-        },
-        {
-            'id': 'VCT-003',
-            'vendor_id': 'VND-003',
-            'name': 'Mike Davis',
-            'title': 'Operations Director',
-            'email': 'mike.davis@dataflow.com',
-            'phone': '+1-555-0103',
-            'primary_contact': True
-        },
-        {
-            'id': 'VCT-004',
-            'vendor_id': 'VND-004',
-            'name': 'Lisa Wilson',
-            'title': 'Service Manager',
-            'email': 'lisa.wilson@itsupport.com',
-            'phone': '+1-555-0104',
-            'primary_contact': True
-        },
-        {
-            'id': 'VCT-005',
-            'vendor_id': 'VND-005',
-            'name': 'Elena Vargas',
-            'title': 'Mainframe Delivery Lead',
-            'email': 'elena.vargas@ibmzcolo.example',
-            'phone': '+1-555-0105',
-            'primary_contact': True
-        },
-        {
-            'id': 'VCT-006',
-            'vendor_id': 'VND-006',
-            'name': 'Tom Briggs',
-            'title': 'JDE AMS Manager',
-            'email': 'tom.briggs@jdeams.example',
-            'phone': '+1-555-0106',
-            'primary_contact': True
-        }
     ]
 
-    risk_levels = ['Low', 'Medium', 'High', 'Critical']
-    for vendor in vendors:
-        vendor['contract_value'] = int(max(10000, vendor['contract_value'] * float(rng.uniform(0.9, 1.1))))
-        if int(rng.integers(0, 4)) == 0:
-            vendor['risk_level'] = str(rng.choice(risk_levels))
-    for assessment in vendor_assessments:
-        for score_key in ('security_score', 'compliance_score', 'financial_score', 'operational_score'):
-            assessment[score_key] = int(np.clip(assessment[score_key] + int(rng.integers(-5, 6)), 50, 100))
-        assessment['overall_score'] = round(
-            (
-                assessment['security_score']
-                + assessment['compliance_score']
-                + assessment['financial_score']
-                + assessment['operational_score']
-            )
-            / 4.0,
-            1,
-        )
+    # Diligence assessments
+    assessments = [
+        {
+            "assessment_id": "ASM-2026-001",
+            "vendor_id": "VND-2026-001",
+            "title": "Annual diligence + IR-triggered reassess (PayrollCo)",
+            "scope": "SOC 2 review · DPA · backup-scope gap · IR evidence pack",
+            "status": "In progress",
+            "due": today + timedelta(days=5),
+            "started": today - timedelta(days=8),
+            "assessor": "A. Nguyen",
+            "tier_driven": "Full — Tier 1",
+            "notes": "Accelerated by INC-2026-009. Cannot close until tenant impact known.",
+        },
+        {
+            "assessment_id": "ASM-2026-002",
+            "vendor_id": "VND-2026-002",
+            "title": "Periodic Tier-1 colo review",
+            "scope": "SOC 2 · physical security · HMC MFA exception · right-to-audit walkthrough",
+            "status": "Complete",
+            "due": today - timedelta(days=70),
+            "started": today - timedelta(days=90),
+            "assessor": "A. Nguyen",
+            "tier_driven": "Full — Tier 1",
+            "notes": "Two findings opened (ISS-2026-003, ISS-2026-004).",
+        },
+        {
+            "assessment_id": "ASM-2026-003",
+            "vendor_id": "VND-2026-003",
+            "title": "Tier-2 AMS diligence — escalate assurance",
+            "scope": "SIG Lite → demand SOC 2 · privileged access · IFS ops · offshore L2",
+            "status": "With vendor",
+            "due": today + timedelta(days=40),
+            "started": today - timedelta(days=50),
+            "assessor": "A. Nguyen",
+            "tier_driven": "Standard — Tier 2",
+            "notes": "Vendor committed to SOC 2 kickoff; timeline soft.",
+        },
+        {
+            "assessment_id": "ASM-2026-004",
+            "vendor_id": "VND-2026-008",
+            "title": "Pre-contract diligence — LedgerLink",
+            "scope": "HITRUST i1 · PCI · DPA · tokenization architecture",
+            "status": "In progress",
+            "due": today + timedelta(days=14),
+            "started": today - timedelta(days=20),
+            "assessor": "A. Nguyen",
+            "tier_driven": "Full — Tier 1",
+            "notes": "Blocked on final HITRUST validated report.",
+        },
+        {
+            "assessment_id": "ASM-2026-005",
+            "vendor_id": "VND-2026-007",
+            "title": "Offboarding assurance close-out",
+            "scope": "Access revoke · data return · cert of destruction",
+            "status": "Overdue",
+            "due": today - timedelta(days=10),
+            "started": today - timedelta(days=30),
+            "assessor": "IT / TPRM",
+            "tier_driven": "Offboarding",
+            "notes": "AD accounts still active.",
+        },
+        {
+            "assessment_id": "ASM-2026-006",
+            "vendor_id": "VND-2026-005",
+            "title": "Annual light review — MailGuard",
+            "scope": "ISO cert check · scorecard · questionnaire delta",
+            "status": "Scheduled",
+            "due": today + timedelta(days=275),
+            "started": pd.NaT,
+            "assessor": "SecOps",
+            "tier_driven": "Light — Tier 2",
+            "notes": "",
+        },
+    ]
 
-    return vendors, vendor_assessments, vendor_contracts, vendor_incidents, vendor_categories, vendor_contacts
+    issues = [
+        {
+            "issue_id": "ISS-2026-001",
+            "vendor_id": "VND-2026-001",
+            "title": "Backup-environment breach — tenant impact unknown",
+            "severity": "Critical",
+            "status": "With vendor",
+            "opened": today - timedelta(days=1),
+            "due": today + timedelta(days=2),
+            "owner": "TPRM / Vendor forensics",
+            "source": "INC-2026-009 / monitoring",
+            "detail": "Vendor notified unauthorized access to backup env. Need IOC list + confirmation whether our tenant backups were accessed.",
+        },
+        {
+            "issue_id": "ISS-2026-002",
+            "vendor_id": "VND-2026-001",
+            "title": "SOC 2 scope excludes backup infrastructure",
+            "severity": "High",
+            "status": "Open",
+            "opened": today - timedelta(days=8),
+            "due": today + timedelta(days=60),
+            "owner": "PayrollCo / TPRM",
+            "source": "Assurance review",
+            "detail": "Prior SOC 2 pen-test explicitly excluded backup infrastructure. Require scope expansion or compensating evidence.",
+        },
+        {
+            "issue_id": "ISS-2026-003",
+            "vendor_id": "VND-2026-002",
+            "title": "Visitor-log retention below policy (90d vs 365d)",
+            "severity": "Medium",
+            "status": "With vendor",
+            "opened": today - timedelta(days=70),
+            "due": today + timedelta(days=20),
+            "owner": "NorthStack",
+            "source": "ASM-2026-002",
+            "detail": "Physical security finding. Vendor proposed policy change; evidence pending.",
+        },
+        {
+            "issue_id": "ISS-2026-004",
+            "vendor_id": "VND-2026-002",
+            "title": "HMC console MFA exception",
+            "severity": "High",
+            "status": "Accepted risk",
+            "opened": today - timedelta(days=70),
+            "due": today + timedelta(days=180),
+            "owner": "Maya Chen / NorthStack",
+            "source": "ASM-2026-002",
+            "detail": "Time-boxed acceptance with escort + PAM logging. Revisit at next Tier-1 review.",
+        },
+        {
+            "issue_id": "ISS-2026-005",
+            "vendor_id": "VND-2026-003",
+            "title": "Assurance below tier — SIG Lite only",
+            "severity": "High",
+            "status": "With vendor",
+            "opened": today - timedelta(days=45),
+            "due": today + timedelta(days=90),
+            "owner": "Orbit AMS",
+            "source": "ASM-2026-003",
+            "detail": "Tier-2 with privileged IBM i access requires SOC 2 Type II (or HITRUST i1) within 90 days.",
+        },
+        {
+            "issue_id": "ISS-2026-006",
+            "vendor_id": "VND-2026-003",
+            "title": "IFS permission ops not evidenced in change process",
+            "severity": "High",
+            "status": "Open",
+            "opened": today - timedelta(days=7),
+            "due": today + timedelta(days=21),
+            "owner": "Orbit AMS / IBM i Ops",
+            "source": "INC-2026-005",
+            "detail": "Anonymous IFS share context. AMS must show permission review in every change touching IFS.",
+        },
+        {
+            "issue_id": "ISS-2026-007",
+            "vendor_id": "VND-2026-003",
+            "title": "MSA missing exit / data-return clause",
+            "severity": "Medium",
+            "status": "Open",
+            "opened": today - timedelta(days=40),
+            "due": today + timedelta(days=45),
+            "owner": "Legal / Procurement",
+            "source": "Contract review",
+            "detail": "Amendment in flight.",
+        },
+        {
+            "issue_id": "ISS-2026-008",
+            "vendor_id": "VND-2026-007",
+            "title": "Offboarding — AD helpdesk accounts still active",
+            "severity": "High",
+            "status": "Open",
+            "opened": today - timedelta(days=12),
+            "due": today - timedelta(days=2),
+            "owner": "IAM",
+            "source": "Offboarding checklist",
+            "detail": "3 accounts in AD helpdesk group. Contract ended. Overdue revoke.",
+        },
+        {
+            "issue_id": "ISS-2026-009",
+            "vendor_id": "VND-2026-007",
+            "title": "Certificate of data destruction pending",
+            "severity": "Medium",
+            "status": "With vendor",
+            "opened": today - timedelta(days=5),
+            "due": today + timedelta(days=10),
+            "owner": "FleetDesk",
+            "source": "Offboarding",
+            "detail": "Vendor drafting CoD for ticket archives containing employee PII fragments.",
+        },
+    ]
+
+    signals = [
+        {"signal_id": "SIG-001", "vendor_id": "VND-2026-001", "detected": today - timedelta(hours=10), "severity": "Critical", "signal": "Breach notification email — backup environment", "status": "Open", "action": "Linked to INC-2026-009 / ISS-2026-001"},
+        {"signal_id": "SIG-002", "vendor_id": "VND-2026-001", "detected": today - timedelta(days=2), "severity": "High", "signal": "Outside-in score drop 80 → 62", "status": "Open", "action": "Triggered reassessment ASM-2026-001"},
+        {"signal_id": "SIG-003", "vendor_id": "VND-2026-003", "detected": today - timedelta(days=7), "severity": "High", "signal": "Related IR: IFS anonymous share (INC-2026-005)", "status": "Open", "action": "ISS-2026-006 opened"},
+        {"signal_id": "SIG-004", "vendor_id": "VND-2026-007", "detected": today - timedelta(days=5), "severity": "Medium", "signal": "Contract end date passed — offboarding SLA clock", "status": "Open", "action": "Checklist incomplete"},
+        {"signal_id": "SIG-005", "vendor_id": "VND-2026-002", "detected": today - timedelta(days=15), "severity": "Low", "signal": "SOC 2 period ends in ~220 days — schedule bridge letter", "status": "Watch", "action": "Calendar reminder"},
+        {"signal_id": "SIG-006", "vendor_id": "VND-2026-008", "detected": today - timedelta(days=3), "severity": "Medium", "signal": "HITRUST i1 validation still pending past vendor ETA", "status": "Open", "action": "Chase in ASM-2026-004"},
+        {"signal_id": "SIG-007", "vendor_id": "VND-2026-005", "detected": today - timedelta(days=20), "severity": "Low", "signal": "Outside-in +3 pts", "status": "Closed", "action": "No action"},
+        {"signal_id": "SIG-008", "vendor_id": "VND-2026-003", "detected": today - timedelta(days=1), "severity": "Medium", "signal": "Fourth-party: offshore L2 desk — new sub-processor notice", "status": "Open", "action": "Review DPA sub-processor list"},
+    ]
+
+    df_v = pd.DataFrame(vendors)
+    df_a = pd.DataFrame(assessments)
+    df_i = pd.DataFrame(issues)
+    df_s = pd.DataFrame(signals)
+
+    for col in ("contract_end", "last_assessment", "next_assessment"):
+        df_v[col] = pd.to_datetime(df_v[col], errors="coerce")
+    for col in ("due", "started"):
+        df_a[col] = pd.to_datetime(df_a[col], errors="coerce")
+    for col in ("opened", "due"):
+        df_i[col] = pd.to_datetime(df_i[col], errors="coerce")
+    df_s["detected"] = pd.to_datetime(df_s["detected"], errors="coerce")
+
+    # Featured deep packs
+    for v in vendors:
+        v.setdefault("diligence_steps", [])
+        v.setdefault("evidence", [])
+        v.setdefault("open_actions", [])
+
+    # Attach via session rebuild — store as columns on dataframe by merging from lists
+    deep = {
+        "VND-2026-001": {
+            "diligence_steps": [
+                {"seq": 1, "step": "Confirm DPA + breach-notification clause (Art. 33 path)", "status": "Done"},
+                {"seq": 2, "step": "Rotate API / SSO / SFTP (IR containment)", "status": "Done"},
+                {"seq": 3, "step": "Obtain IOC list + tenant-impact letter", "status": "Waiting"},
+                {"seq": 4, "step": "Review SOC 2; document backup-scope gap", "status": "Done"},
+                {"seq": 5, "step": "Residual decision: continue / exit / accept with conditions", "status": "Blocked"},
+                {"seq": 6, "step": "Update BIA-2026-004 / PLN-2026-004 with TPRM outcome", "status": "Pending"},
+            ],
+            "evidence": [
+                {"ref": "EVD-T-001-A", "desc": "Vendor breach notification", "source": "Email"},
+                {"ref": "EVD-T-001-B", "desc": "DPA-2024-019", "source": "Contracts"},
+                {"ref": "EVD-T-001-C", "desc": "SOC 2 Type II (Dec 2025)", "source": "TPRM locker"},
+                {"ref": "EVD-T-001-D", "desc": "Credential rotation logs", "source": "IR / IAM"},
+                {"ref": "EVD-T-001-E", "desc": "DPA 8.3 inquiry", "source": "Legal"},
+            ],
+            "open_actions": [
+                {"action": "Tenant impact + IOC from vendor", "owner": "TPRM", "due": today + timedelta(days=1), "status": "Waiting"},
+                {"action": "SOC 2 scope expansion commitment", "owner": "PayrollCo", "due": today + timedelta(days=60), "status": "Open"},
+                {"action": "Alternate processor evaluation", "owner": "Procurement", "due": today + timedelta(days=14), "status": "Planned"},
+            ],
+        },
+        "VND-2026-002": {
+            "diligence_steps": [
+                {"seq": 1, "step": "SOC 2 Type II review", "status": "Done"},
+                {"seq": 2, "step": "Physical / visitor controls sample", "status": "Done"},
+                {"seq": 3, "step": "HMC access + MFA exception review", "status": "Done"},
+                {"seq": 4, "step": "Right-to-audit clause confirmation", "status": "Done"},
+                {"seq": 5, "step": "Close or accept open findings", "status": "In progress"},
+            ],
+            "evidence": [
+                {"ref": "EVD-T-002-A", "desc": "SOC 2 Type II", "source": "TPRM locker"},
+                {"ref": "EVD-T-002-B", "desc": "Colo physical security addendum", "source": "Contracts"},
+                {"ref": "EVD-T-002-C", "desc": "HMC MFA exception memo", "source": "Mainframe Security"},
+            ],
+            "open_actions": [
+                {"action": "Visitor-log retention evidence", "owner": "NorthStack", "due": today + timedelta(days=20), "status": "With vendor"},
+                {"action": "Revisit HMC MFA acceptance", "owner": "Maya Chen", "due": today + timedelta(days=180), "status": "Accepted risk"},
+            ],
+        },
+        "VND-2026-003": {
+            "diligence_steps": [
+                {"seq": 1, "step": "SIG Lite intake", "status": "Done"},
+                {"seq": 2, "step": "Demand SOC 2 / HITRUST for Tier-2 privileged AMS", "status": "In progress"},
+                {"seq": 3, "step": "Offshore L2 / sub-processor review", "status": "In progress"},
+                {"seq": 4, "step": "IFS change-control evidence post INC-2026-005", "status": "Open"},
+                {"seq": 5, "step": "MSA exit clause amendment", "status": "Open"},
+            ],
+            "evidence": [
+                {"ref": "EVD-T-003-A", "desc": "SIG Lite responses", "source": "TPRM"},
+                {"ref": "EVD-T-003-B", "desc": "Privileged access listing (PAM)", "source": "IAM"},
+                {"ref": "EVD-T-003-C", "desc": "INC-2026-005 IR summary", "source": "IR"},
+            ],
+            "open_actions": [
+                {"action": "SOC 2 kickoff letter from vendor", "owner": "Orbit AMS", "due": today + timedelta(days=30), "status": "With vendor"},
+                {"action": "IFS permission review in AMS SOP", "owner": "Orbit / IBM i Ops", "due": today + timedelta(days=21), "status": "Open"},
+                {"action": "Exit clause amendment", "owner": "Legal", "due": today + timedelta(days=45), "status": "Open"},
+            ],
+        },
+    }
+
+    df_v["diligence_steps"] = df_v["vendor_id"].map(lambda i: deep.get(i, {}).get("diligence_steps", []))
+    df_v["evidence"] = df_v["vendor_id"].map(lambda i: deep.get(i, {}).get("evidence", []))
+    df_v["open_actions"] = df_v["vendor_id"].map(lambda i: deep.get(i, {}).get("open_actions", []))
+
+    return df_v, df_a, df_i, df_s
 
 
-_INCIDENT_STATUS_ORDER = ['Under Investigation', 'Contained', 'Resolved']
+def _enrich_v(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    today = _today()
+    out["assess_overdue"] = out["next_assessment"].notna() & (out["next_assessment"] < today)
+    out["has_alert"] = out["monitoring_alert"].fillna("").astype(str).str.len() > 0
+    out["tier1"] = out["tier"].str.startswith("Tier 1")
+    return out
 
 
-def _advance_incident_status(status: str) -> str:
-    if status not in _INCIDENT_STATUS_ORDER or status == _INCIDENT_STATUS_ORDER[-1]:
-        return status
-    return _INCIDENT_STATUS_ORDER[_INCIDENT_STATUS_ORDER.index(status) + 1]
-
-
-def _sync_vendors(seed: int) -> None:
-    if st.session_state.get('_tprm_seed') != seed or not st.session_state.get('vendors'):
-        vendors, assessments, contracts, incidents, categories, contacts = generate_sample_data(seed)
-        st.session_state.vendors = vendors
-        st.session_state.vendor_assessments = assessments
-        st.session_state.vendor_contracts = contracts
-        st.session_state.vendor_incidents = incidents
-        st.session_state.vendor_categories = categories
-        st.session_state.vendor_contacts = contacts
+def _sync(seed: int):
+    if st.session_state.get("_tprm_seed") != seed or "tprm_vendors" not in st.session_state:
+        v, a, i, s = _sample(seed)
+        st.session_state.tprm_vendors = v
+        st.session_state.tprm_asm = a
+        st.session_state.tprm_issues = i
+        st.session_state.tprm_signals = s
         st.session_state._tprm_seed = seed
+    return (
+        st.session_state.tprm_vendors,
+        st.session_state.tprm_asm,
+        st.session_state.tprm_issues,
+        st.session_state.tprm_signals,
+    )
 
 
-def main():
+def _save_v(df):
+    st.session_state.tprm_vendors = df.reset_index(drop=True)
+
+
+def _save_a(df):
+    st.session_state.tprm_asm = df.reset_index(drop=True)
+
+
+def _save_i(df):
+    st.session_state.tprm_issues = df.reset_index(drop=True)
+
+
+def _patch_v(vid, **fields):
+    df = st.session_state.tprm_vendors.copy()
+    loc = df.index[df["vendor_id"] == vid]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_v(df)
+
+
+def _patch_a(aid, **fields):
+    df = st.session_state.tprm_asm.copy()
+    loc = df.index[df["assessment_id"] == aid]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_a(df)
+
+
+def _patch_i(iid, **fields):
+    df = st.session_state.tprm_issues.copy()
+    loc = df.index[df["issue_id"] == iid]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_i(df)
+
+
+def _fmt(ts) -> str:
+    if ts is None:
+        return "—"
+    if isinstance(ts, str) and ts.strip() in {"", "—", "NaT", "None"}:
+        return "—"
+    try:
+        if pd.isna(ts):
+            return "—"
+    except (TypeError, ValueError):
+        pass
+    try:
+        p = pd.Timestamp(ts)
+        if pd.isna(p):
+            return "—"
+        return p.strftime("%Y-%m-%d")
+    except (ValueError, TypeError, OverflowError):
+        return "—"
+
+
+def _metrics(v, a, i, s):
+    ev = _enrich_v(v)
+    open_issues = i[~i["status"].isin(["Closed", "Accepted risk"])]
+    return {
+        "tier1": int(ev["tier1"].sum()),
+        "alerts": int(ev["has_alert"].sum()),
+        "asm_hot": int(a["status"].isin(["Overdue", "In progress", "With vendor"]).sum()),
+        "issues_open": int(len(open_issues)),
+        "offboard": int(ev["lifecycle"].eq("Offboarding").sum()),
+    }
+
+
+def _vendor_detail(row, asm, issues, signals, *, expanded=False):
+    st.markdown(f"### {row['vendor_id']} · {row['name']}")
+    a, b, c, d = st.columns(4)
+    a.metric("Tier", row["tier"].split("—")[0].strip())
+    b.metric("Inherent → Residual", f"{row['inherent']} → {row['residual']}")
+    c.metric("Outside-in", f"{int(row['outside_in'])}  {row['outside_in_trend']}")
+    d.metric("Lifecycle", row["lifecycle"])
+
+    c1, c2, c3 = st.columns(3)
+    c1.write(f"**Service:** {row['service']}")
+    c1.write(f"**Category:** {row['category']}")
+    c1.write(f"**TPRM owner:** {row['owner']}")
+    c1.write(f"**Business owner:** {row['business_owner']}")
+    c2.write(f"**Data access:** {row['data_access']}")
+    c2.write(f"**System access:** {row['system_access']}")
+    c2.write(f"**Criticality:** {row['criticality_note']}")
+    c3.write(f"**Assurance:** {row['assurance']}")
+    c3.write(f"**Period:** {row['assurance_period']}")
+    c3.write(f"**Next assessment:** {_fmt(row['next_assessment'])}")
+    c3.write(f"**Contract end:** {_fmt(row['contract_end'])}")
+
+    flags = []
+    if row["dpa"]:
+        flags.append("DPA")
+    if row["security_addendum"]:
+        flags.append("Security addendum")
+    if row["right_to_audit"]:
+        flags.append("Right to audit")
+    if row["exit_clause"]:
+        flags.append("Exit clause")
+    st.caption("Contract flags: " + (", ".join(flags) if flags else "none"))
+
+    st.write(row["summary"])
+    if row["assurance_gap"]:
+        st.warning(f"Assurance gap: {row['assurance_gap']}")
+    if row["monitoring_alert"]:
+        st.error(f"Monitoring: {row['monitoring_alert']}")
+    if row["fourth_parties"] and row["fourth_parties"] != "—":
+        st.write(f"**Fourth parties / concentration:** {row['fourth_parties']}")
+    if row["risk_refs"]:
+        st.caption(f"Linked: {row['risk_refs']}")
+
+    raw = st.session_state.tprm_vendors
+    rr = raw[raw["vendor_id"] == row["vendor_id"]]
+    if not rr.empty:
+        r0 = rr.iloc[0]
+        steps = r0.get("diligence_steps") or []
+        evid = r0.get("evidence") or []
+        acts = r0.get("open_actions") or []
+        if steps:
+            with st.expander(f"Diligence checklist ({len(steps)})", expanded=expanded):
+                st.dataframe(pd.DataFrame(steps), use_container_width=True, hide_index=True)
+        if evid:
+            with st.expander(f"Evidence ({len(evid)})", expanded=expanded):
+                st.dataframe(pd.DataFrame(evid), use_container_width=True, hide_index=True)
+        if acts:
+            with st.expander(f"Open actions ({len(acts)})", expanded=expanded):
+                adf = pd.DataFrame(acts)
+                if "due" in adf.columns:
+                    adf["due"] = adf["due"].apply(_fmt)
+                st.dataframe(adf, use_container_width=True, hide_index=True)
+
+    va = asm[asm["vendor_id"] == row["vendor_id"]]
+    vi = issues[issues["vendor_id"] == row["vendor_id"]]
+    vs = signals[signals["vendor_id"] == row["vendor_id"]]
+
+    with st.expander(f"Assessments ({len(va)})", expanded=False):
+        if va.empty:
+            st.info("None.")
+        else:
+            show = va.copy()
+            show["due"] = show["due"].apply(_fmt)
+            show["started"] = show["started"].apply(_fmt)
+            st.dataframe(
+                show[["assessment_id", "title", "status", "tier_driven", "due", "assessor"]],
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    with st.expander(f"Issues ({len(vi)})", expanded=expanded):
+        if vi.empty:
+            st.info("None.")
+        else:
+            show = vi.copy()
+            show["opened"] = show["opened"].apply(_fmt)
+            show["due"] = show["due"].apply(_fmt)
+            st.dataframe(
+                show[["issue_id", "title", "severity", "status", "due", "owner"]],
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    with st.expander(f"Monitoring signals ({len(vs)})", expanded=False):
+        if vs.empty:
+            st.info("None.")
+        else:
+            show = vs.copy()
+            show["detected"] = show["detected"].apply(_fmt)
+            st.dataframe(
+                show[["signal_id", "detected", "severity", "signal", "status", "action"]],
+                use_container_width=True,
+                hide_index=True,
+            )
+
+
+def _vendor_actions(row, *, key: str):
+    vid = row["vendor_id"]
+    a1, a2, a3 = st.columns(3)
+    with a1:
+        if row["lifecycle"] not in {"Terminated"} and st.button(
+            "Mark residual Medium", key=f"res_{key}", use_container_width=True
+        ):
+            _patch_v(vid, residual="Medium", monitoring_alert="")
+            st.rerun()
+    with a2:
+        if row["lifecycle"] == "Diligence" and st.button(
+            "Approve → Active", key=f"act_{key}", use_container_width=True
+        ):
+            _patch_v(vid, lifecycle="Active", residual="Medium")
+            st.rerun()
+    with a3:
+        if row["lifecycle"] not in {"Offboarding", "Terminated"} and st.button(
+            "Start offboarding", key=f"off_{key}", use_container_width=True
+        ):
+            _patch_v(vid, lifecycle="Offboarding")
+            st.rerun()
+
+
+def main() -> None:
     portfolio_skin.page_header(
         title="Third-Party Risk Management",
-        lede="Interactive GRC tool — #RUNGRCRaleigh build-in-public.",
+        lede="Tier, diligence, assurance, monitoring, remediate, exit. Club demo — not a system of record.",
         kicker="Third-party risk",
     )
-    st.markdown("Comprehensive platform for managing vendor relationships, assessing third-party risks, and ensuring compliance with vendor management requirements")
 
-    with st.sidebar:
-        st.title("Navigation")
-        seed = demo_kit.seed_controls()
-        st.markdown("---")
-        page = st.selectbox(
-            "Select Module",
-            ["Dashboard", "Vendor Management", "Risk Assessments", "Contract Management", "Incident Tracking", "Category Management", "Contact Management", "Reports"]
+    seed = demo_kit.seed_controls()
+    vendors, asm, issues, signals = _sync(seed)
+    ev = _enrich_v(vendors)
+    m = _metrics(vendors, asm, issues, signals)
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Filters")
+    tier_f = st.sidebar.multiselect("Tier", TIERS, default=TIERS)
+    life_f = st.sidebar.multiselect("Lifecycle", LIFECYCLE, default=LIFECYCLE)
+    filtered = ev[ev["tier"].isin(tier_f) & ev["lifecycle"].isin(life_f)]
+
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.metric("Tier 1", m["tier1"])
+    k2.metric("Monitoring alerts", m["alerts"])
+    k3.metric("Hot diligence", m["asm_hot"])
+    k4.metric("Open issues", m["issues_open"])
+    k5.metric("Offboarding", m["offboard"])
+
+    work, vend_tab, dil_tab, mon_tab, iss_tab, intake, export = st.tabs(
+        ["Workbench", "Vendor", "Diligence", "Monitoring", "Issues", "Intake", "Export"]
+    )
+
+    with work:
+        st.subheader("TPRM workbench")
+        if m["alerts"]:
+            st.warning(f"{m['alerts']} vendor(s) have open monitoring alerts.")
+
+        featured = ev[ev["vendor_id"].isin(FEATURED)].sort_values("tier")
+        st.markdown(f"**Featured — statement of record ({len(featured)})**")
+        for _, row in featured.iterrows():
+            st.markdown("---")
+            _vendor_detail(row, asm, issues, signals, expanded=True)
+            _vendor_actions(row, key=f"feat_{row['vendor_id']}")
+            st.markdown("---")
+
+        hot_asm = asm[asm["status"].isin(["Overdue", "In progress", "With vendor"])].sort_values("due")
+        st.markdown(f"**Diligence needing attention ({len(hot_asm)})**")
+        if hot_asm.empty:
+            st.info("Clear.")
+        else:
+            for _, r in hot_asm.iterrows():
+                with st.expander(f"{r['assessment_id']} · {r['title']} · {r['status']} · due {_fmt(r['due'])}"):
+                    st.write(f"**Vendor:** {r['vendor_id']} · **Scope:** {r['scope']}")
+                    st.write(f"**Tier-driven:** {r['tier_driven']} · **Assessor:** {r['assessor']}")
+                    if r["notes"]:
+                        st.write(r["notes"])
+                    if r["status"] != "Complete" and st.button("Mark complete", key=f"ac_{r['assessment_id']}"):
+                        _patch_a(r["assessment_id"], status="Complete")
+                        st.rerun()
+
+        open_iss = issues[~issues["status"].isin(["Closed"])].sort_values("due")
+        st.markdown(f"**Open / accepted issues ({len(open_iss)})**")
+        show = open_iss.copy()
+        show["due"] = show["due"].apply(_fmt)
+        st.dataframe(
+            show[["issue_id", "vendor_id", "title", "severity", "status", "due", "owner"]],
+            use_container_width=True,
+            hide_index=True,
         )
-        score_adjust = st.slider(
-            "What-if score adjust",
-            min_value=-10,
-            max_value=10,
-            value=0,
-            step=1,
-            help="Temporary adjustment to assessment overall scores.",
+
+        off = ev[ev["lifecycle"].eq("Offboarding")]
+        if not off.empty:
+            st.markdown("**Offboarding**")
+            for _, row in off.iterrows():
+                with st.expander(f"{row['vendor_id']} · {row['name']}"):
+                    _vendor_detail(row, asm, issues, signals)
+                    if st.button("Mark terminated", key=f"term_{row['vendor_id']}"):
+                        _patch_v(row["vendor_id"], lifecycle="Terminated", monitoring_alert="")
+                        st.rerun()
+
+    with vend_tab:
+        st.subheader("Vendor register")
+        ids = filtered["vendor_id"].tolist()
+        if not ids:
+            st.info("Nothing in filter.")
+        else:
+            pick = st.selectbox("Vendor", ids)
+            row = ev[ev["vendor_id"] == pick].iloc[0]
+            _vendor_detail(row, asm, issues, signals, expanded=True)
+            _vendor_actions(row, key=f"v_{pick}")
+        show = filtered[
+            [
+                "vendor_id",
+                "name",
+                "tier",
+                "inherent",
+                "residual",
+                "lifecycle",
+                "outside_in",
+                "assurance",
+                "next_assessment",
+            ]
+        ].copy()
+        show["next_assessment"] = show["next_assessment"].apply(_fmt)
+        st.dataframe(show, use_container_width=True, hide_index=True)
+
+    with dil_tab:
+        st.subheader("Diligence / assessments")
+        show = asm.copy()
+        show["due"] = show["due"].apply(_fmt)
+        show["started"] = show["started"].apply(_fmt)
+        st.dataframe(show, use_container_width=True, hide_index=True)
+
+        # Tier → diligence depth reminder
+        st.caption(
+            "Tier drives depth: Tier 1 = full assurance + on-site/rights as needed; "
+            "Tier 2 = SOC 2 / HITRUST i1 or equivalent; Tier 3–4 = light questionnaire / cert check."
         )
-        st.caption("Sample / mock data only.")
-    _sync_vendors(seed)
-    for assessment in st.session_state.vendor_assessments:
-        base = assessment.get('_base_overall', assessment['overall_score'])
-        assessment['_base_overall'] = base
-        assessment['overall_score'] = round(float(np.clip(base + score_adjust, 0, 100)), 1)
 
-    if page == "Dashboard":
-        show_dashboard()
-    elif page == "Vendor Management":
-        show_vendor_management()
-    elif page == "Risk Assessments":
-        show_risk_assessments()
-    elif page == "Contract Management":
-        show_contract_management()
-    elif page == "Incident Tracking":
-        show_incident_tracking()
-    elif page == "Category Management":
-        show_category_management()
-    elif page == "Contact Management":
-        show_contact_management()
-    elif page == "Reports":
-        show_reports()
+    with mon_tab:
+        st.subheader("Continuous monitoring (synthetic signals)")
+        show = signals.copy()
+        show["detected"] = show["detected"].apply(_fmt)
+        st.dataframe(show, use_container_width=True, hide_index=True)
 
-def show_dashboard():
-    st.header("Vendor Risk Dashboard")
-    
-    # Calculate key metrics
-    total_vendors = len(st.session_state.vendors)
-    active_vendors = len([v for v in st.session_state.vendors if v['status'] == 'Active'])
-    critical_risk = len([v for v in st.session_state.vendors if v['risk_level'] == 'Critical'])
-    high_risk = len([v for v in st.session_state.vendors if v['risk_level'] == 'High'])
-    
-    # Display key metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Total Vendors", total_vendors)
-        st.metric("Active Vendors", active_vendors, f"{active_vendors}/{total_vendors}")
-    
-    with col2:
-        st.metric("Critical Risk", critical_risk)
-        st.metric("High Risk", high_risk)
-    
-    with col3:
-        total_contract_value = sum([v['contract_value'] for v in st.session_state.vendors])
-        st.metric("Total Contract Value", f"${total_contract_value:,}")
-        avg_assessment_score = np.mean([a['overall_score'] for a in st.session_state.vendor_assessments])
-        st.metric("Avg Assessment Score", f"{avg_assessment_score:.1f}")
-    
-    with col4:
-        active_incidents = len([i for i in st.session_state.vendor_incidents if i['status'] == 'Under Investigation'])
-        st.metric("Active Incidents", active_incidents)
-        overdue_assessments = len([v for v in st.session_state.vendors if v['last_assessment'] < datetime.datetime.now() - timedelta(days=365)])
-        st.metric("Overdue Assessments", overdue_assessments)
-    
-    # Dashboard charts
-    st.subheader("Vendor Risk Overview")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Risk level distribution
-        risk_counts = pd.DataFrame(st.session_state.vendors)['risk_level'].value_counts()
-        fig = px.pie(values=risk_counts.values, names=risk_counts.index, 
-                    title="Vendors by Risk Level")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        # Category distribution
-        category_counts = pd.DataFrame(st.session_state.vendors)['category'].value_counts()
-        fig = px.bar(x=category_counts.index, y=category_counts.values, 
-                    title="Vendors by Category")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Recent vendor incidents
-    st.subheader("Recent Vendor Incidents")
-    recent_incidents = sorted(st.session_state.vendor_incidents, key=lambda x: x['incident_date'], reverse=True)[:5]
-    
-    for incident in recent_incidents:
-        vendor = next((v for v in st.session_state.vendors if v['id'] == incident['vendor_id']), None)
-        
-        col1, col2, col3, col4 = st.columns([2, 2, 1, 1])
-        with col1:
-            st.write(f"**{vendor['name'] if vendor else 'Unknown Vendor'}**")
-        with col2:
-            st.write(f"**{incident['incident_type']}** - {incident['description']}")
-        with col3:
-            if incident['severity'] == 'Critical':
-                st.write("Critical")
-            elif incident['severity'] == 'High':
-                st.write("High")
-            else:
-                st.write("Medium")
-        with col4:
-            if incident['status'] == 'Resolved':
-                st.write("Resolved")
-            else:
-                st.write("Active")
-        st.divider()
-
-def show_vendor_management():
-    st.header("Vendor Management")
-    
-    # Add new vendor
-    with st.expander("Add New Vendor"):
-        with st.form("new_vendor"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Vendor Name")
-                category = st.selectbox("Category", [c['name'] for c in st.session_state.vendor_categories])
-                description = st.text_area("Description")
-                risk_level = st.selectbox("Risk Level", ["Low", "Medium", "High", "Critical"])
-            with col2:
-                contract_value = st.number_input("Contract Value ($)", min_value=0, value=100000)
-                contract_start = st.date_input("Contract Start Date")
-                contract_end = st.date_input("Contract End Date")
-                status = st.selectbox("Status", ["Active", "Inactive", "Under Review", "Terminated"])
-            
-            if st.form_submit_button("Add Vendor"):
-                new_vendor = {
-                    'id': f'VND-{len(st.session_state.vendors)+1:03d}',
-                    'name': name,
-                    'category': category,
-                    'description': description,
-                    'risk_level': risk_level,
-                    'contract_value': contract_value,
-                    'contract_start': datetime.datetime.combine(contract_start, datetime.time()),
-                    'contract_end': datetime.datetime.combine(contract_end, datetime.time()),
-                    'status': status,
-                    'last_assessment': datetime.datetime.now()
-                }
-                st.session_state.vendors.append(new_vendor)
-                st.success("Vendor added successfully!")
-    
-    # Display vendors
-    df = pd.DataFrame(st.session_state.vendors)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        category_filter = st.selectbox("Filter by Category", ["All"] + list(df['category'].unique()))
-    with col2:
-        risk_filter = st.selectbox("Filter by Risk Level", ["All"] + list(df['risk_level'].unique()))
-    with col3:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if category_filter != "All":
-        filtered_df = filtered_df[filtered_df['category'] == category_filter]
-    if risk_filter != "All":
-        filtered_df = filtered_df[filtered_df['risk_level'] == risk_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Vendor analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Vendors by Risk Level")
-        risk_counts = filtered_df['risk_level'].value_counts()
-        fig = px.bar(x=risk_counts.index, y=risk_counts.values, 
-                    title="Vendors by Risk Level",
-                    color=risk_counts.index,
-                    color_discrete_map={'Critical': 'red', 'High': 'orange', 'Medium': 'yellow', 'Low': 'green'})
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Contract Value by Category")
-        value_by_category = filtered_df.groupby('category')['contract_value'].sum().reset_index()
-        fig = px.pie(values=value_by_category['contract_value'], names=value_by_category['category'], 
-                    title="Contract Value Distribution by Category")
+        fig = px.bar(
+            ev.sort_values("outside_in"),
+            x="name",
+            y="outside_in",
+            color="tier",
+            title="Outside-in score by vendor (demo)",
+            category_orders={"tier": TIERS},
+        )
         st.plotly_chart(fig, use_container_width=True)
 
-def show_risk_assessments():
-    st.header("Risk Assessments")
-    
-    # Add new assessment
-    with st.expander("Add New Assessment"):
-        with st.form("new_assessment"):
-            col1, col2 = st.columns(2)
-            with col1:
-                vendor_id = st.selectbox("Vendor", [v['id'] for v in st.session_state.vendors])
-                assessment_date = st.date_input("Assessment Date")
-                security_score = st.slider("Security Score", 0, 100, 85)
-                compliance_score = st.slider("Compliance Score", 0, 100, 90)
-            with col2:
-                financial_score = st.slider("Financial Score", 0, 100, 85)
-                operational_score = st.slider("Operational Score", 0, 100, 88)
-                risk_level = st.selectbox("Risk Level", ["Low", "Medium", "High", "Critical"])
-                status = st.selectbox("Status", ["Draft", "In Progress", "Completed", "Under Review"])
-                next_assessment = st.date_input("Next Assessment Date")
-            
-            if st.form_submit_button("Add Assessment"):
-                overall_score = (security_score + compliance_score + financial_score + operational_score) / 4
-                new_assessment = {
-                    'id': f'VA-{len(st.session_state.vendor_assessments)+1:03d}',
-                    'vendor_id': vendor_id,
-                    'assessment_date': datetime.datetime.combine(assessment_date, datetime.time()),
-                    'security_score': security_score,
-                    'compliance_score': compliance_score,
-                    'financial_score': financial_score,
-                    'operational_score': operational_score,
-                    'overall_score': overall_score,
-                    'risk_level': risk_level,
-                    'status': status,
-                    'next_assessment': datetime.datetime.combine(next_assessment, datetime.time())
-                }
-                st.session_state.vendor_assessments.append(new_assessment)
-                st.success("Assessment added successfully!")
-    
-    # Display assessments
-    df = pd.DataFrame(st.session_state.vendor_assessments)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        risk_filter = st.selectbox("Filter by Risk Level", ["All"] + list(df['risk_level'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col3:
-        score_filter = st.slider("Overall Score Range", 0, 100, (0, 100))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if risk_filter != "All":
-        filtered_df = filtered_df[filtered_df['risk_level'] == risk_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    filtered_df = filtered_df[(filtered_df['overall_score'] >= score_filter[0]) & (filtered_df['overall_score'] <= score_filter[1])]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Assessment analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Assessment Scores by Dimension")
-        if not filtered_df.empty:
-            scores_data = {
-                'Dimension': ['Security', 'Compliance', 'Financial', 'Operational'],
-                'Average Score': [
-                    filtered_df['security_score'].mean(),
-                    filtered_df['compliance_score'].mean(),
-                    filtered_df['financial_score'].mean(),
-                    filtered_df['operational_score'].mean()
-                ]
-            }
-            scores_df = pd.DataFrame(scores_data)
-            fig = px.bar(scores_df, x='Dimension', y='Average Score', 
-                        title="Average Assessment Scores by Dimension")
-            st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Risk Level Distribution")
-        risk_counts = filtered_df['risk_level'].value_counts()
-        fig = px.pie(values=risk_counts.values, names=risk_counts.index, 
-                    title="Assessment Risk Level Distribution")
-        st.plotly_chart(fig, use_container_width=True)
+    with iss_tab:
+        st.subheader("Issues & remediation")
+        for _, r in issues.sort_values("due").iterrows():
+            with st.expander(f"{r['issue_id']} · {r['title']} · {r['severity']} · {r['status']}"):
+                st.write(f"**Vendor:** {r['vendor_id']} · **Due:** {_fmt(r['due'])} · **Owner:** {r['owner']}")
+                st.write(f"**Source:** {r['source']}")
+                st.write(r["detail"])
+                b1, b2, b3 = st.columns(3)
+                with b1:
+                    if r["status"] != "Closed" and st.button("Close", key=f"icl_{r['issue_id']}"):
+                        _patch_i(r["issue_id"], status="Closed")
+                        st.rerun()
+                with b2:
+                    if r["status"] == "Open" and st.button("Send to vendor", key=f"iv_{r['issue_id']}"):
+                        _patch_i(r["issue_id"], status="With vendor")
+                        st.rerun()
+                with b3:
+                    if r["status"] not in {"Closed", "Accepted risk"} and st.button(
+                        "Accept risk", key=f"ia_{r['issue_id']}"
+                    ):
+                        _patch_i(r["issue_id"], status="Accepted risk")
+                        st.rerun()
 
-def show_contract_management():
-    st.header("Contract Management")
-    
-    # Add new contract
-    with st.expander("Add New Contract"):
-        with st.form("new_contract"):
-            col1, col2 = st.columns(2)
-            with col1:
-                vendor_id = st.selectbox("Vendor", [v['id'] for v in st.session_state.vendors])
-                contract_number = st.text_input("Contract Number")
-                contract_type = st.selectbox("Contract Type", ["Service Agreement", "License Agreement", "Purchase Order", "Master Agreement"])
-                start_date = st.date_input("Start Date")
-            with col2:
-                end_date = st.date_input("End Date")
-                value = st.number_input("Contract Value", min_value=0, value=100000)
-                currency = st.selectbox("Currency", ["USD", "EUR", "GBP", "CAD"])
-                auto_renewal = st.checkbox("Auto Renewal")
-                termination_notice = st.number_input("Termination Notice (days)", min_value=0, value=30)
-                status = st.selectbox("Status", ["Active", "Pending", "Expired", "Terminated"])
-            
-            if st.form_submit_button("Add Contract"):
-                new_contract = {
-                    'id': f'VC-{len(st.session_state.vendor_contracts)+1:03d}',
-                    'vendor_id': vendor_id,
-                    'contract_number': contract_number,
-                    'contract_type': contract_type,
-                    'start_date': datetime.datetime.combine(start_date, datetime.time()),
-                    'end_date': datetime.datetime.combine(end_date, datetime.time()),
-                    'value': value,
-                    'currency': currency,
-                    'auto_renewal': auto_renewal,
-                    'termination_notice': termination_notice,
-                    'status': status
-                }
-                st.session_state.vendor_contracts.append(new_contract)
-                st.success("Contract added successfully!")
-    
-    # Display contracts
-    df = pd.DataFrame(st.session_state.vendor_contracts)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        type_filter = st.selectbox("Filter by Type", ["All"] + list(df['contract_type'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col3:
-        currency_filter = st.selectbox("Filter by Currency", ["All"] + list(df['currency'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if type_filter != "All":
-        filtered_df = filtered_df[filtered_df['contract_type'] == type_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    if currency_filter != "All":
-        filtered_df = filtered_df[filtered_df['currency'] == currency_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Contract analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Contract Value by Type")
-        value_by_type = filtered_df.groupby('contract_type')['value'].sum().reset_index()
-        fig = px.bar(x=value_by_type['contract_type'], y=value_by_type['value'], 
-                    title="Contract Value by Type")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Contract Status Distribution")
-        status_counts = filtered_df['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="Contract Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
+    with intake:
+        st.subheader("Intake new third party")
+        with st.form("intake"):
+            c1, c2 = st.columns(2)
+            with c1:
+                name = st.text_input("Vendor name")
+                service = st.text_input("Service")
+                data_access = st.text_input("Data access", placeholder="e.g. customer PII")
+                system_access = st.text_input("System access", placeholder="e.g. SSO, API")
+            with c2:
+                # Simple inherent → tier (ProcessUnity-style lite)
+                has_pii = st.checkbox("Processes personal / regulated data")
+                prod_access = st.checkbox("Production / privileged system access")
+                mission = st.checkbox("Mission-critical process dependency")
+                owner = st.text_input("TPRM owner", value="TPRM")
+            if st.form_submit_button("Create vendor"):
+                if not name.strip():
+                    st.error("Name required.")
+                else:
+                    score = int(has_pii) + int(prod_access) + int(mission)
+                    if score >= 3 or (has_pii and prod_access):
+                        tier, inherent = "Tier 1 — Critical", "Critical"
+                    elif score == 2:
+                        tier, inherent = "Tier 2 — High", "High"
+                    elif score == 1:
+                        tier, inherent = "Tier 3 — Medium", "Medium"
+                    else:
+                        tier, inherent = "Tier 4 — Low", "Low"
+                    n = len(st.session_state.tprm_vendors) + 1
+                    today = _today()
+                    add = {
+                        "vendor_id": f"VND-2026-{n:03d}",
+                        "name": name.strip(),
+                        "service": service.strip() or "TBD",
+                        "category": "Intake",
+                        "owner": owner.strip() or "TPRM",
+                        "business_owner": "TBD",
+                        "lifecycle": "Intake",
+                        "tier": tier,
+                        "inherent": inherent,
+                        "residual": inherent,
+                        "data_access": data_access.strip() or "TBD",
+                        "system_access": system_access.strip() or "TBD",
+                        "criticality_note": "Intake — inherent from checklist.",
+                        "outside_in": 70,
+                        "outside_in_trend": "—",
+                        "assurance": "None on file",
+                        "assurance_period": "—",
+                        "assurance_gap": "",
+                        "dpa": False,
+                        "security_addendum": False,
+                        "right_to_audit": False,
+                        "exit_clause": False,
+                        "contract_end": today + timedelta(days=365),
+                        "last_assessment": pd.NaT,
+                        "next_assessment": today + timedelta(days=30),
+                        "fourth_parties": "",
+                        "monitoring_alert": "",
+                        "risk_refs": "",
+                        "summary": f"Intake complete. Tier {tier} from inherent checklist. Diligence not started.",
+                        "diligence_steps": [],
+                        "evidence": [],
+                        "open_actions": [],
+                    }
+                    _save_v(pd.concat([st.session_state.tprm_vendors, pd.DataFrame([add])], ignore_index=True))
+                    st.success(f"{add['vendor_id']} created as {tier}.")
+                    st.rerun()
 
-def show_incident_tracking():
-    st.header("Incident Tracking")
-    
-    # Add new incident
-    with st.expander("Add New Incident"):
-        with st.form("new_incident"):
-            col1, col2 = st.columns(2)
-            with col1:
-                vendor_id = st.selectbox("Vendor", [v['id'] for v in st.session_state.vendors])
-                incident_date = st.date_input("Incident Date")
-                incident_type = st.selectbox("Incident Type", ["Service Outage", "Security Breach", "Data Breach", "Performance Issue", "Compliance Violation", "Other"])
-                severity = st.selectbox("Severity", ["Low", "Medium", "High", "Critical"])
-            with col2:
-                description = st.text_area("Description")
-                impact = st.text_area("Impact Assessment")
-                resolution_time = st.number_input("Resolution Time (hours)", min_value=0, value=4)
-                status = st.selectbox("Status", ["Open", "Under Investigation", "Resolved", "Closed"])
-            
-            if st.form_submit_button("Add Incident"):
-                new_incident = {
-                    'id': f'VI-{len(st.session_state.vendor_incidents)+1:03d}',
-                    'vendor_id': vendor_id,
-                    'incident_date': datetime.datetime.combine(incident_date, datetime.time()),
-                    'incident_type': incident_type,
-                    'severity': severity,
-                    'description': description,
-                    'impact': impact,
-                    'resolution_time': resolution_time,
-                    'status': status
-                }
-                st.session_state.vendor_incidents.append(new_incident)
-                st.success("Incident added successfully!")
-    
-    # Display incidents
-    df = pd.DataFrame(st.session_state.vendor_incidents)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        type_filter = st.selectbox("Filter by Type", ["All"] + list(df['incident_type'].unique()))
-    with col2:
-        severity_filter = st.selectbox("Filter by Severity", ["All"] + list(df['severity'].unique()))
-    with col3:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if type_filter != "All":
-        filtered_df = filtered_df[filtered_df['incident_type'] == type_filter]
-    if severity_filter != "All":
-        filtered_df = filtered_df[filtered_df['severity'] == severity_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
+    with export:
+        st.subheader("Export")
+        out = filtered.copy()
+        for col in ("contract_end", "last_assessment", "next_assessment"):
+            out[col] = out[col].apply(_fmt)
+        for col in ("diligence_steps", "evidence", "open_actions"):
+            if col in out.columns:
+                out = out.drop(columns=[col])
+        demo_kit.csv_download(out, "vendors.csv", label="Download vendors")
+        oa = asm.copy()
+        oa["due"] = oa["due"].apply(_fmt)
+        oa["started"] = oa["started"].apply(_fmt)
+        demo_kit.csv_download(oa, "assessments.csv", label="Download assessments", key="a_csv")
+        oi = issues.copy()
+        oi["opened"] = oi["opened"].apply(_fmt)
+        oi["due"] = oi["due"].apply(_fmt)
+        demo_kit.csv_download(oi, "issues.csv", label="Download issues", key="i_csv")
+        st.caption("Resample rebuilds the demo set. Edits live in this browser session only.")
 
-    st.subheader("Advance incident")
-    for incident in st.session_state.vendor_incidents:
-        if incident['status'] not in _INCIDENT_STATUS_ORDER or incident['status'] == 'Resolved':
-            continue
-        cols = st.columns([3, 1])
-        cols[0].write(f"{incident['id']} — {incident['incident_type']} ({incident['status']})")
-        if cols[1].button("Advance status", key=f"adv_vi_{incident['id']}"):
-            incident['status'] = _advance_incident_status(incident['status'])
-            st.rerun()
-    
-    # Incident analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Incidents by Type")
-        type_counts = filtered_df['incident_type'].value_counts()
-        fig = px.bar(x=type_counts.index, y=type_counts.values, 
-                    title="Incidents by Type")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Incident Severity Distribution")
-        severity_counts = filtered_df['severity'].value_counts()
-        fig = px.pie(values=severity_counts.values, names=severity_counts.index, 
-                    title="Incident Severity Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-
-def show_category_management():
-    st.header("Category Management")
-    
-    # Add new category
-    with st.expander("Add New Category"):
-        with st.form("new_category"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Category Name")
-                description = st.text_area("Description")
-            with col2:
-                risk_weight = st.slider("Risk Weight", 0.0, 1.0, 0.5, 0.1)
-                assessment_frequency = st.selectbox("Assessment Frequency", ["Monthly", "Quarterly", "Semi-annually", "Annually"])
-            
-            if st.form_submit_button("Add Category"):
-                new_category = {
-                    'id': f'CAT-{len(st.session_state.vendor_categories)+1:03d}',
-                    'name': name,
-                    'description': description,
-                    'risk_weight': risk_weight,
-                    'assessment_frequency': assessment_frequency,
-                    'total_vendors': 0
-                }
-                st.session_state.vendor_categories.append(new_category)
-                st.success("Category added successfully!")
-    
-    # Display categories
-    df = pd.DataFrame(st.session_state.vendor_categories)
-    
-    # Filters
-    col1, col2 = st.columns(2)
-    with col1:
-        frequency_filter = st.selectbox("Filter by Assessment Frequency", ["All"] + list(df['assessment_frequency'].unique()))
-    with col2:
-        weight_filter = st.slider("Risk Weight Range", 0.0, 1.0, (0.0, 1.0), 0.1)
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if frequency_filter != "All":
-        filtered_df = filtered_df[filtered_df['assessment_frequency'] == frequency_filter]
-    filtered_df = filtered_df[(filtered_df['risk_weight'] >= weight_filter[0]) & (filtered_df['risk_weight'] <= weight_filter[1])]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Category analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Risk Weight Distribution")
-        fig = px.bar(filtered_df, x='name', y='risk_weight', 
-                    title="Risk Weight by Category")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Assessment Frequency Distribution")
-        frequency_counts = filtered_df['assessment_frequency'].value_counts()
-        fig = px.pie(values=frequency_counts.values, names=frequency_counts.index, 
-                    title="Assessment Frequency Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-
-def show_contact_management():
-    st.header("Contact Management")
-    
-    # Add new contact
-    with st.expander("Add New Contact"):
-        with st.form("new_contact"):
-            col1, col2 = st.columns(2)
-            with col1:
-                vendor_id = st.selectbox("Vendor", [v['id'] for v in st.session_state.vendors])
-                name = st.text_input("Contact Name")
-                title = st.text_input("Title")
-            with col2:
-                email = st.text_input("Email")
-                phone = st.text_input("Phone")
-                primary_contact = st.checkbox("Primary Contact")
-            
-            if st.form_submit_button("Add Contact"):
-                new_contact = {
-                    'id': f'VCT-{len(st.session_state.vendor_contacts)+1:03d}',
-                    'vendor_id': vendor_id,
-                    'name': name,
-                    'title': title,
-                    'email': email,
-                    'phone': phone,
-                    'primary_contact': primary_contact
-                }
-                st.session_state.vendor_contacts.append(new_contact)
-                st.success("Contact added successfully!")
-    
-    # Display contacts
-    df = pd.DataFrame(st.session_state.vendor_contacts)
-    
-    # Filters
-    col1, col2 = st.columns(2)
-    with col1:
-        vendor_filter = st.selectbox("Filter by Vendor", ["All"] + list(df['vendor_id'].unique()))
-    with col2:
-        primary_filter = st.selectbox("Filter by Contact Type", ["All", "Primary", "Secondary"])
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if vendor_filter != "All":
-        filtered_df = filtered_df[filtered_df['vendor_id'] == vendor_filter]
-    if primary_filter == "Primary":
-        filtered_df = filtered_df[filtered_df['primary_contact'] == True]
-    elif primary_filter == "Secondary":
-        filtered_df = filtered_df[filtered_df['primary_contact'] == False]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Contact analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Contacts by Vendor")
-        vendor_contact_counts = filtered_df['vendor_id'].value_counts()
-        fig = px.bar(x=vendor_contact_counts.index, y=vendor_contact_counts.values, 
-                    title="Number of Contacts by Vendor")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Primary vs Secondary Contacts")
-        contact_type_counts = filtered_df['primary_contact'].value_counts()
-        fig = px.pie(values=contact_type_counts.values, names=['Secondary', 'Primary'], 
-                    title="Primary vs Secondary Contacts")
-        st.plotly_chart(fig, use_container_width=True)
-
-def show_reports():
-    st.header("Vendor Risk Reports")
-    
-    # Report options
-    report_type = st.selectbox("Select Report Type", [
-        "Vendor Risk Summary",
-        "Assessment Performance Report",
-        "Contract Value Report",
-        "Incident Analysis Report",
-        "Category Risk Report",
-        "Compliance Report"
-    ])
-    
-    if report_type == "Vendor Risk Summary":
-        st.subheader("Vendor Risk Summary")
-        
-        # Calculate summary metrics
-        total_vendors = len(st.session_state.vendors)
-        active_vendors = len([v for v in st.session_state.vendors if v['status'] == 'Active'])
-        critical_risk = len([v for v in st.session_state.vendors if v['risk_level'] == 'Critical'])
-        high_risk = len([v for v in st.session_state.vendors if v['risk_level'] == 'High'])
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("**Vendor Overview**")
-            st.write(f"• Total Vendors: {total_vendors}")
-            st.write(f"• Active Vendors: {active_vendors}")
-            st.write(f"• Critical Risk Vendors: {critical_risk}")
-            st.write(f"• High Risk Vendors: {high_risk}")
-        
-        with col2:
-            st.write("**Risk Metrics**")
-            total_contract_value = sum([v['contract_value'] for v in st.session_state.vendors])
-            st.write(f"• Total Contract Value: ${total_contract_value:,}")
-            avg_assessment_score = np.mean([a['overall_score'] for a in st.session_state.vendor_assessments])
-            st.write(f"• Average Assessment Score: {avg_assessment_score:.1f}")
-            active_incidents = len([i for i in st.session_state.vendor_incidents if i['status'] == 'Under Investigation'])
-            st.write(f"• Active Incidents: {active_incidents}")
-            st.write(f"• Overall Risk Posture: Moderate")
-    
-    # Export functionality
-    with st.expander("Export"):
-        export_df = pd.DataFrame(st.session_state.vendors).copy()
-        for col in ('contract_start', 'contract_end', 'last_assessment'):
-            if col in export_df.columns:
-                export_df[col] = export_df[col].astype(str)
-        demo_kit.csv_download(export_df, "vendor_risk_data.csv", label="Download vendors CSV")
 
 if __name__ == "__main__":
     main()

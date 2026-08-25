@@ -1,17 +1,21 @@
+#!/usr/bin/env python3
+"""Data privacy program workbench — club teaching toy.
+
+RoPA / Art. 30, DPIAs, rights requests, breach clocks, US state law,
+GDPR, and NIS2-flavored obligations — educational / synthetic only.
+"""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
+import numpy as np
+import pandas as pd
 import streamlit as st
+
 import demo_kit
 import portfolio_skin
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import datetime
-from datetime import timedelta
-import random
-import json
 
-# Page configuration
 st.set_page_config(
     page_title="Data Privacy Management · i on GRC",
     page_icon="assets/favicon.svg",
@@ -21,954 +25,1308 @@ st.set_page_config(
 
 portfolio_skin.apply(hide_sidebar=False)
 
+LEGAL_BASES = [
+    "Consent (Art. 6(1)(a))",
+    "Contract (Art. 6(1)(b))",
+    "Legal obligation (Art. 6(1)(c))",
+    "Vital interests (Art. 6(1)(d))",
+    "Public task (Art. 6(1)(e))",
+    "Legitimate interests (Art. 6(1)(f))",
+    "US — employment / contract",
+    "US — legal obligation",
+    "US — legitimate interest / business purpose (CPRA)",
+]
+ROLES = ["Controller", "Joint controller", "Processor", "Sub-processor"]
+DSAR_TYPES = [
+    "Access (Art. 15 / CPRA know)",
+    "Rectification (Art. 16)",
+    "Erasure (Art. 17 / delete)",
+    "Restriction (Art. 18)",
+    "Portability (Art. 20)",
+    "Objection (Art. 21)",
+    "Opt-out sale/share (CPRA)",
+    "Limit sensitive use (CPRA)",
+]
+FEATURED_ROPA = {"ROPA-2026-001", "ROPA-2026-004", "ROPA-2026-006"}
 
 
-# Initialize session state
-if 'data_subjects' not in st.session_state:
-    st.session_state.data_subjects = []
-if 'privacy_requests' not in st.session_state:
-    st.session_state.privacy_requests = []
-if 'data_processing_activities' not in st.session_state:
-    st.session_state.data_processing_activities = []
-if 'privacy_impact_assessments' not in st.session_state:
-    st.session_state.privacy_impact_assessments = []
-if 'data_breaches' not in st.session_state:
-    st.session_state.data_breaches = []
-if 'consent_records' not in st.session_state:
-    st.session_state.consent_records = []
+def _today() -> pd.Timestamp:
+    return pd.Timestamp.now().normalize()
 
-def generate_sample_data(seed: int = 42):
-    """Generate sample data privacy management data"""
+
+def _now() -> pd.Timestamp:
+    return pd.Timestamp.now()
+
+
+def _sample(seed: int):
+    today = _today()
+    now = _now()
     rng = np.random.default_rng(seed)
-    data_subjects = [
+
+    def j(lo: int, hi: int) -> int:
+        return int(rng.integers(lo, hi))
+
+    # ── RoPA / Art. 30 ───────────────────────────────────────────────
+    ropa = [
         {
-            'id': 'DS-001',
-            'name': 'John Smith',
-            'email': 'john.smith@company.com',
-            'category': 'Employee',
-            'data_types': ['Personal', 'Employment', 'Financial'],
-            'consent_status': 'Active',
-            'data_retention_date': datetime.datetime.now() + timedelta(days=365),
-            'last_updated': datetime.datetime.now() - timedelta(days=30)
+            "ropa_id": "ROPA-2026-001",
+            "name": "Employee payroll & tax filing",
+            "purpose": "Calculate and pay wages; withhold and file taxes; benefits deductions",
+            "controller": "Acme Corp (US parent) — HR/Payroll",
+            "joint_controller": "",
+            "processor": "PayrollCo (VND-2026-001) under DPA-2024-019",
+            "role_of_org": "Controller",
+            "owner": "Payroll Ops · T. Williams",
+            "dpo_contact": "dpo@acme.example · C. Hoffman (Legal)",
+            "legal_basis": "Legal obligation (Art. 6(1)(c)) · US — legal obligation",
+            "li_assessment": "",
+            "categories_subjects": "Employees (1,820) · former employees in retention window",
+            "categories_data": "Identity, SSN/national ID, bank routing/account, salary, tax, benefits",
+            "special_category": "No (payroll) — health only if benefits vendor separate",
+            "recipients": "PayrollCo · tax authorities · bank ACH · benefits carriers",
+            "transfers": "DPF (US) · processor US; EU staff subset via SCCs addendum",
+            "transfer_tool": "SCCs + DPF",
+            "retention": "7 years post employment (tax) · bank details while employed + 90d",
+            "security_measures": "SSO · API token rotation · DPA Art. 28 · encryption in transit",
+            "systems": "AST-2026-012 PayrollCo · AST-2026-008 IdP · SFTP tax drop",
+            "jurisdictions": "GDPR · UK GDPR · CCPA/CPRA workforce limited · NIS2 (HR essential-service adjacency)",
+            "nis2_flag": True,
+            "dpia_id": "DPIA-2026-002",
+            "status": "Active — IR freeze",
+            "last_review": today - timedelta(days=40),
+            "next_review": today + timedelta(days=50),
+            "risk_notes": "INC-2026-009: processor backup breach — processing suspended; Art. 33 clock on org if tenant confirmed.",
+            "summary": "Crown-jewel processing. Art. 30 row must stay accurate through the PayrollCo incident — purpose, processor, transfers, and retention are the audit face of the activity.",
         },
         {
-            'id': 'DS-002',
-            'name': 'Jane Doe',
-            'email': 'jane.doe@company.com',
-            'category': 'Customer',
-            'data_types': ['Personal', 'Financial', 'Transaction'],
-            'consent_status': 'Active',
-            'data_retention_date': datetime.datetime.now() + timedelta(days=730),
-            'last_updated': datetime.datetime.now() - timedelta(days=15)
+            "ropa_id": "ROPA-2026-002",
+            "name": "Customer portal accounts & support",
+            "purpose": "Provide authenticated customer self-service; support tickets; account prefs",
+            "controller": "Acme Corp — Digital / CX",
+            "joint_controller": "",
+            "processor": "Azure AD B2C (VND-2026-004) · cloud host",
+            "role_of_org": "Controller",
+            "owner": "Platform Eng · R. Kim",
+            "dpo_contact": "dpo@acme.example",
+            "legal_basis": "Contract (Art. 6(1)(b))",
+            "li_assessment": "",
+            "categories_subjects": "B2C customers · trial users",
+            "categories_data": "Email, display name, auth events, prefs, support content",
+            "special_category": "No",
+            "recipients": "Support tooling · IdP · marketing-DB (limited prefs)",
+            "transfers": "DPF (US) for M365/Azure",
+            "transfer_tool": "DPF (US)",
+            "retention": "Account life + 2y activity logs",
+            "security_measures": "WAF · MFA rollout · CAPTCHA/rate-limit post INC-2026-001",
+            "systems": "AST-2026-007 portal · AST-2026-008 B2C · AST-2026-013 marketing-DB",
+            "jurisdictions": "GDPR · CCPA/CPRA · state privacy",
+            "nis2_flag": False,
+            "dpia_id": "DPIA-2026-001",
+            "status": "Active",
+            "last_review": today - timedelta(days=20),
+            "next_review": today + timedelta(days=160),
+            "risk_notes": "Credential-stuffing INC-2026-001 — 340 emails exposed in scrape; Art. 33 done; state letters in flight.",
+            "summary": "Core customer processing. RoPA updated after stuffing incident with security measures actually in force.",
         },
         {
-            'id': 'DS-003',
-            'name': 'Bob Johnson',
-            'email': 'bob.johnson@company.com',
-            'category': 'Vendor',
-            'data_types': ['Personal', 'Business'],
-            'consent_status': 'Expired',
-            'data_retention_date': datetime.datetime.now() + timedelta(days=180),
-            'last_updated': datetime.datetime.now() - timedelta(days=60)
+            "ropa_id": "ROPA-2026-003",
+            "name": "Order-to-cash / customer master (IBM i + JDE)",
+            "purpose": "Process orders, invoices, customer master for B2B commerce",
+            "controller": "Acme Corp — ERP Finance",
+            "joint_controller": "",
+            "processor": "Orbit AMS (VND-2026-003) — privileged ops under AMS MSA",
+            "role_of_org": "Controller",
+            "owner": "ERP Finance · M. Hassan",
+            "dpo_contact": "dpo@acme.example",
+            "legal_basis": "Contract (Art. 6(1)(b))",
+            "li_assessment": "",
+            "categories_subjects": "B2B customer contacts · shipping contacts",
+            "categories_data": "Name, address, phone, account IDs, order history",
+            "special_category": "No",
+            "recipients": "Warehouse · carriers · SAP ECC · payment gateway",
+            "transfers": "None for EU customers held in-region mirror; US primary",
+            "transfer_tool": "None (EEA/UK only) for EU shard · else DPF",
+            "retention": "FIN-RET-03 — 7y transactional; master until close + 7y",
+            "security_measures": "PAM · QAUDJRN · AMS change control (IFS gap open)",
+            "systems": "AST-2026-001 PRODBOX · AST-2026-006 JDE · AST-2026-004 SAP",
+            "jurisdictions": "GDPR · SOX (financial) · state breach if personal",
+            "nis2_flag": True,
+            "dpia_id": "",
+            "status": "Active",
+            "last_review": today - timedelta(days=95),
+            "next_review": today - timedelta(days=5),
+            "risk_notes": "RoPA review overdue 5d. INC-2026-005 IFS exposure — verify categories still accurate.",
+            "summary": "Legacy SoR processing. Art. 30 review clock slipped — classic RoPA hygiene failure under ops load.",
         },
         {
-            'id': 'DS-004',
-            'name': 'Alice Brown',
-            'email': 'alice.brown@company.com',
-            'category': 'Customer',
-            'data_types': ['Personal', 'Marketing'],
-            'consent_status': 'Withdrawn',
-            'data_retention_date': datetime.datetime.now() + timedelta(days=30),
-            'last_updated': datetime.datetime.now() - timedelta(days=7)
-        }
-    ]
-    
-    privacy_requests = [
-        {
-            'id': 'PR-001',
-            'data_subject_id': 'DS-001',
-            'request_type': 'Access',
-            'description': 'Request for personal data access',
-            'status': 'Completed',
-            'submitted_date': datetime.datetime.now() - timedelta(days=10),
-            'completed_date': datetime.datetime.now() - timedelta(days=8),
-            'response_time_hours': 48
+            "ropa_id": "ROPA-2026-004",
+            "name": "CreditAssist AI scoring (decision support)",
+            "purpose": "Assist analysts with credit score-band recommendation; human approves",
+            "controller": "Acme Corp — Credit Risk",
+            "joint_controller": "",
+            "processor": "Cloud GPU training vendor (training only) · bureau licenses",
+            "role_of_org": "Controller",
+            "owner": "Credit Risk · AI product owner",
+            "dpo_contact": "dpo@acme.example · MRM liaison",
+            "legal_basis": "Contract (Art. 6(1)(b)) · Legitimate interests (Art. 6(1)(f)) for model improvement",
+            "li_assessment": "LIA-2026-CA-01 — balancing test filed; opt-out not applicable to credit underwriting core",
+            "categories_subjects": "Credit applicants (consumers / SMEs)",
+            "categories_data": "Application attributes, bureau-derived features, outcomes, overrides",
+            "special_category": "No — but high-risk profiling under DPIA / AI Act adjacency",
+            "recipients": "Credit analysts · model registry · MRM · (no automated denial recipients)",
+            "transfers": "Bureau US · model training region US",
+            "transfer_tool": "SCCs + contractual bureau terms",
+            "retention": "Scores 5y · training sets per MRM · features FS-RET-01",
+            "security_measures": "Model card · drift/fairness monitors · access-controlled feature store",
+            "systems": "AST-2026-017 CreditAssist · AST-2026-018 feature store",
+            "jurisdictions": "GDPR Art. 22 adjacency · ISO 42001 · FCRA/ECOA (US) · CPRA automated decision notice",
+            "nis2_flag": False,
+            "dpia_id": "DPIA-2026-003",
+            "status": "Active",
+            "last_review": today - timedelta(days=14),
+            "next_review": today + timedelta(days=170),
+            "risk_notes": "DPIA complete — proceed with human oversight mandatory. No Art. 22 solely automated decision.",
+            "summary": "AI processing on the RoPA. Intended use and prohibitions must match AST-2026-017 model CI — SoT consistency across privacy and asset inventory.",
         },
         {
-            'id': 'PR-002',
-            'data_subject_id': 'DS-002',
-            'request_type': 'Deletion',
-            'description': 'Right to be forgotten request',
-            'status': 'In Progress',
-            'submitted_date': datetime.datetime.now() - timedelta(days=5),
-            'completed_date': None,
-            'response_time_hours': None
+            "ropa_id": "ROPA-2026-005",
+            "name": "Marketing email & analytics",
+            "purpose": "Send product updates and measure campaign engagement",
+            "controller": "Acme Corp — Marketing",
+            "joint_controller": "",
+            "processor": "ESP vendor · analytics SDK",
+            "role_of_org": "Controller",
+            "owner": "Marketing Ops",
+            "dpo_contact": "dpo@acme.example",
+            "legal_basis": "Consent (Art. 6(1)(a)) · CPRA business purpose for limited analytics",
+            "li_assessment": "",
+            "categories_subjects": "Prospects · customers who opted in",
+            "categories_data": "Email, engagement events, segment tags",
+            "special_category": "No",
+            "recipients": "ESP · analytics",
+            "transfers": "DPF (US)",
+            "transfer_tool": "DPF (US)",
+            "retention": "2y from last engagement or until withdraw",
+            "security_measures": "Consent log · suppression list · DSR delete cascade",
+            "systems": "ESP · AST-2026-013 marketing-DB",
+            "jurisdictions": "GDPR · ePrivacy · CCPA/CPRA · CAN-SPAM",
+            "nis2_flag": False,
+            "dpia_id": "",
+            "status": "Active",
+            "last_review": today - timedelta(days=60),
+            "next_review": today + timedelta(days=120),
+            "risk_notes": "Consent rate health OK; watch CPRA share/sale classification of ad pixels.",
+            "summary": "Consent-based marketing — RoPA ties to suppression and DSAR delete path.",
         },
         {
-            'id': 'PR-003',
-            'data_subject_id': 'DS-003',
-            'request_type': 'Correction',
-            'description': 'Update personal information',
-            'status': 'Completed',
-            'submitted_date': datetime.datetime.now() - timedelta(days=15),
-            'completed_date': datetime.datetime.now() - timedelta(days=14),
-            'response_time_hours': 24
+            "ropa_id": "ROPA-2026-006",
+            "name": "Privileged access & security monitoring",
+            "purpose": "Authenticate admins; log privileged sessions; detect misuse; SIEM correlation",
+            "controller": "Acme Corp — IT Security",
+            "joint_controller": "",
+            "processor": "EDR · SIEM · PAM vendors",
+            "role_of_org": "Controller",
+            "owner": "SecOps · Alex Rivera",
+            "dpo_contact": "dpo@acme.example",
+            "legal_basis": "Legitimate interests (Art. 6(1)(f)) · US — legitimate interest / security",
+            "li_assessment": "LIA-2026-SEC-01 — security of processing; workforce notice in handbook",
+            "categories_subjects": "Employees · contractors · vendor admins",
+            "categories_data": "Usernames, source IP, session metadata, device IDs, alert context",
+            "special_category": "No",
+            "recipients": "IR team · forensic hold counsel · (lawful authority if compelled)",
+            "transfers": "US SIEM region · EDR cloud",
+            "transfer_tool": "SCCs / DPF as applicable per vendor",
+            "retention": "Auth logs 1y · privileged session 1y · IR evidence per hold",
+            "security_measures": "PAM · MFA · geo-block · jump hosts · need-to-know SIEM RBAC",
+            "systems": "AST-2026-002 VPN · jumps · PAM · SIEM · EDR",
+            "jurisdictions": "GDPR · NIS2 Art. logging/monitoring expectations · state privacy",
+            "nis2_flag": True,
+            "dpia_id": "DPIA-2026-004",
+            "status": "Active",
+            "last_review": today - timedelta(days=30),
+            "next_review": today + timedelta(days=150),
+            "risk_notes": "NIS2-relevant: essential-entity cybersecurity measures include monitoring — RoPA must reflect reality of jump/SIEM gaps (AST-2026-005).",
+            "summary": "Security processing under LI. Featured because NIS2 and GDPR both care that monitoring is documented, proportionate, and actually covering privileged paths.",
         },
         {
-            'id': 'PR-004',
-            'data_subject_id': 'DS-004',
-            'request_type': 'Portability',
-            'description': 'Data portability request',
-            'status': 'Pending',
-            'submitted_date': datetime.datetime.now() - timedelta(days=2),
-            'completed_date': None,
-            'response_time_hours': None
-        }
-    ]
-    
-    data_processing_activities = [
-        {
-            'id': 'DPA-001',
-            'activity_name': 'Employee Payroll Processing',
-            'description': 'Processing employee salary and benefits data',
-            'legal_basis': 'Contract',
-            'data_categories': ['Personal', 'Financial', 'Employment'],
-            'retention_period': '7 years',
-            'risk_level': 'Medium',
-            'status': 'Active'
+            "ropa_id": "ROPA-2026-007",
+            "name": "Settlement & ledger (IBM Z / CICS)",
+            "purpose": "Execute and record financial settlement instructions",
+            "controller": "Acme Corp — Treasury",
+            "joint_controller": "",
+            "processor": "NorthStack Colo (VND-2026-002) — hosting only",
+            "role_of_org": "Controller",
+            "owner": "Treasury · S. Okonkwo",
+            "dpo_contact": "dpo@acme.example",
+            "legal_basis": "Contract (Art. 6(1)(b)) · Legal obligation (Art. 6(1)(c))",
+            "li_assessment": "",
+            "categories_subjects": "Customers (account activity)",
+            "categories_data": "Account IDs, balances, settlement instructions",
+            "special_category": "No",
+            "recipients": "Clearing partners · regulators (as required)",
+            "transfers": "Limited — partner jurisdictions per settlement network",
+            "transfer_tool": "Contractual + SCCs where personal",
+            "retention": "FIN-RET-03 7y",
+            "security_measures": "RACF · SMF · GDPS · colo physical",
+            "systems": "AST-2026-003 · AST-2026-015",
+            "jurisdictions": "GDPR · SOX · NIS2 (financial entity class candidate)",
+            "nis2_flag": True,
+            "dpia_id": "",
+            "status": "Active",
+            "last_review": today - timedelta(days=70),
+            "next_review": today + timedelta(days=110),
+            "risk_notes": "",
+            "summary": "High-integrity financial processing — personal data limited but NIS2/cyber resilience still in frame.",
         },
         {
-            'id': 'DPA-002',
-            'activity_name': 'Customer Marketing',
-            'description': 'Marketing communications and analytics',
-            'legal_basis': 'Consent',
-            'data_categories': ['Personal', 'Marketing', 'Behavioral'],
-            'retention_period': '2 years',
-            'risk_level': 'Low',
-            'status': 'Active'
+            "ropa_id": "ROPA-2026-008",
+            "name": "Vendor / AMS privileged operations",
+            "purpose": "Allow Orbit AMS to operate JDE/IFS under documented change control",
+            "controller": "Acme Corp",
+            "joint_controller": "",
+            "processor": "Orbit AMS (VND-2026-003)",
+            "role_of_org": "Controller",
+            "owner": "TPRM · A. Nguyen",
+            "dpo_contact": "dpo@acme.example",
+            "legal_basis": "Legitimate interests (Art. 6(1)(f)) / Contract with customers (downstream)",
+            "li_assessment": "Covered under ops LI + customer contracts",
+            "categories_subjects": "Customer contacts residing in JDE (incidental access)",
+            "categories_data": "As in ROPA-2026-003 — AMS has privileged path",
+            "special_category": "No",
+            "recipients": "Orbit AMS engineers · offshore L2 (sub-processor)",
+            "transfers": "India L2 — SCCs required",
+            "transfer_tool": "SCCs",
+            "retention": "Ticket content per AMS MSA · access logs 1y",
+            "security_measures": "PAM · named IDs · (SIG Lite insufficient — ISS TPRM open)",
+            "systems": "AST-2026-001 · AST-2026-006",
+            "jurisdictions": "GDPR Ch. V transfers · TPRM",
+            "nis2_flag": True,
+            "dpia_id": "",
+            "status": "Active — remediation",
+            "last_review": today - timedelta(days=50),
+            "next_review": today + timedelta(days=40),
+            "risk_notes": "Sub-processor notice stale; exit clause missing; IFS permission ops insufficient on questionnaire.",
+            "summary": "Processor RoPA lens — Art. 28 + Ch. V transfers + sub-processors must be explicit.",
         },
-        {
-            'id': 'DPA-003',
-            'activity_name': 'Vendor Management',
-            'description': 'Third-party vendor relationship management',
-            'legal_basis': 'Legitimate Interest',
-            'data_categories': ['Personal', 'Business'],
-            'retention_period': '5 years',
-            'risk_level': 'Medium',
-            'status': 'Active'
-        },
-        {
-            'id': 'DPA-004',
-            'activity_name': 'Security Monitoring',
-            'description': 'IT security and access monitoring',
-            'legal_basis': 'Legitimate Interest',
-            'data_categories': ['Personal', 'Technical'],
-            'retention_period': '1 year',
-            'risk_level': 'High',
-            'status': 'Active'
-        },
-        {
-            'id': 'DPA-005',
-            'activity_name': 'IBM i Customer Master Processing',
-            'description': 'Customer master and order data processed on IBM i production LPAR / DB2 for i',
-            'legal_basis': 'Contract',
-            'data_categories': ['Personal', 'Financial', 'Contact'],
-            'retention_period': '7 years',
-            'risk_level': 'High',
-            'status': 'Active',
-            'systems': ['IBM i', 'JD Edwards']
-        },
-        {
-            'id': 'DPA-006',
-            'activity_name': 'z/OS DB2 Customer Data Processing',
-            'description': 'Account and settlement PII stored and batch-processed in DB2 for z/OS on IBM Z',
-            'legal_basis': 'Contract',
-            'data_categories': ['Personal', 'Financial', 'Transactional'],
-            'retention_period': '10 years',
-            'risk_level': 'High',
-            'status': 'Active',
-            'systems': ['IBM Z', 'DB2 for z/OS']
-        }
-    ]
-    
-    privacy_impact_assessments = [
-        {
-            'id': 'PIA-001',
-            'activity_id': 'DPA-001',
-            'assessment_date': datetime.datetime.now() - timedelta(days=90),
-            'risk_score': 6,
-            'risk_level': 'Medium',
-            'findings': ['Data encryption required', 'Access controls need review'],
-            'status': 'Completed',
-            'next_review': datetime.datetime.now() + timedelta(days=275)
-        },
-        {
-            'id': 'PIA-002',
-            'activity_id': 'DPA-002',
-            'assessment_date': datetime.datetime.now() - timedelta(days=60),
-            'risk_score': 4,
-            'risk_level': 'Low',
-            'findings': ['Consent mechanism needs improvement'],
-            'status': 'In Progress',
-            'next_review': datetime.datetime.now() + timedelta(days=305)
-        },
-        {
-            'id': 'PIA-003',
-            'activity_id': 'DPA-003',
-            'assessment_date': datetime.datetime.now() - timedelta(days=30),
-            'risk_score': 7,
-            'risk_level': 'Medium',
-            'findings': ['Data sharing agreements need updates'],
-            'status': 'Completed',
-            'next_review': datetime.datetime.now() + timedelta(days=335)
-        }
-    ]
-    
-    data_breaches = [
-        {
-            'id': 'DB-001',
-            'incident_date': datetime.datetime.now() - timedelta(days=45),
-            'discovery_date': datetime.datetime.now() - timedelta(days=44),
-            'breach_type': 'Unauthorized Access',
-            'affected_records': 150,
-            'severity': 'Medium',
-            'status': 'Resolved',
-            'notification_required': False,
-            'regulatory_reporting': False
-        },
-        {
-            'id': 'DB-002',
-            'incident_date': datetime.datetime.now() - timedelta(days=90),
-            'discovery_date': datetime.datetime.now() - timedelta(days=89),
-            'breach_type': 'Data Loss',
-            'affected_records': 25,
-            'severity': 'Low',
-            'status': 'Resolved',
-            'notification_required': False,
-            'regulatory_reporting': False
-        },
-        {
-            'id': 'DB-003',
-            'incident_date': datetime.datetime.now() - timedelta(days=15),
-            'discovery_date': datetime.datetime.now() - timedelta(days=14),
-            'breach_type': 'System Compromise',
-            'affected_records': 500,
-            'severity': 'High',
-            'status': 'Under Investigation',
-            'notification_required': True,
-            'regulatory_reporting': True
-        }
-    ]
-    
-    consent_records = [
-        {
-            'id': 'CR-001',
-            'data_subject_id': 'DS-001',
-            'consent_type': 'Marketing Communications',
-            'consent_date': datetime.datetime.now() - timedelta(days=365),
-            'consent_status': 'Active',
-            'withdrawal_date': None,
-            'consent_method': 'Online Form'
-        },
-        {
-            'id': 'CR-002',
-            'data_subject_id': 'DS-002',
-            'consent_type': 'Data Processing',
-            'consent_date': datetime.datetime.now() - timedelta(days=180),
-            'consent_status': 'Active',
-            'withdrawal_date': None,
-            'consent_method': 'Email'
-        },
-        {
-            'id': 'CR-003',
-            'data_subject_id': 'DS-003',
-            'consent_type': 'Third-party Sharing',
-            'consent_date': datetime.datetime.now() - timedelta(days=730),
-            'consent_status': 'Expired',
-            'withdrawal_date': None,
-            'consent_method': 'Contract'
-        },
-        {
-            'id': 'CR-004',
-            'data_subject_id': 'DS-004',
-            'consent_type': 'Marketing Communications',
-            'consent_date': datetime.datetime.now() - timedelta(days=90),
-            'consent_status': 'Withdrawn',
-            'withdrawal_date': datetime.datetime.now() - timedelta(days=7),
-            'consent_method': 'Online Form'
-        }
     ]
 
-    request_statuses = ['Pending', 'In Progress', 'Completed', 'Rejected']
-    for request in privacy_requests:
-        if 'response_time_hours' in request and request['response_time_hours']:
-            request['response_time_hours'] = max(
-                1, int(request['response_time_hours']) + int(rng.integers(-12, 13))
-            )
-        if int(rng.integers(0, 3)) == 0:
-            request['status'] = str(rng.choice(request_statuses))
-    for pia in privacy_impact_assessments:
-        if 'risk_score' in pia:
-            pia['risk_score'] = int(np.clip(pia['risk_score'] + int(rng.integers(-2, 3)), 1, 10))
+    # ── DPIAs ────────────────────────────────────────────────────────
+    dpias = [
+        {
+            "dpia_id": "DPIA-2026-001",
+            "title": "Customer portal auth & profile (post-stuffing refresh)",
+            "ropa_id": "ROPA-2026-002",
+            "status": "Complete — proceed",
+            "owner": "DPO / Platform",
+            "started": today - timedelta(days=100),
+            "completed": today - timedelta(days=25),
+            "next_review": today + timedelta(days=340),
+            "criteria": "Large-scale auth · account data · internet-facing",
+            "risks": "Credential stuffing · scrape of email/display name · session takeover",
+            "measures": "CAPTCHA · rate-limit · forced resets · WAF /api/* · MFA phased",
+            "residual": "Medium",
+            "consult_dpa": False,
+            "notes": "Refreshed after INC-2026-001. Residual accepted with monitoring.",
+        },
+        {
+            "dpia_id": "DPIA-2026-002",
+            "title": "Payroll processor (PayrollCo) — Art. 28 + breach scenario",
+            "ropa_id": "ROPA-2026-001",
+            "status": "Overdue",
+            "owner": "DPO / TPRM",
+            "started": today - timedelta(days=200),
+            "completed": pd.NaT,
+            "next_review": today - timedelta(days=20),
+            "criteria": "Special-adjacent financial ID · processor · large workforce",
+            "risks": "Processor breach · backup-env gap · cross-border · pay disruption",
+            "measures": "DPA · token rotation · suspend processing · manual BCP",
+            "residual": "High (pending INC-2026-009)",
+            "consult_dpa": False,
+            "notes": "Annual DPIA refresh overdue — accelerate under active IR. May need Art. 33/34 path.",
+        },
+        {
+            "dpia_id": "DPIA-2026-003",
+            "title": "CreditAssist AI decision support",
+            "ropa_id": "ROPA-2026-004",
+            "status": "Complete — proceed",
+            "owner": "DPO / MRM",
+            "started": today - timedelta(days=120),
+            "completed": today - timedelta(days=40),
+            "next_review": today + timedelta(days=325),
+            "criteria": "Profiling · credit · AI · systematic evaluation",
+            "risks": "Bias · over-automation · feature leakage · opaque scoring",
+            "measures": "Human-in-loop · prohibited autonomous denial · fairness/drift monitors · model card",
+            "residual": "Medium",
+            "consult_dpa": False,
+            "notes": "Aligned to AST-2026-017. Art. 22 solely automated decision not used.",
+        },
+        {
+            "dpia_id": "DPIA-2026-004",
+            "title": "Privileged session monitoring & SIEM",
+            "ropa_id": "ROPA-2026-006",
+            "status": "Complete — proceed",
+            "owner": "DPO / SecOps",
+            "started": today - timedelta(days=80),
+            "completed": today - timedelta(days=35),
+            "next_review": today + timedelta(days=330),
+            "criteria": "Systematic monitoring of employees · LI",
+            "risks": "Over-collection · function creep · coverage gaps creating false assurance",
+            "measures": "RBAC · retention limits · workforce notice · LIA on file",
+            "residual": "Low–Medium",
+            "consult_dpa": False,
+            "notes": "Call out jump hosts missing SIEM as control failure, not DPIA failure.",
+        },
+        {
+            "dpia_id": "DPIA-2026-005",
+            "title": "New LedgerLink payments gateway (pre-contract)",
+            "ropa_id": "",
+            "status": "In progress",
+            "owner": "DPO / Finance",
+            "started": today - timedelta(days=15),
+            "completed": pd.NaT,
+            "next_review": today + timedelta(days=14),
+            "criteria": "Payment data · new processor · PCI + privacy",
+            "risks": "PAN handling · processor breach · transfer tools",
+            "measures": "Tokenization · HITRUST i1 pending · DPA draft",
+            "residual": "TBD",
+            "consult_dpa": False,
+            "notes": "Gate on VND-2026-008 diligence — do not go live without DPIA complete.",
+        },
+    ]
 
-    return data_subjects, privacy_requests, data_processing_activities, privacy_impact_assessments, data_breaches, consent_records
+    # ── Rights / DSAR ────────────────────────────────────────────────
+    dsars = [
+        {
+            "request_id": "DSAR-2026-001",
+            "type": "Access (Art. 15 / CPRA know)",
+            "regime": "GDPR",
+            "subject_ref": "Customer · portal ID C-10422",
+            "channel": "Privacy portal",
+            "status": "In progress",
+            "received": today - timedelta(days=12),
+            "due": today + timedelta(days=18),
+            "extended": False,
+            "owner": "Privacy ops · L. Torres",
+            "systems_in_scope": "Portal · B2C · marketing-DB · support",
+            "notes": "Identity verified. Pull exports from portal + ESP suppression check.",
+        },
+        {
+            "request_id": "DSAR-2026-002",
+            "type": "Erasure (Art. 17 / delete)",
+            "regime": "GDPR",
+            "subject_ref": "Ex-customer · email on file",
+            "channel": "Email to DPO",
+            "status": "Legal hold",
+            "received": today - timedelta(days=8),
+            "due": today + timedelta(days=22),
+            "extended": False,
+            "owner": "Privacy ops / Legal",
+            "systems_in_scope": "Portal · marketing · support",
+            "notes": "Open billing dispute — erasure deferred under Art. 17(3)(b)/(e); inform subject.",
+        },
+        {
+            "request_id": "DSAR-2026-003",
+            "type": "Opt-out sale/share (CPRA)",
+            "regime": "CPRA",
+            "subject_ref": "CA resident · GPC signal",
+            "channel": "GPC / website",
+            "status": "Complete",
+            "received": today - timedelta(days=20),
+            "due": today - timedelta(days=5),
+            "extended": False,
+            "owner": "Marketing Ops",
+            "systems_in_scope": "ESP · ad pixels",
+            "notes": "GPC honored within 15 business days. Suppression written.",
+        },
+        {
+            "request_id": "DSAR-2026-004",
+            "type": "Access (Art. 15 / CPRA know)",
+            "regime": "GDPR",
+            "subject_ref": "Employee · HR ticket",
+            "channel": "HRIS privacy form",
+            "status": "Intake",
+            "received": today - timedelta(days=2),
+            "due": today + timedelta(days=28),
+            "extended": False,
+            "owner": "HR / Privacy ops",
+            "systems_in_scope": "HRIS · PayrollCo · badge · email",
+            "notes": "Identity pending manager attestation. PayrollCo freeze may delay payroll slice.",
+        },
+        {
+            "request_id": "DSAR-2026-005",
+            "type": "Portability (Art. 20)",
+            "regime": "GDPR",
+            "subject_ref": "Customer · SME admin",
+            "channel": "Privacy portal",
+            "status": "Identity verified",
+            "received": today - timedelta(days=5),
+            "due": today + timedelta(days=25),
+            "extended": False,
+            "owner": "Privacy ops",
+            "systems_in_scope": "Portal · O2C contact fields",
+            "notes": "Machine-readable JSON export path exists for portal; JDE contacts manual.",
+        },
+        {
+            "request_id": "DSAR-2026-006",
+            "type": "Objection (Art. 21)",
+            "regime": "GDPR",
+            "subject_ref": "Prospect · marketing LI historically mis-tagged",
+            "channel": "Unsubscribe + DPO",
+            "status": "Complete",
+            "received": today - timedelta(days=40),
+            "due": today - timedelta(days=10),
+            "extended": False,
+            "owner": "Marketing Ops",
+            "systems_in_scope": "ESP",
+            "notes": "Reclassified to consent-only; objection closed.",
+        },
+        {
+            "request_id": "DSAR-2026-007",
+            "type": "Limit sensitive use (CPRA)",
+            "regime": "CPRA",
+            "subject_ref": "CA employee",
+            "channel": "HR",
+            "status": "In progress",
+            "received": today - timedelta(days=9),
+            "due": today + timedelta(days=6),
+            "extended": False,
+            "owner": "HR / Privacy",
+            "systems_in_scope": "HRIS",
+            "notes": "Sensitive workforce data limit — confirm no secondary analytics use.",
+        },
+        {
+            "request_id": "DSAR-2026-008",
+            "type": "Access (Art. 15 / CPRA know)",
+            "regime": "GDPR",
+            "subject_ref": "Applicant · CreditAssist",
+            "channel": "Credit privacy form",
+            "status": "In progress",
+            "received": today - timedelta(days=18),
+            "due": today + timedelta(days=12),
+            "extended": True,
+            "owner": "Credit Risk / Privacy",
+            "systems_in_scope": "CreditAssist · feature store · bureau (disclose source)",
+            "notes": "Complex — model input/output explanation + bureau source. 60-day extension letter sent (complexity).",
+        },
+    ]
+
+    # ── Breaches / security incidents with privacy notify path ───────
+    breaches = [
+        {
+            "breach_id": "PB-2026-001",
+            "title": "Portal credential-stuffing — email/display-name scrape",
+            "related_ir": "INC-2026-001",
+            "ropa_id": "ROPA-2026-002",
+            "status": "Notify subjects",
+            "detected": now - timedelta(hours=96),
+            "assessed": now - timedelta(hours=88),
+            "dpa_notified": now - timedelta(hours=70),
+            "subjects_notified": pd.NaT,
+            "affected_count": 340,
+            "data_types": "Email · display name",
+            "risk_to_rights": "Possible phishing targeting — not high for Art. 34 alone but state letters required",
+            "regimes": "GDPR Art. 33 (done) · CA/NY/TX state letters",
+            "owner": "DPO / GRC",
+            "nis2_relevant": False,
+            "notes": "Art. 33 within 72h. State notification letters drafting. Subjects: decide on notice vs FAQs.",
+        },
+        {
+            "breach_id": "PB-2026-002",
+            "title": "PayrollCo backup-environment — tenant impact unknown",
+            "related_ir": "INC-2026-009",
+            "ropa_id": "ROPA-2026-001",
+            "status": "Assessing",
+            "detected": now - timedelta(hours=10),
+            "assessed": pd.NaT,
+            "dpa_notified": pd.NaT,
+            "subjects_notified": pd.NaT,
+            "affected_count": 0,
+            "data_types": "Possibly SSN · bank · tax (if tenant in scope)",
+            "risk_to_rights": "High if confirmed — Art. 34 + multi-state + IRS considerations",
+            "regimes": "GDPR Art. 33 clock running · US state · NIS2 early-warning if essential entity criteria met",
+            "owner": "DPO / TPRM / Legal",
+            "nis2_relevant": True,
+            "notes": "Do not miss 72h. Draft Art. 33 holding notice. NIS2: assess if cyber notification to CSIRT/authority required in parallel to DPA.",
+        },
+        {
+            "breach_id": "PB-2026-003",
+            "title": "JDE IFS anonymous share — personal data readability",
+            "related_ir": "INC-2026-005",
+            "ropa_id": "ROPA-2026-003",
+            "status": "Assessing",
+            "detected": now - timedelta(days=7),
+            "assessed": now - timedelta(days=6),
+            "dpa_notified": pd.NaT,
+            "subjects_notified": pd.NaT,
+            "affected_count": 0,
+            "data_types": "Customer contact fields in World libraries (scope TBD)",
+            "risk_to_rights": "Depends on exfil — containment done; forensics ongoing",
+            "regimes": "GDPR risk assessment · possible Art. 33",
+            "owner": "DPO / Infra",
+            "nis2_relevant": True,
+            "notes": "Significant cyber incident candidate under NIS2 if essential — coordinate with CISO on dual-reporting.",
+        },
+        {
+            "breach_id": "PB-2026-004",
+            "title": "Misdirected employee email (single)",
+            "related_ir": "",
+            "ropa_id": "ROPA-2026-006",
+            "status": "Closed — no notify",
+            "detected": now - timedelta(days=45),
+            "assessed": now - timedelta(days=45),
+            "dpa_notified": pd.NaT,
+            "subjects_notified": pd.NaT,
+            "affected_count": 1,
+            "data_types": "Name · work email · performance snippet",
+            "risk_to_rights": "Low — recalled; recipient confirmed delete",
+            "regimes": "Internal register only",
+            "owner": "Privacy ops",
+            "nis2_relevant": False,
+            "notes": "Logged per policy. No DPA notify.",
+        },
+    ]
+
+    # ── Transfer / vendor privacy inventory (light) ───────────────────
+    transfers = [
+        {
+            "transfer_id": "XFR-2026-001",
+            "ropa_id": "ROPA-2026-001",
+            "importer": "PayrollCo (US)",
+            "mechanism": "DPF (US) · SCCs backup",
+            "tia_status": "Complete 2025-11 — refresh triggered by INC-2026-009",
+            "owner": "DPO / TPRM",
+            "next_review": today + timedelta(days=30),
+        },
+        {
+            "transfer_id": "XFR-2026-002",
+            "ropa_id": "ROPA-2026-008",
+            "importer": "Orbit AMS offshore L2 (India)",
+            "mechanism": "SCCs",
+            "tia_status": "Stale — sub-processor notice pending update",
+            "owner": "TPRM / DPO",
+            "next_review": today + timedelta(days=14),
+        },
+        {
+            "transfer_id": "XFR-2026-003",
+            "ropa_id": "ROPA-2026-004",
+            "importer": "Credit bureau (US)",
+            "mechanism": "Contractual + SCCs where personal leaves EEA",
+            "tia_status": "Complete",
+            "owner": "Credit Risk / DPO",
+            "next_review": today + timedelta(days=200),
+        },
+        {
+            "transfer_id": "XFR-2026-004",
+            "ropa_id": "ROPA-2026-002",
+            "importer": "Microsoft Azure / B2C",
+            "mechanism": "DPF (US)",
+            "tia_status": "Rely on vendor docs + config review",
+            "owner": "IAM / DPO",
+            "next_review": today + timedelta(days=180),
+        },
+    ]
+
+    # Deep packs for featured RoPA
+    deep = {
+        "ROPA-2026-001": {
+            "tom": [
+                {"measure": "Art. 28 DPA", "status": "In force — DPA-2024-019", "evidence": "Contract repo"},
+                {"measure": "Encryption in transit", "status": "TLS", "evidence": "API gateway"},
+                {"measure": "Access control / SSO", "status": "Federated — sessions revoked in IR", "evidence": "IdP logs"},
+                {"measure": "Breach notice clause", "status": "Invoked", "evidence": "INC-2026-009"},
+                {"measure": "Sub-processors listed", "status": "AWS backup region — scope issue", "evidence": "SOC 2 gap"},
+                {"measure": "Return/delete on exit", "status": "In DPA — not tested live", "evidence": "PLN-2026-004"},
+            ],
+            "evidence": [
+                {"ref": "EVD-P-001-A", "desc": "Art. 30 entry approved", "source": "RoPA register"},
+                {"ref": "EVD-P-001-B", "desc": "DPA-2024-019", "source": "Legal"},
+                {"ref": "EVD-P-001-C", "desc": "INC-2026-009 pack", "source": "IR"},
+                {"ref": "EVD-P-001-D", "desc": "Workforce privacy notice", "source": "HR"},
+            ],
+            "open_actions": [
+                {"action": "Complete DPIA-2026-002 refresh", "owner": "DPO", "due": today + timedelta(days=7), "status": "Overdue"},
+                {"action": "Art. 33 draft if tenant confirmed", "owner": "DPO / Legal", "due": today + timedelta(days=2), "status": "Drafting"},
+                {"action": "TIA refresh post-incident", "owner": "DPO / TPRM", "due": today + timedelta(days=30), "status": "Planned"},
+                {"action": "NIS2 dual-report assessment with CISO", "owner": "CISO / DPO", "due": today + timedelta(days=3), "status": "Open"},
+            ],
+        },
+        "ROPA-2026-004": {
+            "tom": [
+                {"measure": "Human oversight", "status": "Mandatory override", "evidence": "AST-2026-017 / model card"},
+                {"measure": "DPIA", "status": "Complete — proceed", "evidence": "DPIA-2026-003"},
+                {"measure": "Fairness / drift monitoring", "status": "Enabled", "evidence": "MLOps"},
+                {"measure": "Prohibited autonomous denial", "status": "Policy enforced in UI", "evidence": "Credit UI"},
+                {"measure": "Training data licenses", "status": "Bureau contracts", "evidence": "Procurement"},
+                {"measure": "CPRA automated decision notice", "status": "In applicant notices", "evidence": "Legal"},
+            ],
+            "evidence": [
+                {"ref": "EVD-P-004-A", "desc": "DPIA-2026-003", "source": "DPO"},
+                {"ref": "EVD-P-004-B", "desc": "LIA-2026-CA-01", "source": "DPO"},
+                {"ref": "EVD-P-004-C", "desc": "Model card MC-CA-2026-02", "source": "MRM"},
+                {"ref": "EVD-P-004-D", "desc": "Applicant privacy notice excerpt", "source": "Legal"},
+            ],
+            "open_actions": [
+                {"action": "Align RoPA wording with any model v2.4 promote", "owner": "AI product / DPO", "due": today + timedelta(days=45), "status": "Planned"},
+                {"action": "DSAR-2026-008 complex access — complete pack", "owner": "Privacy ops", "due": today + timedelta(days=12), "status": "In progress"},
+            ],
+        },
+        "ROPA-2026-006": {
+            "tom": [
+                {"measure": "LIA", "status": "On file", "evidence": "LIA-2026-SEC-01"},
+                {"measure": "Workforce notice", "status": "Handbook §12", "evidence": "HR"},
+                {"measure": "SIEM RBAC", "status": "Need-to-know", "evidence": "SecOps"},
+                {"measure": "Retention", "status": "1y auth / session", "evidence": "SIEM policy"},
+                {"measure": "Coverage completeness", "status": "Gap — JUMP-DMZ-03", "evidence": "AST-2026-005"},
+                {"measure": "NIS2 monitoring expectation", "status": "Partial until jump SIEM closed", "evidence": "CISO"},
+            ],
+            "evidence": [
+                {"ref": "EVD-P-006-A", "desc": "DPIA-2026-004", "source": "DPO"},
+                {"ref": "EVD-P-006-B", "desc": "LIA-2026-SEC-01", "source": "DPO"},
+                {"ref": "EVD-P-006-C", "desc": "Asset gap GAP-2026-001", "source": "CMDB / CAASM"},
+            ],
+            "open_actions": [
+                {"action": "Close SIEM gap on JUMP-DMZ-03 before NIS2 evidence pull", "owner": "SecOps", "due": today + timedelta(days=3), "status": "In progress"},
+                {"action": "Annual LIA re-attest", "owner": "DPO", "due": today + timedelta(days=150), "status": "Planned"},
+            ],
+        },
+    }
+
+    df_r = pd.DataFrame(ropa)
+    for col in ("last_review", "next_review"):
+        df_r[col] = pd.to_datetime(df_r[col], errors="coerce")
+    df_r["tom"] = df_r["ropa_id"].map(lambda i: deep.get(i, {}).get("tom", []))
+    df_r["evidence"] = df_r["ropa_id"].map(lambda i: deep.get(i, {}).get("evidence", []))
+    df_r["open_actions"] = df_r["ropa_id"].map(lambda i: deep.get(i, {}).get("open_actions", []))
+
+    df_d = pd.DataFrame(dpias)
+    for col in ("started", "completed", "next_review"):
+        df_d[col] = pd.to_datetime(df_d[col], errors="coerce")
+
+    df_q = pd.DataFrame(dsars)
+    for col in ("received", "due"):
+        df_q[col] = pd.to_datetime(df_q[col], errors="coerce")
+
+    df_b = pd.DataFrame(breaches)
+    for col in ("detected", "assessed", "dpa_notified", "subjects_notified"):
+        df_b[col] = pd.to_datetime(df_b[col], errors="coerce")
+
+    df_t = pd.DataFrame(transfers)
+    df_t["next_review"] = pd.to_datetime(df_t["next_review"], errors="coerce")
+
+    return df_r, df_d, df_q, df_b, df_t
 
 
-_REQUEST_STATUS_ORDER = ['Pending', 'In Progress', 'Completed']
+def _enrich_ropa(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    today = _today()
+    out["review_overdue"] = out["next_review"] < today
+    out["days_to_review"] = (out["next_review"] - today).dt.days
+    return out
 
 
-def _advance_request_status(status: str) -> str:
-    if status not in _REQUEST_STATUS_ORDER or status == _REQUEST_STATUS_ORDER[-1]:
-        return status
-    return _REQUEST_STATUS_ORDER[_REQUEST_STATUS_ORDER.index(status) + 1]
+def _enrich_dsar(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    today = _today()
+    out["open"] = ~out["status"].isin(["Complete", "Rejected"])
+    out["overdue"] = out["open"] & (out["due"] < today)
+    out["due_soon"] = out["open"] & (out["due"] <= today + timedelta(days=7)) & ~out["overdue"]
+    out["age_d"] = (today - out["received"]).dt.days
+    return out
 
 
-def _sync_privacy(seed: int) -> None:
-    if st.session_state.get('_privacy_seed') != seed or not st.session_state.get('data_subjects'):
-        subjects, requests, activities, pias, breaches, consents = generate_sample_data(seed)
-        st.session_state.data_subjects = subjects
-        st.session_state.privacy_requests = requests
-        st.session_state.data_processing_activities = activities
-        st.session_state.privacy_impact_assessments = pias
-        st.session_state.data_breaches = breaches
-        st.session_state.consent_records = consents
-        st.session_state._privacy_seed = seed
+def _enrich_breach(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    now = _now()
+    out["hours_since_detect"] = ((now - out["detected"]).dt.total_seconds() / 3600).round(1)
+    out["art33_due"] = out["detected"] + timedelta(hours=72)
+    out["art33_remaining_h"] = ((out["art33_due"] - now).dt.total_seconds() / 3600).round(1)
+    out["needs_art33"] = out["status"].isin(["Detected", "Assessing", "Notify DPA"]) & out["dpa_notified"].isna()
+    out["art33_breach_risk"] = out["needs_art33"] & (out["art33_remaining_h"] < 24)
+    return out
 
 
-def main():
-    portfolio_skin.page_header(
-        title="Data Privacy Management",
-        lede="Interactive GRC tool — #RUNGRCRaleigh build-in-public.",
-        kicker="Privacy",
+def _sync(seed: int):
+    if st.session_state.get("_priv_seed") != seed or "priv_ropa" not in st.session_state:
+        r, d, q, b, t = _sample(seed)
+        st.session_state.priv_ropa = r
+        st.session_state.priv_dpia = d
+        st.session_state.priv_dsar = q
+        st.session_state.priv_breach = b
+        st.session_state.priv_xfer = t
+        st.session_state._priv_seed = seed
+    return (
+        st.session_state.priv_ropa,
+        st.session_state.priv_dpia,
+        st.session_state.priv_dsar,
+        st.session_state.priv_breach,
+        st.session_state.priv_xfer,
     )
-    st.markdown("Comprehensive platform for managing data privacy compliance, data subject rights, privacy impact assessments, and GDPR/CCPA compliance")
 
-    with st.sidebar:
-        st.title("Navigation")
-        seed = demo_kit.seed_controls()
-        st.markdown("---")
-        page = st.selectbox(
-            "Select Module",
-            ["Dashboard", "Data Subject Management", "Privacy Requests", "Data Processing Activities", "Privacy Impact Assessments", "Data Breaches", "Consent Management", "Reports"]
-        )
-        sla_hours = st.slider(
-            "What-if SLA (hours)",
-            min_value=24,
-            max_value=240,
-            value=72,
-            step=12,
-            help="Highlight requests slower than this SLA.",
-        )
-        st.session_state._privacy_sla = sla_hours
-        st.caption("Sample / mock data only.")
-    _sync_privacy(seed)
-    
-    if page == "Dashboard":
-        show_dashboard()
-    elif page == "Data Subject Management":
-        show_data_subject_management()
-    elif page == "Privacy Requests":
-        show_privacy_requests()
-    elif page == "Data Processing Activities":
-        show_data_processing_activities()
-    elif page == "Privacy Impact Assessments":
-        show_privacy_impact_assessments()
-    elif page == "Data Breaches":
-        show_data_breaches()
-    elif page == "Consent Management":
-        show_consent_management()
-    elif page == "Reports":
-        show_reports()
 
-def show_dashboard():
-    st.header("Privacy Dashboard")
-    
-    # Calculate key metrics
-    total_subjects = len(st.session_state.data_subjects)
-    active_consents = len([s for s in st.session_state.data_subjects if s['consent_status'] == 'Active'])
-    pending_requests = len([r for r in st.session_state.privacy_requests if r['status'] == 'Pending'])
-    active_breaches = len([b for b in st.session_state.data_breaches if b['status'] == 'Under Investigation'])
-    
-    # Display key metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Total Data Subjects", total_subjects)
-        st.metric("Active Consents", active_consents, f"{active_consents}/{total_subjects}")
-    
-    with col2:
-        st.metric("Pending Requests", pending_requests)
-        avg_response_time = np.mean([r['response_time_hours'] for r in st.session_state.privacy_requests if r['response_time_hours']])
-        st.metric("Avg Response Time", f"{avg_response_time:.1f} hours")
-    
-    with col3:
-        st.metric("Active Breaches", active_breaches)
-        total_activities = len(st.session_state.data_processing_activities)
-        st.metric("Processing Activities", total_activities)
-    
-    with col4:
-        completed_pias = len([p for p in st.session_state.privacy_impact_assessments if p['status'] == 'Completed'])
-        st.metric("Completed PIAs", completed_pias)
-        avg_risk_score = np.mean([p['risk_score'] for p in st.session_state.privacy_impact_assessments])
-        st.metric("Avg Risk Score", f"{avg_risk_score:.1f}/10")
-    
-    # Dashboard charts
-    st.subheader("Privacy Overview")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Consent status distribution
-        consent_counts = pd.DataFrame(st.session_state.data_subjects)['consent_status'].value_counts()
-        fig = px.pie(values=consent_counts.values, names=consent_counts.index, 
-                    title="Data Subject Consent Status")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        # Request status distribution
-        request_counts = pd.DataFrame(st.session_state.privacy_requests)['status'].value_counts()
-        fig = px.bar(x=request_counts.index, y=request_counts.values, 
-                    title="Privacy Request Status")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Recent privacy requests
-    st.subheader("Recent Privacy Requests")
-    recent_requests = sorted(st.session_state.privacy_requests, key=lambda x: x['submitted_date'], reverse=True)[:5]
-    
-    for request in recent_requests:
-        subject = next((s for s in st.session_state.data_subjects if s['id'] == request['data_subject_id']), None)
-        
-        col1, col2, col3, col4 = st.columns([2, 2, 1, 1])
-        with col1:
-            st.write(f"**{subject['name'] if subject else 'Unknown Subject'}**")
-        with col2:
-            st.write(f"**{request['request_type']}** - {request['description']}")
-        with col3:
-            if request['status'] == 'Completed':
-                st.write("Completed")
-            elif request['status'] == 'In Progress':
-                st.write("Active")
-            else:
-                st.write("Pending")
-        with col4:
-            st.write(f"{request['submitted_date'].strftime('%m/%d')}")
-        st.divider()
+def _save_ropa(df):
+    st.session_state.priv_ropa = df.reset_index(drop=True)
 
-def show_data_subject_management():
-    st.header("Data Subject Management")
-    
-    # Add new data subject
-    with st.expander("Add New Data Subject"):
-        with st.form("new_subject"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Name")
-                email = st.text_input("Email")
-                category = st.selectbox("Category", ["Employee", "Customer", "Vendor", "Partner", "Other"])
-            with col2:
-                data_types = st.multiselect("Data Types", ["Personal", "Financial", "Employment", "Marketing", "Transaction", "Business", "Technical"])
-                consent_status = st.selectbox("Consent Status", ["Active", "Expired", "Withdrawn", "Pending"])
-                retention_date = st.date_input("Data Retention Date")
-            
-            if st.form_submit_button("Add Data Subject"):
-                new_subject = {
-                    'id': f'DS-{len(st.session_state.data_subjects)+1:03d}',
-                    'name': name,
-                    'email': email,
-                    'category': category,
-                    'data_types': data_types,
-                    'consent_status': consent_status,
-                    'data_retention_date': datetime.datetime.combine(retention_date, datetime.time()),
-                    'last_updated': datetime.datetime.now()
-                }
-                st.session_state.data_subjects.append(new_subject)
-                st.success("Data subject added successfully!")
-    
-    # Display data subjects
-    df = pd.DataFrame(st.session_state.data_subjects)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        category_filter = st.selectbox("Filter by Category", ["All"] + list(df['category'].unique()))
-    with col2:
-        consent_filter = st.selectbox("Filter by Consent Status", ["All"] + list(df['consent_status'].unique()))
-    with col3:
-        search_term = st.text_input("Search by name or email")
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if category_filter != "All":
-        filtered_df = filtered_df[filtered_df['category'] == category_filter]
-    if consent_filter != "All":
-        filtered_df = filtered_df[filtered_df['consent_status'] == consent_filter]
-    if search_term:
-        filtered_df = filtered_df[
-            filtered_df['name'].str.contains(search_term, case=False) |
-            filtered_df['email'].str.contains(search_term, case=False)
-        ]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Data subject analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Data Subjects by Category")
-        category_counts = filtered_df['category'].value_counts()
-        fig = px.bar(x=category_counts.index, y=category_counts.values, 
-                    title="Data Subjects by Category")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Consent Status Distribution")
-        consent_counts = filtered_df['consent_status'].value_counts()
-        fig = px.pie(values=consent_counts.values, names=consent_counts.index, 
-                    title="Consent Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
 
-def show_privacy_requests():
-    st.header("Privacy Request Management")
-    
-    # Add new privacy request
-    with st.expander("Add New Privacy Request"):
-        with st.form("new_request"):
-            col1, col2 = st.columns(2)
-            with col1:
-                data_subject_id = st.selectbox("Data Subject", [s['id'] for s in st.session_state.data_subjects])
-                request_type = st.selectbox("Request Type", ["Access", "Deletion", "Correction", "Portability", "Objection"])
-                description = st.text_area("Description")
-            with col2:
-                status = st.selectbox("Status", ["Pending", "In Progress", "Completed", "Rejected"])
-                submitted_date = st.date_input("Submitted Date")
-            
-            if st.form_submit_button("Add Request"):
-                new_request = {
-                    'id': f'PR-{len(st.session_state.privacy_requests)+1:03d}',
-                    'data_subject_id': data_subject_id,
-                    'request_type': request_type,
-                    'description': description,
-                    'status': status,
-                    'submitted_date': datetime.datetime.combine(submitted_date, datetime.time()),
-                    'completed_date': None,
-                    'response_time_hours': None
-                }
-                st.session_state.privacy_requests.append(new_request)
-                st.success("Privacy request added successfully!")
-    
-    # Display privacy requests
-    df = pd.DataFrame(st.session_state.privacy_requests)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        type_filter = st.selectbox("Filter by Type", ["All"] + list(df['request_type'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col3:
-        date_filter = st.date_input("Filter by Date")
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if type_filter != "All":
-        filtered_df = filtered_df[filtered_df['request_type'] == type_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    if date_filter:
-        filtered_df = filtered_df[filtered_df['submitted_date'].dt.date == date_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
+def _save_dsar(df):
+    st.session_state.priv_dsar = df.reset_index(drop=True)
 
-    sla = int(st.session_state.get('_privacy_sla', 72))
-    slow = [
-        r for r in st.session_state.privacy_requests
-        if r.get('response_time_hours') and r['response_time_hours'] > sla
-        and r['status'] != 'Completed'
-    ]
-    st.caption(f"Requests over {sla}h SLA: {len(slow)}")
-    if not filtered_df.empty:
-        pick = st.selectbox("Advance request status for", filtered_df['id'].tolist())
-        if st.button("Advance selected request status"):
-            for i, req in enumerate(st.session_state.privacy_requests):
-                if req['id'] == pick:
-                    st.session_state.privacy_requests[i]['status'] = _advance_request_status(
-                        req['status']
-                    )
-                    break
+
+def _save_breach(df):
+    st.session_state.priv_breach = df.reset_index(drop=True)
+
+
+def _save_dpia(df):
+    st.session_state.priv_dpia = df.reset_index(drop=True)
+
+
+def _patch_ropa(rid, **fields):
+    df = st.session_state.priv_ropa.copy()
+    loc = df.index[df["ropa_id"] == rid]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_ropa(df)
+
+
+def _patch_dsar(qid, **fields):
+    df = st.session_state.priv_dsar.copy()
+    loc = df.index[df["request_id"] == qid]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_dsar(df)
+
+
+def _patch_breach(bid, **fields):
+    df = st.session_state.priv_breach.copy()
+    loc = df.index[df["breach_id"] == bid]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_breach(df)
+
+
+def _patch_dpia(did, **fields):
+    df = st.session_state.priv_dpia.copy()
+    loc = df.index[df["dpia_id"] == did]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_dpia(df)
+
+
+def _fmt(ts) -> str:
+    if ts is None:
+        return "—"
+    if isinstance(ts, str) and ts.strip() in {"", "—", "NaT", "None"}:
+        return "—"
+    try:
+        if pd.isna(ts):
+            return "—"
+    except (TypeError, ValueError):
+        pass
+    try:
+        p = pd.Timestamp(ts)
+        if pd.isna(p):
+            return "—"
+        if p.hour or p.minute:
+            return p.strftime("%Y-%m-%d %H:%M")
+        return p.strftime("%Y-%m-%d")
+    except (ValueError, TypeError, OverflowError):
+        return "—"
+
+
+def _metrics(ropa, dpias, dsars, breaches):
+    er = _enrich_ropa(ropa)
+    eq = _enrich_dsar(dsars)
+    eb = _enrich_breach(breaches)
+    return {
+        "ropa": len(er),
+        "ropa_od": int(er["review_overdue"].sum()),
+        "dsar_open": int(eq["open"].sum()),
+        "dsar_od": int(eq["overdue"].sum()),
+        "art33": int(eb["needs_art33"].sum()),
+        "art33_hot": int(eb["art33_breach_risk"].sum()),
+        "dpia_hot": int(dpias["status"].isin(["Overdue", "In progress", "Screening"]).sum()),
+        "nis2": int(er["nis2_flag"].sum()),
+    }
+
+
+def _ropa_detail(row, dpias, *, expanded=False):
+    st.markdown(f"### {row['ropa_id']} · {row['name']}")
+    a, b, c, d = st.columns(4)
+    a.metric("Org role", row["role_of_org"])
+    b.metric("Status", row["status"].split("—")[0].strip())
+    c.metric("NIS2-relevant", "Yes" if row["nis2_flag"] else "No")
+    d.metric("Next review", _fmt(row["next_review"]))
+
+    c1, c2, c3 = st.columns(3)
+    c1.write(f"**Purpose:** {row['purpose']}")
+    c1.write(f"**Owner:** {row['owner']}")
+    c1.write(f"**DPO:** {row['dpo_contact']}")
+    c1.write(f"**Controller:** {row['controller']}")
+    if row["processor"]:
+        c1.write(f"**Processor:** {row['processor']}")
+    c2.write(f"**Legal basis:** {row['legal_basis']}")
+    if row["li_assessment"]:
+        c2.write(f"**LI assessment:** {row['li_assessment']}")
+    c2.write(f"**Subjects:** {row['categories_subjects']}")
+    c2.write(f"**Data categories:** {row['categories_data']}")
+    c2.write(f"**Special category:** {row['special_category']}")
+    c3.write(f"**Recipients:** {row['recipients']}")
+    c3.write(f"**Transfers:** {row['transfers']}")
+    c3.write(f"**Transfer tool:** {row['transfer_tool']}")
+    c3.write(f"**Retention:** {row['retention']}")
+    c3.write(f"**Security measures:** {row['security_measures']}")
+
+    st.write(row["summary"])
+    if row["risk_notes"]:
+        st.warning(row["risk_notes"])
+    st.caption(f"Systems: {row['systems']}")
+    st.caption(f"Jurisdictions: {row['jurisdictions']}")
+    if row["dpia_id"]:
+        st.caption(f"DPIA: {row['dpia_id']}")
+    st.caption(f"Last review: {_fmt(row['last_review'])}")
+
+    raw = st.session_state.priv_ropa
+    rr = raw[raw["ropa_id"] == row["ropa_id"]]
+    if not rr.empty:
+        r0 = rr.iloc[0]
+        tom = r0.get("tom") or []
+        evid = r0.get("evidence") or []
+        acts = r0.get("open_actions") or []
+        if tom:
+            with st.expander(f"Technical & organisational measures ({len(tom)})", expanded=expanded):
+                st.dataframe(pd.DataFrame(tom), use_container_width=True, hide_index=True)
+        if evid:
+            with st.expander(f"Evidence ({len(evid)})", expanded=expanded):
+                st.dataframe(pd.DataFrame(evid), use_container_width=True, hide_index=True)
+        if acts:
+            with st.expander(f"Open actions ({len(acts)})", expanded=expanded):
+                adf = pd.DataFrame(acts)
+                if "due" in adf.columns:
+                    adf["due"] = adf["due"].apply(_fmt)
+                st.dataframe(adf, use_container_width=True, hide_index=True)
+
+    if row["dpia_id"]:
+        d = dpias[dpias["dpia_id"] == row["dpia_id"]]
+        if not d.empty:
+            dr = d.iloc[0]
+            with st.expander(f"Linked DPIA · {dr['dpia_id']} · {dr['status']}", expanded=False):
+                st.write(f"**Risks:** {dr['risks']}")
+                st.write(f"**Measures:** {dr['measures']}")
+                st.write(f"**Residual:** {dr['residual']}")
+                st.write(dr["notes"])
+
+
+def _ropa_actions(row, *, key: str):
+    rid = row["ropa_id"]
+    a1, a2 = st.columns(2)
+    with a1:
+        if st.button("Mark Art. 30 reviewed", key=f"rr_{key}", use_container_width=True):
+            _patch_ropa(
+                rid,
+                last_review=_today(),
+                next_review=_today() + timedelta(days=180),
+            )
+            st.rerun()
+    with a2:
+        if row.get("review_overdue") and st.button(
+            "Flag owner — review overdue", key=f"ro_{key}", use_container_width=True
+        ):
+            note = (row.get("risk_notes") or "") + " [Owner notified: Art. 30 review overdue.]"
+            _patch_ropa(rid, risk_notes=note.strip())
             st.rerun()
 
-    # Request analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Requests by Type")
-        type_counts = filtered_df['request_type'].value_counts()
-        fig = px.bar(x=type_counts.index, y=type_counts.values, 
-                    title="Privacy Requests by Type")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Request Status Distribution")
-        status_counts = filtered_df['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="Request Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
 
-def show_data_processing_activities():
-    st.header("Data Processing Activities")
-    
-    # Add new activity
-    with st.expander("Add New Processing Activity"):
-        with st.form("new_activity"):
-            col1, col2 = st.columns(2)
-            with col1:
-                activity_name = st.text_input("Activity Name")
-                description = st.text_area("Description")
-                legal_basis = st.selectbox("Legal Basis", ["Consent", "Contract", "Legitimate Interest", "Legal Obligation", "Vital Interest", "Public Task"])
-            with col2:
-                data_categories = st.multiselect("Data Categories", ["Personal", "Financial", "Employment", "Marketing", "Transaction", "Business", "Technical"])
-                retention_period = st.text_input("Retention Period")
-                risk_level = st.selectbox("Risk Level", ["Low", "Medium", "High", "Critical"])
-                status = st.selectbox("Status", ["Active", "Inactive", "Under Review"])
-            
-            if st.form_submit_button("Add Activity"):
-                new_activity = {
-                    'id': f'DPA-{len(st.session_state.data_processing_activities)+1:03d}',
-                    'activity_name': activity_name,
-                    'description': description,
-                    'legal_basis': legal_basis,
-                    'data_categories': data_categories,
-                    'retention_period': retention_period,
-                    'risk_level': risk_level,
-                    'status': status
-                }
-                st.session_state.data_processing_activities.append(new_activity)
-                st.success("Processing activity added successfully!")
-    
-    # Display activities
-    df = pd.DataFrame(st.session_state.data_processing_activities)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        basis_filter = st.selectbox("Filter by Legal Basis", ["All"] + list(df['legal_basis'].unique()))
-    with col2:
-        risk_filter = st.selectbox("Filter by Risk Level", ["All"] + list(df['risk_level'].unique()))
-    with col3:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if basis_filter != "All":
-        filtered_df = filtered_df[filtered_df['legal_basis'] == basis_filter]
-    if risk_filter != "All":
-        filtered_df = filtered_df[filtered_df['risk_level'] == risk_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Activity analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Activities by Legal Basis")
-        basis_counts = filtered_df['legal_basis'].value_counts()
-        fig = px.bar(x=basis_counts.index, y=basis_counts.values, 
-                    title="Processing Activities by Legal Basis")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Risk Level Distribution")
-        risk_counts = filtered_df['risk_level'].value_counts()
-        fig = px.pie(values=risk_counts.values, names=risk_counts.index, 
-                    title="Risk Level Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-
-def show_privacy_impact_assessments():
-    st.header("Privacy Impact Assessments")
-    
-    # Add new PIA
-    with st.expander("Add New PIA"):
-        with st.form("new_pia"):
-            col1, col2 = st.columns(2)
-            with col1:
-                activity_id = st.selectbox("Processing Activity", [a['id'] for a in st.session_state.data_processing_activities])
-                assessment_date = st.date_input("Assessment Date")
-                risk_score = st.slider("Risk Score", 1, 10, 5)
-            with col2:
-                risk_level = st.selectbox("Risk Level", ["Low", "Medium", "High", "Critical"])
-                findings = st.text_area("Findings (comma-separated)")
-                status = st.selectbox("Status", ["Draft", "In Progress", "Completed", "Under Review"])
-                next_review = st.date_input("Next Review Date")
-            
-            if st.form_submit_button("Add PIA"):
-                new_pia = {
-                    'id': f'PIA-{len(st.session_state.privacy_impact_assessments)+1:03d}',
-                    'activity_id': activity_id,
-                    'assessment_date': datetime.datetime.combine(assessment_date, datetime.time()),
-                    'risk_score': risk_score,
-                    'risk_level': risk_level,
-                    'findings': [f.strip() for f in findings.split(',')] if findings else [],
-                    'status': status,
-                    'next_review': datetime.datetime.combine(next_review, datetime.time())
-                }
-                st.session_state.privacy_impact_assessments.append(new_pia)
-                st.success("PIA added successfully!")
-    
-    # Display PIAs
-    df = pd.DataFrame(st.session_state.privacy_impact_assessments)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        risk_filter = st.selectbox("Filter by Risk Level", ["All"] + list(df['risk_level'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col3:
-        score_filter = st.slider("Risk Score Range", 1, 10, (1, 10))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if risk_filter != "All":
-        filtered_df = filtered_df[filtered_df['risk_level'] == risk_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    filtered_df = filtered_df[(filtered_df['risk_score'] >= score_filter[0]) & (filtered_df['risk_score'] <= score_filter[1])]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # PIA analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Risk Score Distribution")
-        fig = px.histogram(filtered_df, x='risk_score', nbins=10, 
-                          title="Risk Score Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("PIA Status Distribution")
-        status_counts = filtered_df['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="PIA Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-
-def show_data_breaches():
-    st.header("Data Breach Management")
-    
-    # Add new breach
-    with st.expander("Add New Data Breach"):
-        with st.form("new_breach"):
-            col1, col2 = st.columns(2)
-            with col1:
-                incident_date = st.date_input("Incident Date")
-                discovery_date = st.date_input("Discovery Date")
-                breach_type = st.selectbox("Breach Type", ["Unauthorized Access", "Data Loss", "System Compromise", "Malware", "Phishing", "Other"])
-            with col2:
-                affected_records = st.number_input("Affected Records", min_value=1, value=1)
-                severity = st.selectbox("Severity", ["Low", "Medium", "High", "Critical"])
-                status = st.selectbox("Status", ["Under Investigation", "Contained", "Resolved", "Closed"])
-                notification_required = st.checkbox("Notification Required")
-                regulatory_reporting = st.checkbox("Regulatory Reporting Required")
-            
-            if st.form_submit_button("Add Breach"):
-                new_breach = {
-                    'id': f'DB-{len(st.session_state.data_breaches)+1:03d}',
-                    'incident_date': datetime.datetime.combine(incident_date, datetime.time()),
-                    'discovery_date': datetime.datetime.combine(discovery_date, datetime.time()),
-                    'breach_type': breach_type,
-                    'affected_records': affected_records,
-                    'severity': severity,
-                    'status': status,
-                    'notification_required': notification_required,
-                    'regulatory_reporting': regulatory_reporting
-                }
-                st.session_state.data_breaches.append(new_breach)
-                st.success("Data breach added successfully!")
-    
-    # Display breaches
-    df = pd.DataFrame(st.session_state.data_breaches)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        type_filter = st.selectbox("Filter by Type", ["All"] + list(df['breach_type'].unique()))
-    with col2:
-        severity_filter = st.selectbox("Filter by Severity", ["All"] + list(df['severity'].unique()))
-    with col3:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if type_filter != "All":
-        filtered_df = filtered_df[filtered_df['breach_type'] == type_filter]
-    if severity_filter != "All":
-        filtered_df = filtered_df[filtered_df['severity'] == severity_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Breach analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Breaches by Type")
-        type_counts = filtered_df['breach_type'].value_counts()
-        fig = px.bar(x=type_counts.index, y=type_counts.values, 
-                    title="Data Breaches by Type")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Breach Severity Distribution")
-        severity_counts = filtered_df['severity'].value_counts()
-        fig = px.pie(values=severity_counts.values, names=severity_counts.index, 
-                    title="Breach Severity Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-
-def show_consent_management():
-    st.header("Consent Management")
-    
-    # Add new consent record
-    with st.expander("Add New Consent Record"):
-        with st.form("new_consent"):
-            col1, col2 = st.columns(2)
-            with col1:
-                data_subject_id = st.selectbox("Data Subject", [s['id'] for s in st.session_state.data_subjects])
-                consent_type = st.text_input("Consent Type")
-                consent_date = st.date_input("Consent Date")
-            with col2:
-                consent_status = st.selectbox("Consent Status", ["Active", "Expired", "Withdrawn"])
-                withdrawal_date = st.date_input("Withdrawal Date (if applicable)")
-                consent_method = st.selectbox("Consent Method", ["Online Form", "Email", "Contract", "Phone", "In-Person"])
-            
-            if st.form_submit_button("Add Consent"):
-                new_consent = {
-                    'id': f'CR-{len(st.session_state.consent_records)+1:03d}',
-                    'data_subject_id': data_subject_id,
-                    'consent_type': consent_type,
-                    'consent_date': datetime.datetime.combine(consent_date, datetime.time()),
-                    'consent_status': consent_status,
-                    'withdrawal_date': datetime.datetime.combine(withdrawal_date, datetime.time()) if withdrawal_date else None,
-                    'consent_method': consent_method
-                }
-                st.session_state.consent_records.append(new_consent)
-                st.success("Consent record added successfully!")
-    
-    # Display consent records
-    df = pd.DataFrame(st.session_state.consent_records)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        type_filter = st.selectbox("Filter by Consent Type", ["All"] + list(df['consent_type'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['consent_status'].unique()))
-    with col3:
-        method_filter = st.selectbox("Filter by Method", ["All"] + list(df['consent_method'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if type_filter != "All":
-        filtered_df = filtered_df[filtered_df['consent_type'] == type_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['consent_status'] == status_filter]
-    if method_filter != "All":
-        filtered_df = filtered_df[filtered_df['consent_method'] == method_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Consent analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Consent Status Distribution")
-        status_counts = filtered_df['consent_status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="Consent Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Consent by Method")
-        method_counts = filtered_df['consent_method'].value_counts()
-        fig = px.bar(x=method_counts.index, y=method_counts.values, 
-                    title="Consent Collection Methods")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-
-def show_reports():
-    st.header("Privacy Reports")
-    
-    # Report options
-    report_type = st.selectbox("Select Report Type", [
-        "Privacy Compliance Summary",
-        "Data Subject Rights Report",
-        "Processing Activities Report",
-        "Breach Incident Report",
-        "Consent Management Report",
-        "Regulatory Compliance Report"
-    ])
-    
-    if report_type == "Privacy Compliance Summary":
-        st.subheader("Privacy Compliance Summary")
-        
-        # Calculate summary metrics
-        total_subjects = len(st.session_state.data_subjects)
-        active_consents = len([s for s in st.session_state.data_subjects if s['consent_status'] == 'Active'])
-        pending_requests = len([r for r in st.session_state.privacy_requests if r['status'] == 'Pending'])
-        active_breaches = len([b for b in st.session_state.data_breaches if b['status'] == 'Under Investigation'])
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("**Data Subject Overview**")
-            st.write(f"• Total Data Subjects: {total_subjects}")
-            st.write(f"• Active Consents: {active_consents}")
-            st.write(f"• Consent Rate: {(active_consents/total_subjects*100):.1f}%")
-            st.write(f"• Pending Requests: {pending_requests}")
-        
-        with col2:
-            st.write("**Compliance Status**")
-            st.write(f"• Active Breaches: {active_breaches}")
-            st.write(f"• Processing Activities: {len(st.session_state.data_processing_activities)}")
-            st.write(f"• Completed PIAs: {len([p for p in st.session_state.privacy_impact_assessments if p['status'] == 'Completed'])}")
-            st.write(f"• Overall Compliance: Strong")
-    
-    # Export functionality
-    st.subheader("Export Data")
-    export_df = pd.DataFrame(st.session_state.data_subjects).copy()
-    for col in ('data_retention_date', 'last_updated'):
-        if col in export_df.columns:
-            export_df[col] = export_df[col].astype(str)
-    if 'data_types' in export_df.columns:
-        export_df['data_types'] = export_df['data_types'].astype(str)
-    demo_kit.csv_download(export_df, "data_privacy_subjects.csv", label="Download subjects CSV")
-    req_df = pd.DataFrame(st.session_state.privacy_requests).copy()
-    for col in ('submitted_date', 'completed_date'):
-        if col in req_df.columns:
-            req_df[col] = req_df[col].astype(str)
-    demo_kit.csv_download(
-        req_df, "privacy_requests.csv", label="Download requests CSV", key="privacy_requests_csv"
+def main() -> None:
+    portfolio_skin.page_header(
+        title="Data Privacy Management",
+        lede="Art. 30 RoPA, DPIAs, rights clocks, breach / NIS2 paths, US state privacy. Club demo — not a system of record.",
+        kicker="Privacy",
     )
 
-    export_format = st.selectbox("Export Format", ["CSV", "JSON", "Excel"])
-    
-    if st.button("Export Privacy Data"):
-        if export_format == "CSV":
-            df_subjects = pd.DataFrame(st.session_state.data_subjects)
-            csv = df_subjects.to_csv(index=False)
-            st.download_button(
-                label="Download CSV",
-                data=csv,
-                file_name="data_privacy_subjects.csv",
-                mime="text/csv"
+    seed = demo_kit.seed_controls()
+    ropa, dpias, dsars, breaches, xfers = _sync(seed)
+    er = _enrich_ropa(ropa)
+    eq = _enrich_dsar(dsars)
+    eb = _enrich_breach(breaches)
+    m = _metrics(ropa, dpias, dsars, breaches)
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Filters")
+    nis2_only = st.sidebar.checkbox("NIS2-relevant RoPA only", value=False)
+    open_dsar_only = st.sidebar.checkbox("Open DSARs only", value=False)
+
+    k1, k2, k3, k4, k5, k6 = st.columns(6)
+    k1.metric("RoPA entries", m["ropa"])
+    k2.metric("RoPA review overdue", m["ropa_od"])
+    k3.metric("Open rights requests", m["dsar_open"])
+    k4.metric("DSAR overdue", m["dsar_od"])
+    k5.metric("Art. 33 clocks live", m["art33"], help="Incidents still needing DPA notification assessment")
+    k6.metric("NIS2-tagged activities", m["nis2"])
+
+    if m["art33_hot"]:
+        st.error(f"{m['art33_hot']} privacy incident(s) inside final 24h of GDPR Art. 33 72-hour window.")
+    elif m["art33"]:
+        st.warning(f"{m['art33']} privacy incident(s) with Art. 33 notification still open.")
+
+    work, ropa_tab, rights, breach_tab, dpia_tab, xfer_tab, intake, export = st.tabs(
+        [
+            "Workbench",
+            "RoPA (Art. 30)",
+            "Rights / DSAR",
+            "Breach & notify",
+            "DPIA",
+            "Transfers",
+            "Intake",
+            "Export",
+        ]
+    )
+
+    with work:
+        st.subheader("Privacy workbench")
+
+        featured = er[er["ropa_id"].isin(FEATURED_ROPA)].copy()
+        order = {i: n for n, i in enumerate(["ROPA-2026-001", "ROPA-2026-004", "ROPA-2026-006"])}
+        featured["_o"] = featured["ropa_id"].map(lambda x: order.get(x, 99))
+        featured = featured.sort_values("_o")
+
+        st.markdown(f"**Featured RoPA — statement of record ({len(featured)})**")
+        for _, row in featured.iterrows():
+            st.markdown("---")
+            _ropa_detail(row, dpias, expanded=True)
+            _ropa_actions(row, key=f"feat_{row['ropa_id']}")
+            st.markdown("---")
+
+        # Art 33 queue
+        hot_b = eb[eb["needs_art33"]].sort_values("art33_remaining_h")
+        st.markdown(f"**Breach / Art. 33 queue ({len(hot_b)})**")
+        if hot_b.empty:
+            st.info("No open Art. 33 clocks.")
+        else:
+            for _, b in hot_b.iterrows():
+                with st.expander(
+                    f"{b['breach_id']} · {b['title']} · {b['status']} · "
+                    f"{b['art33_remaining_h']:.0f}h left to 72h"
+                ):
+                    st.write(f"**Detected:** {_fmt(b['detected'])} · **IR:** {b['related_ir'] or '—'}")
+                    st.write(f"**Regimes:** {b['regimes']}")
+                    st.write(f"**Risk to rights:** {b['risk_to_rights']}")
+                    st.write(b["notes"])
+                    if b["nis2_relevant"]:
+                        st.warning("NIS2-relevant — coordinate cyber authority / CSIRT path with CISO.")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button("Mark DPA notified (Art. 33)", key=f"a33_{b['breach_id']}"):
+                            _patch_breach(
+                                b["breach_id"],
+                                dpa_notified=_now(),
+                                status="Notify subjects",
+                                assessed=_now() if pd.isna(b["assessed"]) else b["assessed"],
+                            )
+                            st.rerun()
+                    with c2:
+                        if st.button("Close — no notify", key=f"bn_{b['breach_id']}"):
+                            _patch_breach(b["breach_id"], status="Closed — no notify", assessed=_now())
+                            st.rerun()
+
+        # DSAR due soon / overdue
+        hot_q = eq[eq["overdue"] | eq["due_soon"]].sort_values("due")
+        st.markdown(f"**Rights requests due ≤7d or overdue ({len(hot_q)})**")
+        if hot_q.empty:
+            st.info("Clear.")
+        else:
+            show = hot_q.copy()
+            show["due"] = show["due"].apply(_fmt)
+            show["received"] = show["received"].apply(_fmt)
+            st.dataframe(
+                show[["request_id", "type", "regime", "status", "due", "owner", "notes"]],
+                use_container_width=True,
+                hide_index=True,
             )
+
+        od_ropa = er[er["review_overdue"]]
+        if not od_ropa.empty:
+            st.markdown("**Art. 30 reviews overdue**")
+            st.dataframe(
+                od_ropa[["ropa_id", "name", "owner", "next_review", "risk_notes"]].assign(
+                    next_review=lambda d: d["next_review"].apply(_fmt)
+                ),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    with ropa_tab:
+        st.subheader("Records of processing (GDPR Art. 30)")
+        view = er[er["nis2_flag"]] if nis2_only else er
+        pick = st.selectbox("Activity", view["ropa_id"].tolist())
+        row = er[er["ropa_id"] == pick].iloc[0]
+        _ropa_detail(row, dpias, expanded=True)
+        _ropa_actions(row, key=f"ropa_{pick}")
+
+        show = view[
+            [
+                "ropa_id",
+                "name",
+                "role_of_org",
+                "legal_basis",
+                "owner",
+                "transfer_tool",
+                "nis2_flag",
+                "next_review",
+                "status",
+            ]
+        ].copy()
+        show["next_review"] = show["next_review"].apply(_fmt)
+        st.dataframe(show, use_container_width=True, hide_index=True)
+
+    with rights:
+        st.subheader("Data subject / consumer rights")
+        view = eq[eq["open"]] if open_dsar_only else eq
+        show = view.copy()
+        show["received"] = show["received"].apply(_fmt)
+        show["due"] = show["due"].apply(_fmt)
+        st.dataframe(
+            show[
+                [
+                    "request_id",
+                    "type",
+                    "regime",
+                    "subject_ref",
+                    "status",
+                    "received",
+                    "due",
+                    "extended",
+                    "owner",
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        rid = st.selectbox("Request detail", view["request_id"].tolist())
+        r = eq[eq["request_id"] == rid].iloc[0]
+        st.markdown(f"#### {r['request_id']} · {r['type']}")
+        st.write(f"**Regime:** {r['regime']} · **Status:** {r['status']} · **Due:** {_fmt(r['due'])}")
+        st.write(f"**Subject:** {r['subject_ref']}")
+        st.write(f"**Systems:** {r['systems_in_scope']}")
+        st.write(r["notes"])
+        b1, b2, b3, b4 = st.columns(4)
+        with b1:
+            if r["status"] == "Intake" and st.button("Verify identity", key=f"dv_{rid}"):
+                _patch_dsar(rid, status="Identity verified")
+                st.rerun()
+        with b2:
+            if r["status"] in {"Identity verified", "Intake"} and st.button(
+                "Start work", key=f"ds_{rid}"
+            ):
+                _patch_dsar(rid, status="In progress")
+                st.rerun()
+        with b3:
+            if r["open"] and not r["extended"] and st.button("Extend +30d", key=f"de_{rid}"):
+                _patch_dsar(rid, extended=True, due=pd.Timestamp(r["due"]) + timedelta(days=30))
+                st.rerun()
+        with b4:
+            if r["open"] and st.button("Complete", key=f"dc_{rid}"):
+                _patch_dsar(rid, status="Complete")
+                st.rerun()
+
+        st.caption(
+            "Clocks: GDPR typically 1 month (extendable); CPRA often 45 days (extendable). "
+            "Demo uses due dates already set per request — not a lawyer."
+        )
+
+    with breach_tab:
+        st.subheader("Personal data breaches & notification")
+        for _, b in eb.sort_values("detected", ascending=False).iterrows():
+            clock = ""
+            if b["needs_art33"]:
+                clock = f" · Art.33 {b['art33_remaining_h']:.0f}h left"
+            with st.expander(f"{b['breach_id']} · {b['title']} · {b['status']}{clock}"):
+                st.write(f"**Detected:** {_fmt(b['detected'])} · **Hours since:** {b['hours_since_detect']}")
+                st.write(f"**IR / RoPA:** {b['related_ir'] or '—'} / {b['ropa_id']}")
+                st.write(f"**Affected (est.):** {int(b['affected_count'])} · **Data:** {b['data_types']}")
+                st.write(f"**Risk to rights:** {b['risk_to_rights']}")
+                st.write(f"**Regimes:** {b['regimes']}")
+                st.write(f"**DPA notified:** {_fmt(b['dpa_notified'])} · **Subjects:** {_fmt(b['subjects_notified'])}")
+                if b["nis2_relevant"]:
+                    st.warning("NIS2-relevant cyber notification may run in parallel to privacy notify.")
+                st.write(b["notes"])
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    if b["needs_art33"] and st.button("Art. 33 notified", key=f"b33_{b['breach_id']}"):
+                        _patch_breach(b["breach_id"], dpa_notified=_now(), status="Notify subjects")
+                        st.rerun()
+                with c2:
+                    if b["status"] == "Notify subjects" and st.button(
+                        "Subjects notified", key=f"bs_{b['breach_id']}"
+                    ):
+                        _patch_breach(
+                            b["breach_id"],
+                            subjects_notified=_now(),
+                            status="Closed",
+                        )
+                        st.rerun()
+                with c3:
+                    if b["status"] not in {"Closed", "Closed — no notify"} and st.button(
+                        "Close — no notify", key=f"bc_{b['breach_id']}"
+                    ):
+                        _patch_breach(b["breach_id"], status="Closed — no notify")
+                        st.rerun()
+
+    with dpia_tab:
+        st.subheader("DPIAs / PIAs")
+        for _, d in dpias.sort_values("next_review").iterrows():
+            flag = " · OVERDUE" if d["status"] == "Overdue" else ""
+            with st.expander(f"{d['dpia_id']} · {d['title']} · {d['status']}{flag}"):
+                st.write(f"**RoPA:** {d['ropa_id'] or '—'} · **Owner:** {d['owner']}")
+                st.write(f"**Criteria:** {d['criteria']}")
+                st.write(f"**Risks:** {d['risks']}")
+                st.write(f"**Measures:** {d['measures']}")
+                st.write(f"**Residual:** {d['residual']}")
+                st.write(f"**Started / completed / next:** {_fmt(d['started'])} / {_fmt(d['completed'])} / {_fmt(d['next_review'])}")
+                st.write(d["notes"])
+                if d["status"] in {"Overdue", "In progress", "Screening"} and st.button(
+                    "Mark complete — proceed", key=f"dp_{d['dpia_id']}"
+                ):
+                    _patch_dpia(
+                        d["dpia_id"],
+                        status="Complete — proceed",
+                        completed=_today(),
+                        next_review=_today() + timedelta(days=365),
+                    )
+                    st.rerun()
+
+    with xfer_tab:
+        st.subheader("International transfers")
+        show = xfers.copy()
+        show["next_review"] = show["next_review"].apply(_fmt)
+        st.dataframe(show, use_container_width=True, hide_index=True)
+        st.caption("TIA = transfer impact assessment. Demo mechanisms: SCCs, DPF, adequacy — not legal advice.")
+
+    with intake:
+        st.subheader("Add RoPA entry")
+        with st.form("intake_ropa"):
+            c1, c2 = st.columns(2)
+            with c1:
+                name = st.text_input("Activity name")
+                purpose = st.text_area("Purpose")
+                owner = st.text_input("Business owner")
+                legal = st.selectbox("Legal basis", LEGAL_BASES)
+            with c2:
+                role = st.selectbox("Our role", ROLES)
+                processor = st.text_input("Processor (if any)")
+                subjects = st.text_input("Categories of data subjects")
+                data_cats = st.text_input("Categories of personal data")
+                nis2 = st.checkbox("NIS2-relevant")
+            if st.form_submit_button("Create Art. 30 entry"):
+                if not name.strip() or not purpose.strip():
+                    st.error("Name and purpose required.")
+                else:
+                    n = len(st.session_state.priv_ropa) + 1
+                    today = _today()
+                    add = {
+                        "ropa_id": f"ROPA-2026-{n:03d}",
+                        "name": name.strip(),
+                        "purpose": purpose.strip(),
+                        "controller": "Acme Corp",
+                        "joint_controller": "",
+                        "processor": processor.strip(),
+                        "role_of_org": role,
+                        "owner": owner.strip() or "TBD",
+                        "dpo_contact": "dpo@acme.example",
+                        "legal_basis": legal,
+                        "li_assessment": "",
+                        "categories_subjects": subjects.strip() or "TBD",
+                        "categories_data": data_cats.strip() or "TBD",
+                        "special_category": "TBD",
+                        "recipients": "TBD",
+                        "transfers": "Not assessed",
+                        "transfer_tool": "Not assessed",
+                        "retention": "TBD",
+                        "security_measures": "TBD",
+                        "systems": "TBD",
+                        "jurisdictions": "TBD",
+                        "nis2_flag": bool(nis2),
+                        "dpia_id": "",
+                        "status": "Draft",
+                        "last_review": today,
+                        "next_review": today + timedelta(days=90),
+                        "risk_notes": "",
+                        "summary": "Intake stub — complete Art. 30 fields before relying on this entry.",
+                        "tom": [],
+                        "evidence": [],
+                        "open_actions": [],
+                    }
+                    _save_ropa(
+                        pd.concat([st.session_state.priv_ropa, pd.DataFrame([add])], ignore_index=True)
+                    )
+                    st.success(f"ROPA-2026-{n:03d} created.")
+                    st.rerun()
+
+        st.subheader("Log rights request")
+        with st.form("intake_dsar"):
+            c1, c2 = st.columns(2)
+            with c1:
+                dtype = st.selectbox("Type", DSAR_TYPES)
+                regime = st.selectbox("Regime", ["GDPR", "CPRA", "Other US state", "UK GDPR"])
+                subject = st.text_input("Subject reference")
+            with c2:
+                channel = st.text_input("Channel", value="Privacy portal")
+                due_days = st.number_input("Due in days", 1, 90, 30)
+            notes = st.text_area("Notes")
+            if st.form_submit_button("Create request"):
+                n = len(st.session_state.priv_dsar) + 1
+                today = _today()
+                add = {
+                    "request_id": f"DSAR-2026-{n:03d}",
+                    "type": dtype,
+                    "regime": regime,
+                    "subject_ref": subject.strip() or "TBD",
+                    "channel": channel.strip() or "Manual",
+                    "status": "Intake",
+                    "received": today,
+                    "due": today + timedelta(days=int(due_days)),
+                    "extended": False,
+                    "owner": "Privacy ops",
+                    "systems_in_scope": "TBD",
+                    "notes": notes.strip(),
+                }
+                _save_dsar(
+                    pd.concat([st.session_state.priv_dsar, pd.DataFrame([add])], ignore_index=True)
+                )
+                st.success(f"DSAR-2026-{n:03d} logged.")
+                st.rerun()
+
+    with export:
+        st.subheader("Export")
+        out_r = er.copy()
+        for col in ("last_review", "next_review"):
+            out_r[col] = out_r[col].apply(_fmt)
+        for col in ("tom", "evidence", "open_actions"):
+            if col in out_r.columns:
+                out_r = out_r.drop(columns=[col])
+        demo_kit.csv_download(out_r, "ropa_art30.csv", label="Download RoPA")
+        out_q = eq.copy()
+        out_q["received"] = out_q["received"].apply(_fmt)
+        out_q["due"] = out_q["due"].apply(_fmt)
+        demo_kit.csv_download(out_q, "dsar_rights.csv", label="Download rights requests", key="q_csv")
+        out_b = eb.copy()
+        for col in ("detected", "assessed", "dpa_notified", "subjects_notified", "art33_due"):
+            if col in out_b.columns:
+                out_b[col] = out_b[col].apply(_fmt)
+        demo_kit.csv_download(out_b, "privacy_breaches.csv", label="Download breach register", key="b_csv")
+        out_d = dpias.copy()
+        for col in ("started", "completed", "next_review"):
+            out_d[col] = out_d[col].apply(_fmt)
+        demo_kit.csv_download(out_d, "dpias.csv", label="Download DPIAs", key="d_csv")
+        st.caption("Resample rebuilds the demo set. Edits live in this browser session only. Not legal advice.")
+
 
 if __name__ == "__main__":
     main()

@@ -1,17 +1,25 @@
-import streamlit as st
-import demo_kit
-import portfolio_skin
-import pandas as pd
+#!/usr/bin/env python3
+"""Security metrics / CISO decision dashboard — club teaching toy.
+
+Outcome-oriented KRIs (not vanity green arrows): posture, detection &
+response, exposure/vuln aging, control coverage, incident & exception
+load — structured like board/SOC dashboards from SIEM / CNAPP / vuln
+leaders, with synthetic portfolio cross-links. Not a live telemetry feed.
+"""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
 import numpy as np
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import datetime
-from datetime import timedelta
-import random
-import json
+import streamlit as st
 
-# Page configuration
+import demo_kit
+import portfolio_skin
+
 st.set_page_config(
     page_title="Security Metrics Dashboard · i on GRC",
     page_icon="assets/favicon.svg",
@@ -21,880 +29,1206 @@ st.set_page_config(
 
 portfolio_skin.apply(hide_sidebar=False)
 
+DOMAINS = [
+    "Posture / risk",
+    "Detection & response",
+    "Exposure / vulnerability",
+    "Coverage / controls",
+    "Identity & access",
+    "Awareness / human",
+    "Compliance / audit",
+    "Third-party / supply",
+]
+DIRECTIONS = ["Improving", "Stable", "Worsening", "Unknown"]
+DECISION_TYPES = [
+    "Fund / resource",
+    "Accept risk",
+    "Remediate now",
+    "Escalate to board",
+    "Monitor",
+    "Change SLA / policy",
+]
+FEATURED_KRIS = {"KRI-2026-001", "KRI-2026-002", "KRI-2026-005", "KRI-2026-008", "KRI-2026-012"}
+_SYNC_KEY = "_secmet_seed_v1"
 
 
-# Initialize session state
-if 'security_metrics' not in st.session_state:
-    st.session_state.security_metrics = []
-if 'kpi_targets' not in st.session_state:
-    st.session_state.kpi_targets = []
-if 'security_events' not in st.session_state:
-    st.session_state.security_events = []
-if 'vulnerabilities' not in st.session_state:
-    st.session_state.vulnerabilities = []
-if 'compliance_metrics' not in st.session_state:
-    st.session_state.compliance_metrics = []
-if 'incident_metrics' not in st.session_state:
-    st.session_state.incident_metrics = []
+def _today() -> pd.Timestamp:
+    return pd.Timestamp.now().normalize()
 
-def generate_sample_data(seed: int = 42):
-    """Generate sample security metrics data"""
+
+def _now() -> pd.Timestamp:
+    return pd.Timestamp.now()
+
+
+def _sample(seed: int):
+    today = _today()
+    now = _now()
     rng = np.random.default_rng(seed)
-    security_metrics = [
+
+    # ── Outcome KRIs (decision objects, not vanity counters) ─────────
+    kris = [
         {
-            'id': 'MET-001',
-            'metric_name': 'Mean Time to Detect (MTTD)',
-            'value': 2.5,
-            'unit': 'hours',
-            'target': 4.0,
-            'status': 'Exceeding',
-            'category': 'Detection',
-            'date': datetime.datetime.now() - timedelta(days=1)
+            "kri_id": "KRI-2026-001",
+            "name": "Crown-jewel visibility & coverage",
+            "domain": "Coverage / controls",
+            "value": 86.0,
+            "unit": "%",
+            "target": 98.0,
+            "direction": "Worsening",
+            "prior": 91.0,
+            "owner": "CISO / CAASM",
+            "audience": "Board · CISO",
+            "formula": "Verified crown-jewel CIs with EDR+vuln+SIEM+backup / total crown jewels",
+            "so_what": "14% of crown jewels have a coverage gap — JUMP-DMZ-03 and PayrollCo freeze cut the score.",
+            "decision": "Remediate now",
+            "decision_detail": "Fund SIEM onjump + re-attest PayrollCo backup scope before board packet locks.",
+            "linked": "AST-2026-005 · DST-2026-001 · GAP-2026-001",
+            "status": "Breach of target",
+            "as_of": today,
+            "summary": "Best-in-breed posture dashboards lead with critical-asset coverage, not 'EDR installed %'. This KRI fails when inventory or telemetry lies.",
         },
         {
-            'id': 'MET-002',
-            'metric_name': 'Mean Time to Respond (MTTR)',
-            'value': 6.2,
-            'unit': 'hours',
-            'target': 8.0,
-            'status': 'On Track',
-            'category': 'Response',
-            'date': datetime.datetime.now() - timedelta(days=1)
+            "kri_id": "KRI-2026-002",
+            "name": "Mean time to detect (MTTD)",
+            "domain": "Detection & response",
+            "value": 18.4,
+            "unit": "hours",
+            "target": 8.0,
+            "direction": "Worsening",
+            "prior": 11.2,
+            "owner": "SOC Lead",
+            "audience": "CISO · Board",
+            "formula": "Avg (detect_ts − first_hostile_activity) for Sev1–2 last 90d",
+            "so_what": "PayrollCo backup issue sat ~10h before IR open; portal stuffing was faster. Aggregate pulled by supplier blind spots.",
+            "decision": "Fund / resource",
+            "decision_detail": "Vendor telemetry SLA + SOC surge for processor incidents; don't celebrate internal MTTD alone.",
+            "linked": "INC-2026-009 · INC-2026-001",
+            "status": "Breach of target",
+            "as_of": today,
+            "summary": "Outcome metric. Vanity cousin is 'SIEM events processed' — we don't show that.",
         },
         {
-            'id': 'MET-003',
-            'metric_name': 'Security Awareness Training Completion',
-            'value': 87.5,
-            'unit': '%',
-            'target': 90.0,
-            'status': 'Needs Attention',
-            'category': 'Awareness',
-            'date': datetime.datetime.now() - timedelta(days=1)
+            "kri_id": "KRI-2026-003",
+            "name": "Mean time to contain (MTTC)",
+            "domain": "Detection & response",
+            "value": 5.1,
+            "unit": "hours",
+            "target": 4.0,
+            "direction": "Stable",
+            "prior": 4.8,
+            "owner": "IR Lead",
+            "audience": "CISO",
+            "formula": "Avg (contain_ts − detect_ts) Sev1–2 last 90d",
+            "so_what": "Containment OK when we own the plane; processor incidents stall at 'assessing'.",
+            "decision": "Change SLA / policy",
+            "decision_detail": "Define processor-contain playbooks with TPRM kill-switch criteria.",
+            "linked": "INC-2026-009 · PLN IR",
+            "status": "Near miss",
+            "as_of": today,
+            "summary": "Separating contain from full remediate avoids MTTR mush that boards can't act on.",
         },
         {
-            'id': 'MET-004',
-            'metric_name': 'Vulnerability Remediation Rate',
-            'value': 92.3,
-            'unit': '%',
-            'target': 95.0,
-            'status': 'On Track',
-            'category': 'Vulnerability',
-            'date': datetime.datetime.now() - timedelta(days=1)
+            "kri_id": "KRI-2026-004",
+            "name": "Mean time to remediate (full close)",
+            "domain": "Detection & response",
+            "value": 9.6,
+            "unit": "days",
+            "target": 7.0,
+            "direction": "Worsening",
+            "prior": 7.2,
+            "owner": "IR Lead / GRC",
+            "audience": "CISO",
+            "formula": "Avg (close_ts − detect_ts) for closed Sev1–2; open excl.",
+            "so_what": "IFS exposure and payroll processor still open — remediate clock is the business story.",
+            "decision": "Escalate to board",
+            "decision_detail": "Board brief: two open Sev1 with privacy/NIS2 dual-report adjacency.",
+            "linked": "INC-2026-005 · INC-2026-009 · PB-2026-*",
+            "status": "Breach of target",
+            "as_of": today,
+            "summary": "Full close includes root cause and control fix — not just ticket status.",
         },
         {
-            'id': 'MET-005',
-            'metric_name': 'Phishing Click Rate',
-            'value': 3.2,
-            'unit': '%',
-            'target': 5.0,
-            'status': 'Exceeding',
-            'category': 'Awareness',
-            'date': datetime.datetime.now() - timedelta(days=1)
+            "kri_id": "KRI-2026-005",
+            "name": "Critical vuln SLA compliance (≤7d)",
+            "domain": "Exposure / vulnerability",
+            "value": 71.0,
+            "unit": "%",
+            "target": 95.0,
+            "direction": "Worsening",
+            "prior": 84.0,
+            "owner": "Vuln Mgmt · Platform",
+            "audience": "CISO · Board",
+            "formula": "Crit CVEs closed ≤7d / crit opened in window (excl. accepted risk w/ EXC)",
+            "so_what": "Change freeze + IBM i / JDE patch windows + JUMP exposure drove miss. Accepted risks must be EXC-linked.",
+            "decision": "Remediate now",
+            "decision_detail": "Prioritize crown-jewel crits; force EXC-2026-* for anything past SLA.",
+            "linked": "VUL-2026-001 · VUL-2026-004 · EXC-2026-004",
+            "status": "Breach of target",
+            "as_of": today,
+            "summary": "Patch count is vanity. SLA on criticals against crown jewels is the decision metric.",
         },
         {
-            'id': 'MET-006',
-            'metric_name': 'Security Incident Count',
-            'value': 12,
-            'unit': 'incidents',
-            'target': 15,
-            'status': 'Exceeding',
-            'category': 'Incident',
-            'date': datetime.datetime.now() - timedelta(days=1)
-        }
+            "kri_id": "KRI-2026-006",
+            "name": "Open critical / high findings (aged)",
+            "domain": "Exposure / vulnerability",
+            "value": 38.0,
+            "unit": "findings",
+            "target": 15.0,
+            "direction": "Worsening",
+            "prior": 24.0,
+            "owner": "Vuln Mgmt",
+            "audience": "CISO",
+            "formula": "Open Crit+High older than SLA (7d crit / 30d high)",
+            "so_what": "Backlog is risk concentration, not 'work left'. 11 on crown-jewel services.",
+            "decision": "Fund / resource",
+            "decision_detail": "Surge week on PRODBOX / portal / jump; defer low on marketing-DB.",
+            "linked": "AST-2026-001 · AST-2026-007 · AST-2026-005",
+            "status": "Breach of target",
+            "as_of": today,
+            "summary": "Aging + asset criticality beats raw open counts.",
+        },
+        {
+            "kri_id": "KRI-2026-007",
+            "name": "Alert → true-positive incident rate",
+            "domain": "Detection & response",
+            "value": 4.2,
+            "unit": "%",
+            "target": 8.0,
+            "direction": "Stable",
+            "prior": 4.0,
+            "owner": "SOC Lead",
+            "audience": "CISO",
+            "formula": "Confirmed incidents / actionable alerts (excl. info)",
+            "so_what": "Low conversion = analyst burnout and missed signal. Tuning debt after portal stuffing rules.",
+            "decision": "Fund / resource",
+            "decision_detail": "Detection engineering sprint: suppress known-good, promote high-fidelity.",
+            "linked": "SOC queue · INC-2026-001 detections",
+            "status": "Near miss",
+            "as_of": today,
+            "summary": "Opposite of vanity 'alerts closed'. Quality of signal.",
+        },
+        {
+            "kri_id": "KRI-2026-008",
+            "name": "Privileged path monitoring coverage",
+            "domain": "Identity & access",
+            "value": 78.0,
+            "unit": "%",
+            "target": 100.0,
+            "direction": "Worsening",
+            "prior": 92.0,
+            "owner": "SecOps · Alex Rivera",
+            "audience": "CISO · Audit",
+            "formula": "Privileged jump/PAM sessions with SIEM+session log / all privileged paths",
+            "so_what": "JUMP-DMZ-03 not in SIEM — false assurance on ROPA-2026-006 / NIS2 monitoring.",
+            "decision": "Remediate now",
+            "decision_detail": "Ship jump logs this week; block new privileged paths without telemetry.",
+            "linked": "AST-2026-005 · ROPA-2026-006 · NIS2",
+            "status": "Breach of target",
+            "as_of": today,
+            "summary": "Identity/control coverage the board can understand: are admin paths watched?",
+        },
+        {
+            "kri_id": "KRI-2026-009",
+            "name": "MFA coverage (workforce + break-glass exceptions)",
+            "domain": "Identity & access",
+            "value": 94.0,
+            "unit": "%",
+            "target": 99.0,
+            "direction": "Improving",
+            "prior": 91.0,
+            "owner": "IAM",
+            "audience": "CISO",
+            "formula": "Users with phishing-resistant or MFA / in-scope identities (svc accts separate)",
+            "so_what": "Gap is mostly service accounts + 3 break-glass with EXC. Portal B2C MFA phased.",
+            "decision": "Monitor",
+            "decision_detail": "Finish B2C MFA phase; keep EXC aged <90d.",
+            "linked": "EXC-2026-011 · AST-2026-008",
+            "status": "Near miss",
+            "as_of": today,
+            "summary": "Coverage with exception hygiene — not 'MFA project complete'.",
+        },
+        {
+            "kri_id": "KRI-2026-010",
+            "name": "Phishing resilience (report − click)",
+            "domain": "Awareness / human",
+            "value": 2.1,
+            "unit": "ratio",
+            "target": 3.0,
+            "direction": "Improving",
+            "prior": 1.4,
+            "owner": "Awareness · HR",
+            "audience": "CISO",
+            "formula": "Report rate / click rate on last campaign (higher better)",
+            "so_what": "Click 3.8% · report 8.0%. Better than last quarter; still below target ratio.",
+            "decision": "Monitor",
+            "decision_detail": "Target finance + AMS vendor admins next sim.",
+            "linked": "Campaign Q3",
+            "status": "Near miss",
+            "as_of": today,
+            "summary": "Resilience ratio beats completion % vanity.",
+        },
+        {
+            "kri_id": "KRI-2026-011",
+            "name": "Active risk exceptions (past review)",
+            "domain": "Compliance / audit",
+            "value": 7.0,
+            "unit": "exceptions",
+            "target": 3.0,
+            "direction": "Worsening",
+            "prior": 4.0,
+            "owner": "GRC",
+            "audience": "CISO · Audit committee",
+            "formula": "Open EXC past next_review or compensating control unverified",
+            "so_what": "Stale waivers are silent risk acceptance. Includes patch SLA and IFS-related.",
+            "decision": "Escalate to board",
+            "decision_detail": "Force re-cert or close; no silent renewals this cycle.",
+            "linked": "EXC-2026-004 · EXC-2026-011",
+            "status": "Breach of target",
+            "as_of": today,
+            "summary": "Exception aging is a first-class KRI in mature GRC platforms.",
+        },
+        {
+            "kri_id": "KRI-2026-012",
+            "name": "Material third-party cyber incidents (open)",
+            "domain": "Third-party / supply",
+            "value": 2.0,
+            "unit": "incidents",
+            "target": 0.0,
+            "direction": "Worsening",
+            "prior": 0.0,
+            "owner": "TPRM / CISO",
+            "audience": "Board · CISO",
+            "formula": "Open Sev1–2 where primary blast is processor/vendor",
+            "so_what": "PayrollCo + Orbit AMS adjacency. Residual risk not on internal EDR charts.",
+            "decision": "Escalate to board",
+            "decision_detail": "Board: processing freeze, Art.33/NIS2 clocks, exit options.",
+            "linked": "INC-2026-009 · VND-2026-001 · VND-2026-003",
+            "status": "Breach of target",
+            "as_of": today,
+            "summary": "Supply-chain cyber is a board metric — CNAPP/SIEM leaders now surface vendor blast radius.",
+        },
+        {
+            "kri_id": "KRI-2026-013",
+            "name": "Backup restore test success (tier-0)",
+            "domain": "Coverage / controls",
+            "value": 67.0,
+            "unit": "%",
+            "target": 100.0,
+            "direction": "Stable",
+            "prior": 67.0,
+            "owner": "Infra / BCM",
+            "audience": "CISO · Board",
+            "formula": "Tier-0 services with successful restore test ≤90d / tier-0 count",
+            "so_what": "PRODBOX / Z tested; portal OK; payroll processor restore unverified under IR.",
+            "decision": "Accept risk",
+            "decision_detail": "Documented accept until PayrollCo IR closes — time-box 14d.",
+            "linked": "BIA / PLN-2026-* · VND-2026-001",
+            "status": "Breach of target",
+            "as_of": today,
+            "summary": "Backup configured ≠ restore proven. Outcome over activity.",
+        },
+        {
+            "kri_id": "KRI-2026-014",
+            "name": "External attack-surface critical exposures",
+            "domain": "Exposure / vulnerability",
+            "value": 9.0,
+            "unit": "exposures",
+            "target": 3.0,
+            "direction": "Improving",
+            "prior": 14.0,
+            "owner": "ASM / SecOps",
+            "audience": "CISO",
+            "formula": "Internet-facing critical findings (auth bypass, RCE, open admin)",
+            "so_what": "Down from 14 after portal hardening; 9 remain incl. staging bleed and jump management plane.",
+            "decision": "Remediate now",
+            "decision_detail": "Kill staging bleed; restrict jump mgmt to VPN+PAM only.",
+            "linked": "AST-2026-007 · AST-2026-005",
+            "status": "Breach of target",
+            "as_of": today,
+            "summary": "ASM-style exposure count with trend — what Wiz/Tenable-style boards show.",
+        },
+        {
+            "kri_id": "KRI-2026-015",
+            "name": "Control effectiveness (sampled)",
+            "domain": "Compliance / audit",
+            "value": 81.0,
+            "unit": "%",
+            "target": 90.0,
+            "direction": "Stable",
+            "prior": 80.0,
+            "owner": "GRC / Internal Audit",
+            "audience": "Audit committee",
+            "formula": "Controls tested operating effectively / controls tested (rolling 90d)",
+            "so_what": "Failures cluster: privileged logging, vendor sub-processor notice, IFS ACL.",
+            "decision": "Remediate now",
+            "decision_detail": "Tie failed controls to open INC/EXC; no green SoA without evidence.",
+            "linked": "ISO 27701 SoA · PBC-2026-003",
+            "status": "Near miss",
+            "as_of": today,
+            "summary": "Design existence ≠ operating effectiveness — GRC platforms lead with this distinction.",
+        },
     ]
-    
-    kpi_targets = [
-        {
-            'id': 'KPI-001',
-            'metric_name': 'MTTD',
-            'target_value': 4.0,
-            'current_value': 2.5,
-            'unit': 'hours',
-            'status': 'Exceeding',
-            'priority': 'High'
-        },
-        {
-            'id': 'KPI-002',
-            'metric_name': 'MTTR',
-            'target_value': 8.0,
-            'current_value': 6.2,
-            'unit': 'hours',
-            'status': 'On Track',
-            'priority': 'High'
-        },
-        {
-            'id': 'KPI-003',
-            'metric_name': 'Training Completion',
-            'target_value': 90.0,
-            'current_value': 87.5,
-            'unit': '%',
-            'status': 'Needs Attention',
-            'priority': 'Medium'
-        },
-        {
-            'id': 'KPI-004',
-            'metric_name': 'Vulnerability Remediation',
-            'target_value': 95.0,
-            'current_value': 92.3,
-            'unit': '%',
-            'status': 'On Track',
-            'priority': 'High'
-        }
-    ]
-    
-    security_events = [
-        {
-            'id': 'EVT-001',
-            'event_type': 'Failed Login Attempts',
-            'severity': 'Medium',
-            'count': 45,
-            'source': 'Active Directory',
-            'date': datetime.datetime.now() - timedelta(hours=2)
-        },
-        {
-            'id': 'EVT-002',
-            'event_type': 'Suspicious Network Activity',
-            'severity': 'High',
-            'count': 12,
-            'source': 'Firewall',
-            'date': datetime.datetime.now() - timedelta(hours=4)
-        },
-        {
-            'id': 'EVT-003',
-            'event_type': 'Malware Detection',
-            'severity': 'Critical',
-            'count': 3,
-            'source': 'EDR',
-            'date': datetime.datetime.now() - timedelta(hours=6)
-        },
-        {
-            'id': 'EVT-004',
-            'event_type': 'Data Access Violation',
-            'severity': 'High',
-            'count': 8,
-            'source': 'DLP',
-            'date': datetime.datetime.now() - timedelta(hours=8)
-        }
-    ]
-    
-    vulnerabilities = [
-        {
-            'id': 'VUL-001',
-            'title': 'SQL Injection Vulnerability',
-            'severity': 'Critical',
-            'cvss_score': 9.8,
-            'status': 'Open',
-            'affected_systems': 5,
-            'date_discovered': datetime.datetime.now() - timedelta(days=2)
-        },
-        {
-            'id': 'VUL-002',
-            'title': 'Outdated SSL Certificate',
-            'severity': 'Medium',
-            'cvss_score': 5.5,
-            'status': 'In Progress',
-            'affected_systems': 12,
-            'date_discovered': datetime.datetime.now() - timedelta(days=5)
-        },
-        {
-            'id': 'VUL-003',
-            'title': 'Weak Password Policy',
-            'severity': 'High',
-            'cvss_score': 7.2,
-            'status': 'Open',
-            'affected_systems': 25,
-            'date_discovered': datetime.datetime.now() - timedelta(days=1)
-        },
-        {
-            'id': 'VUL-004',
-            'title': 'Missing Security Patches',
-            'severity': 'Medium',
-            'cvss_score': 6.1,
-            'status': 'In Progress',
-            'affected_systems': 8,
-            'date_discovered': datetime.datetime.now() - timedelta(days=3)
-        }
-    ]
-    
-    compliance_metrics = [
-        {
-            'id': 'COMP-001',
-            'framework': 'ISO 27001',
-            'compliance_score': 87.5,
-            'target_score': 90.0,
-            'status': 'On Track',
-            'last_assessment': datetime.datetime.now() - timedelta(days=30)
-        },
-        {
-            'id': 'COMP-002',
-            'framework': 'SOC 2',
-            'compliance_score': 92.3,
-            'target_score': 95.0,
-            'status': 'On Track',
-            'last_assessment': datetime.datetime.now() - timedelta(days=45)
-        },
-        {
-            'id': 'COMP-003',
-            'framework': 'GDPR',
-            'compliance_score': 95.8,
-            'target_score': 95.0,
-            'status': 'Exceeding',
-            'last_assessment': datetime.datetime.now() - timedelta(days=60)
-        },
-        {
-            'id': 'COMP-004',
-            'framework': 'PCI DSS',
-            'compliance_score': 89.2,
-            'target_score': 90.0,
-            'status': 'On Track',
-            'last_assessment': datetime.datetime.now() - timedelta(days=15)
-        }
-    ]
-    
-    incident_metrics = [
-        {
-            'id': 'INC-001',
-            'incident_type': 'Phishing Attack',
-            'severity': 'Medium',
-            'status': 'Resolved',
-            'resolution_time': 4.5,
-            'date': datetime.datetime.now() - timedelta(days=7)
-        },
-        {
-            'id': 'INC-002',
-            'incident_type': 'Data Breach Attempt',
-            'severity': 'High',
-            'status': 'Under Investigation',
-            'resolution_time': None,
-            'date': datetime.datetime.now() - timedelta(days=2)
-        },
-        {
-            'id': 'INC-003',
-            'incident_type': 'Malware Infection',
-            'severity': 'Critical',
-            'status': 'Resolved',
-            'resolution_time': 8.2,
-            'date': datetime.datetime.now() - timedelta(days=14)
-        },
-        {
-            'id': 'INC-004',
-            'incident_type': 'Unauthorized Access',
-            'severity': 'High',
-            'status': 'Resolved',
-            'resolution_time': 6.1,
-            'date': datetime.datetime.now() - timedelta(days=10)
-        }
+
+    # Trend series (90d weekly) for featured / charted KRIs
+    weeks = pd.date_range(today - timedelta(days=84), periods=13, freq="W-MON")
+    trends = []
+    bases = {
+        "KRI-2026-001": (91, 86, True),
+        "KRI-2026-002": (9, 18.4, True),
+        "KRI-2026-005": (88, 71, True),
+        "KRI-2026-008": (95, 78, True),
+        "KRI-2026-012": (0, 2, True),
+        "KRI-2026-014": (14, 9, False),
+    }
+    for kid, (start, end, higher_worse) in bases.items():
+        for i, w in enumerate(weeks):
+            t = i / max(len(weeks) - 1, 1)
+            noise = float(rng.normal(0, abs(end - start) * 0.04))
+            val = start + (end - start) * t + noise
+            trends.append(
+                {
+                    "kri_id": kid,
+                    "week": w,
+                    "value": round(max(val, 0), 2),
+                    "higher_worse": higher_worse,
+                }
+            )
+
+    # Alert funnel (SOC)
+    funnel = pd.DataFrame(
+        [
+            {"stage": "Raw signals (7d)", "count": 1_240_000, "order": 1},
+            {"stage": "Correlated alerts", "count": 18_400, "order": 2},
+            {"stage": "Actionable / queued", "count": 1_120, "order": 3},
+            {"stage": "Investigated", "count": 640, "order": 4},
+            {"stage": "True positive / incident", "count": 27, "order": 5},
+            {"stage": "Sev1–2 declared", "count": 4, "order": 6},
+        ]
+    )
+
+    # Coverage by control domain × criticality
+    coverage = [
+        {"control": "EDR", "crown_jewel": 96, "high": 91, "medium": 84, "gap_note": "OT / a few jump hosts"},
+        {"control": "Vuln scan", "crown_jewel": 88, "high": 85, "medium": 70, "gap_note": "IBM i / Z auth scan limits"},
+        {"control": "SIEM ingest", "crown_jewel": 82, "high": 78, "medium": 65, "gap_note": "JUMP-DMZ-03 · some SaaS"},
+        {"control": "Backup + restore test", "crown_jewel": 67, "high": 72, "medium": 80, "gap_note": "PayrollCo unverified"},
+        {"control": "MFA / phishing-resistant", "crown_jewel": 94, "high": 92, "medium": 88, "gap_note": "svc accts · B2C phase"},
+        {"control": "PAM / privileged session", "crown_jewel": 78, "high": 70, "medium": 55, "gap_note": "AMS + jump gap"},
+        {"control": "DLP / egress", "crown_jewel": 60, "high": 55, "medium": 40, "gap_note": "Legacy midrange weak"},
+        {"control": "CSPM / cloud posture", "crown_jewel": 85, "high": 80, "medium": 75, "gap_note": "Portal OK · training GPU tenant"},
     ]
 
-    metric_statuses = ['Exceeding', 'On Track', 'Needs Attention']
-    for metric in security_metrics:
-        metric['value'] = round(float(metric['value']) * float(rng.uniform(0.9, 1.1)), 2)
-        if int(rng.integers(0, 3)) == 0:
-            metric['status'] = str(rng.choice(metric_statuses))
-    for kpi in kpi_targets:
-        kpi['current_value'] = round(float(kpi['current_value']) * float(rng.uniform(0.9, 1.1)), 2)
-    for event in security_events:
-        event['count'] = max(1, int(event['count']) + int(rng.integers(-5, 6)))
-    for vuln in vulnerabilities:
-        vuln['cvss_score'] = round(float(np.clip(vuln['cvss_score'] + float(rng.uniform(-0.5, 0.5)), 0.1, 10.0)), 1)
-    for comp in compliance_metrics:
-        comp['compliance_score'] = round(float(np.clip(comp['compliance_score'] + float(rng.uniform(-3, 3)), 50, 100)), 1)
+    # Vuln aging buckets
+    vulns = [
+        {
+            "vuln_id": "VUL-2026-001",
+            "title": "Critical RCE on portal API dependency",
+            "severity": "Critical",
+            "cvss": 9.8,
+            "asset": "AST-2026-007 portal",
+            "crown_jewel": True,
+            "age_d": 11,
+            "sla_d": 7,
+            "status": "Open — past SLA",
+            "owner": "Platform Eng",
+            "decision": "Emergency change window — EXC if slip another 48h",
+            "linked_exc": "",
+        },
+        {
+            "vuln_id": "VUL-2026-002",
+            "title": "Outdated TLS on internal JDE web",
+            "severity": "High",
+            "cvss": 7.5,
+            "asset": "AST-2026-006 JDE",
+            "crown_jewel": True,
+            "age_d": 34,
+            "sla_d": 30,
+            "status": "Open — past SLA",
+            "owner": "ERP / Orbit AMS",
+            "decision": "Tie to AMS change; EXC-2026-004 if freeze holds",
+            "linked_exc": "EXC-2026-004",
+        },
+        {
+            "vuln_id": "VUL-2026-003",
+            "title": "Jump host missing EDR sensor",
+            "severity": "High",
+            "cvss": 7.1,
+            "asset": "AST-2026-005 JUMP-DMZ-03",
+            "crown_jewel": True,
+            "age_d": 21,
+            "sla_d": 14,
+            "status": "In progress",
+            "owner": "SecOps",
+            "decision": "Same sprint as SIEM — coverage KRI depends on it",
+            "linked_exc": "",
+        },
+        {
+            "vuln_id": "VUL-2026-004",
+            "title": "Privilege escalation in PAM connector",
+            "severity": "Critical",
+            "cvss": 9.1,
+            "asset": "PAM · IdP",
+            "crown_jewel": True,
+            "age_d": 5,
+            "sla_d": 7,
+            "status": "In progress",
+            "owner": "IAM",
+            "decision": "Still inside SLA — watch daily",
+            "linked_exc": "",
+        },
+        {
+            "vuln_id": "VUL-2026-005",
+            "title": "Public S3 listing on non-prod marketing",
+            "severity": "High",
+            "cvss": 7.2,
+            "asset": "marketing-DB staging",
+            "crown_jewel": False,
+            "age_d": 8,
+            "sla_d": 30,
+            "status": "Open",
+            "owner": "Martech",
+            "decision": "Close this week — ASM exposure count",
+            "linked_exc": "",
+        },
+        {
+            "vuln_id": "VUL-2026-006",
+            "title": "IBM i user profile with stale *ALLOBJ",
+            "severity": "Critical",
+            "cvss": 8.8,
+            "asset": "AST-2026-001 PRODBOX",
+            "crown_jewel": True,
+            "age_d": 16,
+            "sla_d": 7,
+            "status": "Open — past SLA",
+            "owner": "IBM i Ops / Security",
+            "decision": "Remove or EXC with compensating QAUDJRN — board-visible",
+            "linked_exc": "",
+        },
+        {
+            "vuln_id": "VUL-2026-007",
+            "title": "Medium XSS in support widget",
+            "severity": "Medium",
+            "cvss": 5.4,
+            "asset": "AST-2026-007",
+            "crown_jewel": False,
+            "age_d": 40,
+            "sla_d": 90,
+            "status": "Open",
+            "owner": "Platform",
+            "decision": "Backlog — do not distract from crits",
+            "linked_exc": "",
+        },
+        {
+            "vuln_id": "VUL-2026-008",
+            "title": "Vendor admin shared ID (Orbit)",
+            "severity": "High",
+            "cvss": 7.0,
+            "asset": "VND-2026-003",
+            "crown_jewel": True,
+            "age_d": 45,
+            "sla_d": 30,
+            "status": "Accepted — EXC",
+            "owner": "TPRM",
+            "decision": "Re-challenge EXC; named IDs required",
+            "linked_exc": "EXC-2026-011",
+        },
+    ]
 
-    return security_metrics, kpi_targets, security_events, vulnerabilities, compliance_metrics, incident_metrics
+    # Decision queue (what leadership must do)
+    decisions = [
+        {
+            "decision_id": "DEC-2026-001",
+            "title": "Approve emergency change for portal critical RCE",
+            "kri_id": "KRI-2026-005",
+            "owner": "CISO + Platform",
+            "due": today + timedelta(days=1),
+            "status": "Open",
+            "impact": "Crown-jewel internet exposure; SLA already breached",
+            "options": "Patch now · WAF virtual patch + EXC 72h · Accept (not recommended)",
+        },
+        {
+            "decision_id": "DEC-2026-002",
+            "title": "Board brief — open processor Sev1 (PayrollCo)",
+            "kri_id": "KRI-2026-012",
+            "owner": "CISO + GC + TPRM",
+            "due": today + timedelta(days=2),
+            "status": "Open",
+            "impact": "Art.33 / NIS2 / payroll continuity",
+            "options": "Escalate pack · continue freeze · begin exit assessment",
+        },
+        {
+            "decision_id": "DEC-2026-003",
+            "title": "Fund detection-engineering sprint (alert quality)",
+            "kri_id": "KRI-2026-007",
+            "owner": "CISO + SOC",
+            "due": today + timedelta(days=7),
+            "status": "Open",
+            "impact": "Analyst capacity · MTTD secondary benefit",
+            "options": "2 FTE weeks · MSSP surge · defer (risk)",
+        },
+        {
+            "decision_id": "DEC-2026-004",
+            "title": "Close or re-certify stale exceptions (≥7)",
+            "kri_id": "KRI-2026-011",
+            "owner": "GRC",
+            "due": today + timedelta(days=5),
+            "status": "Open",
+            "impact": "Audit committee narrative · silent risk accept",
+            "options": "Force close · re-cert with new expiry · escalate owners",
+        },
+        {
+            "decision_id": "DEC-2026-005",
+            "title": "SIEM + EDR on JUMP-DMZ-03 this week",
+            "kri_id": "KRI-2026-008",
+            "owner": "SecOps",
+            "due": today + timedelta(days=3),
+            "status": "In progress",
+            "impact": "Privileged coverage KRI · NIS2 evidence",
+            "options": "Complete · compensating temporary block of jump use",
+        },
+        {
+            "decision_id": "DEC-2026-006",
+            "title": "Time-box backup restore accept for PayrollCo",
+            "kri_id": "KRI-2026-013",
+            "owner": "BCM + TPRM",
+            "due": today + timedelta(days=14),
+            "status": "Open",
+            "impact": "Tier-0 restore claim false until proven",
+            "options": "14d accept · require vendor restore evidence · exit",
+        },
+    ]
+
+    # Incident scorecard (portfolio-linked)
+    incidents = [
+        {
+            "inc_id": "INC-2026-001",
+            "title": "Portal credential stuffing",
+            "sev": "Sev2",
+            "mttd_h": 3.2,
+            "mttc_h": 4.5,
+            "status": "Contained — notify path",
+            "driver_kri": "KRI-2026-002 · KRI-2026-014",
+        },
+        {
+            "inc_id": "INC-2026-005",
+            "title": "JDE IFS anonymous share",
+            "sev": "Sev1",
+            "mttd_h": 72.0,
+            "mttc_h": 8.0,
+            "status": "Open — forensics",
+            "driver_kri": "KRI-2026-004 · KRI-2026-001",
+        },
+        {
+            "inc_id": "INC-2026-009",
+            "title": "PayrollCo backup-environment",
+            "sev": "Sev1",
+            "mttd_h": 10.0,
+            "mttc_h": None,
+            "status": "Assessing — processor",
+            "driver_kri": "KRI-2026-002 · KRI-2026-012",
+        },
+        {
+            "inc_id": "INC-2026-003",
+            "title": "Phishing → mailbox rule",
+            "sev": "Sev3",
+            "mttd_h": 6.0,
+            "mttc_h": 2.0,
+            "status": "Closed",
+            "driver_kri": "KRI-2026-010",
+        },
+        {
+            "inc_id": "INC-2026-008",
+            "title": "Suspicious VPN geo",
+            "sev": "Sev3",
+            "mttd_h": 1.5,
+            "mttc_h": 1.0,
+            "status": "Closed",
+            "driver_kri": "KRI-2026-008",
+        },
+    ]
+
+    # Executive narrative bullets
+    narrative = [
+        {
+            "lane": "Risk up",
+            "text": "Crown-jewel coverage and critical SLA breached; two open vendor/processor Sev1s.",
+        },
+        {
+            "lane": "Risk down",
+            "text": "External critical exposures 14→9; phishing resilience improving; MFA trending up.",
+        },
+        {
+            "lane": "Blind spot",
+            "text": "Privileged jump without SIEM + payroll restore unproven = false assurance on monitoring/BCM.",
+        },
+        {
+            "lane": "Ask of leadership",
+            "text": "Six open decisions this week — patch, board brief, exceptions, jump telemetry, backup accept, detection eng.",
+        },
+    ]
+
+    df_k = pd.DataFrame(kris)
+    df_k["as_of"] = pd.to_datetime(df_k["as_of"], errors="coerce")
+    df_tr = pd.DataFrame(trends)
+    df_tr["week"] = pd.to_datetime(df_tr["week"], errors="coerce")
+    df_cov = pd.DataFrame(coverage)
+    df_v = pd.DataFrame(vulns)
+    df_d = pd.DataFrame(decisions)
+    df_d["due"] = pd.to_datetime(df_d["due"], errors="coerce")
+    df_i = pd.DataFrame(incidents)
+    df_n = pd.DataFrame(narrative)
+
+    return df_k, df_tr, funnel, df_cov, df_v, df_d, df_i, df_n
 
 
-_VULN_STATUS_ORDER = ['Open', 'In Progress', 'Resolved']
+def _enrich_kri(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    # For % and counts where higher can be good or bad — use domain heuristics
+    higher_worse = {
+        "KRI-2026-002",
+        "KRI-2026-003",
+        "KRI-2026-004",
+        "KRI-2026-006",
+        "KRI-2026-011",
+        "KRI-2026-012",
+        "KRI-2026-014",
+    }
+    out["higher_worse"] = out["kri_id"].isin(higher_worse)
+    # Breach if wrong side of target
+    out["off_target"] = np.where(
+        out["higher_worse"],
+        out["value"] > out["target"],
+        out["value"] < out["target"],
+    )
+    out["delta"] = out["value"] - out["prior"]
+    return out
 
 
-def _advance_vuln_status(status: str) -> str:
-    if status not in _VULN_STATUS_ORDER or status == _VULN_STATUS_ORDER[-1]:
-        return status
-    return _VULN_STATUS_ORDER[_VULN_STATUS_ORDER.index(status) + 1]
+def _enrich_decisions(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    today = _today()
+    out["open"] = out["status"].isin(["Open", "In progress"])
+    out["overdue"] = out["open"] & (out["due"] < today)
+    out["due_soon"] = out["open"] & (out["due"] <= today + timedelta(days=3))
+    return out
 
 
-def _sync_security_metrics(seed: int) -> None:
-    if st.session_state.get('_security_metrics_seed') != seed or not st.session_state.get('security_metrics'):
-        metrics, kpis, events, vulns, compliance, incidents = generate_sample_data(seed)
-        st.session_state.security_metrics = metrics
-        st.session_state.kpi_targets = kpis
-        st.session_state.security_events = events
-        st.session_state.vulnerabilities = vulns
-        st.session_state.compliance_metrics = compliance
-        st.session_state.incident_metrics = incidents
-        st.session_state._security_metrics_seed = seed
+def _enrich_vulns(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    out["past_sla"] = out["age_d"] > out["sla_d"]
+    out["needs_action"] = out["status"].astype(str).str.contains("past SLA|In progress|Open", regex=True) & ~out[
+        "status"
+    ].astype(str).str.contains("Accepted")
+    return out
 
 
-def main():
+def _sync(seed: int):
+    need = st.session_state.get(_SYNC_KEY) != seed or "sec_kris" not in st.session_state
+    if need:
+        k, tr, fun, cov, v, d, i, n = _sample(seed)
+        st.session_state.sec_kris = k
+        st.session_state.sec_trends = tr
+        st.session_state.sec_funnel = fun
+        st.session_state.sec_cov = cov
+        st.session_state.sec_vulns = v
+        st.session_state.sec_decisions = d
+        st.session_state.sec_incs = i
+        st.session_state.sec_narrative = n
+        st.session_state[_SYNC_KEY] = seed
+    return (
+        st.session_state.sec_kris,
+        st.session_state.sec_trends,
+        st.session_state.sec_funnel,
+        st.session_state.sec_cov,
+        st.session_state.sec_vulns,
+        st.session_state.sec_decisions,
+        st.session_state.sec_incs,
+        st.session_state.sec_narrative,
+    )
+
+
+def _save_kris(df):
+    st.session_state.sec_kris = df.reset_index(drop=True)
+
+
+def _save_decisions(df):
+    st.session_state.sec_decisions = df.reset_index(drop=True)
+
+
+def _save_vulns(df):
+    st.session_state.sec_vulns = df.reset_index(drop=True)
+
+
+def _patch_kri(kid, **fields):
+    df = st.session_state.sec_kris.copy()
+    loc = df.index[df["kri_id"] == kid]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_kris(df)
+
+
+def _patch_decision(did, **fields):
+    df = st.session_state.sec_decisions.copy()
+    loc = df.index[df["decision_id"] == did]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_decisions(df)
+
+
+def _patch_vuln(vid, **fields):
+    df = st.session_state.sec_vulns.copy()
+    loc = df.index[df["vuln_id"] == vid]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_vulns(df)
+
+
+def _fmt(ts) -> str:
+    if ts is None:
+        return "—"
+    try:
+        if pd.isna(ts):
+            return "—"
+    except (TypeError, ValueError):
+        pass
+    try:
+        p = pd.Timestamp(ts)
+        if pd.isna(p):
+            return "—"
+        return p.strftime("%Y-%m-%d")
+    except (ValueError, TypeError, OverflowError):
+        return "—"
+
+
+def _fmt_val(row) -> str:
+    v = row["value"]
+    u = row["unit"]
+    if u == "%":
+        return f"{v:.0f}%"
+    if u in {"hours", "days", "findings", "incidents", "exceptions", "exposures", "ratio"}:
+        if float(v) == int(v):
+            return f"{int(v)} {u}"
+        return f"{v:.1f} {u}"
+    return f"{v} {u}"
+
+
+def _kri_detail(row, trends, *, expanded=False):
+    st.markdown(f"### {row['kri_id']} · {row['name']}")
+    a, b, c, d = st.columns(4)
+    a.metric("Current", _fmt_val(row), delta=f"{row['delta']:+.1f} vs prior")
+    b.metric("Target", f"{row['target']:g} {row['unit']}")
+    c.metric("Direction", row["direction"])
+    d.metric("Status", row["status"])
+
+    c1, c2 = st.columns(2)
+    c1.write(f"**Domain:** {row['domain']}")
+    c1.write(f"**Owner:** {row['owner']} · **Audience:** {row['audience']}")
+    c1.write(f"**Formula:** {row['formula']}")
+    c1.write(f"**Linked:** {row['linked']}")
+    c2.write(f"**So what:** {row['so_what']}")
+    c2.write(f"**Decision:** {row['decision']} — {row['decision_detail']}")
+    st.write(row["summary"])
+
+    t = trends[trends["kri_id"] == row["kri_id"]]
+    if not t.empty:
+        fig = px.line(t, x="week", y="value", markers=True, title="13-week trend")
+        fig.add_hline(y=row["target"], line_dash="dash", annotation_text="target")
+        fig.update_layout(height=280, margin=dict(l=10, r=10, t=40, b=10))
+        st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("Record decision outcome", expanded=False):
+        new_dec = st.selectbox(
+            "Decision type",
+            DECISION_TYPES,
+            index=DECISION_TYPES.index(row["decision"]) if row["decision"] in DECISION_TYPES else 0,
+            key=f"dec_sel_{row['kri_id']}",
+        )
+        note = st.text_input("Decision note", key=f"dec_note_{row['kri_id']}")
+        if st.button("Save decision", key=f"dec_save_{row['kri_id']}"):
+            detail = row["decision_detail"]
+            if note.strip():
+                detail = f"{detail} | {note.strip()}"
+            _patch_kri(row["kri_id"], decision=new_dec, decision_detail=detail)
+            st.rerun()
+
+
+def main() -> None:
     portfolio_skin.page_header(
         title="Security Metrics Dashboard",
-        lede="Interactive GRC tool — #RUNGRCRaleigh build-in-public.",
-        kicker="Analytics",
+        lede="CISO decision dashboard — outcome KRIs, coverage, exposure aging, SOC funnel, open decisions. Not vanity green arrows. Club demo — synthetic.",
+        kicker="Metrics · Posture",
     )
-    st.markdown("Comprehensive platform for tracking security KPIs, metrics, and performance indicators across the organization")
 
-    with st.sidebar:
-        st.title("Navigation")
-        seed = demo_kit.seed_controls()
+    seed = demo_kit.seed_controls()
+    kris, trends, funnel, cov, vulns, decisions, incs, narrative = _sync(seed)
+    ek = _enrich_kri(kris)
+    ed = _enrich_decisions(decisions)
+    ev = _enrich_vulns(vulns)
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Filters")
+    domain_f = st.sidebar.multiselect("Domains", DOMAINS, default=DOMAINS)
+    off_only = st.sidebar.checkbox("Off-target KRIs only", value=False)
+    cj_vuln = st.sidebar.checkbox("Crown-jewel vulns only", value=False)
+
+    off = int(ek["off_target"].sum())
+    open_dec = int(ed["open"].sum())
+    past_sla = int(ev["past_sla"].sum())
+    worsening = int((ek["direction"] == "Worsening").sum())
+
+    k1, k2, k3, k4, k5, k6 = st.columns(6)
+    k1.metric("KRIs tracked", len(ek))
+    k2.metric("Off target", off)
+    k3.metric("Worsening", worsening)
+    k4.metric("Open decisions", open_dec)
+    k5.metric("Vulns past SLA", past_sla)
+    k6.metric("Open Sev1–2 (demo)", int((incs["sev"].isin(["Sev1", "Sev2"]) & ~incs["status"].str.contains("Closed")).sum()))
+
+    if off >= 8:
+        st.error(f"{off} KRIs off target — posture is not 'mostly green'. See decision queue.")
+    elif off:
+        st.warning(f"{off} KRIs off target. Direction matters more than any single green cell.")
+
+    work, kri_tab, soc_tab, exp_tab, cov_tab, board_tab, intake, export = st.tabs(
+        [
+            "Workbench",
+            "KRIs / outcomes",
+            "Detect & respond",
+            "Exposure",
+            "Coverage",
+            "Board brief",
+            "Intake",
+            "Export",
+        ]
+    )
+
+    view_k = ek[ek["domain"].isin(domain_f)]
+    if off_only:
+        view_k = view_k[view_k["off_target"]]
+
+    with work:
+        st.subheader("CISO workbench")
+
+        st.markdown("**Executive narrative**")
+        for _, n in narrative.iterrows():
+            st.write(f"**{n['lane']}:** {n['text']}")
+
         st.markdown("---")
-        page = st.selectbox(
-            "Select Module",
-            ["Dashboard", "KPI Tracking", "Security Events", "Vulnerability Metrics", "Compliance Metrics", "Incident Analytics", "Trends", "Reports"]
+        st.markdown(f"**Featured KRIs — statement of record ({len(FEATURED_KRIS)})**")
+        feat = view_k[view_k["kri_id"].isin(FEATURED_KRIS)].copy()
+        order = {i: n for n, i in enumerate(sorted(FEATURED_KRIS))}
+        # Prefer narrative order
+        pref = ["KRI-2026-001", "KRI-2026-002", "KRI-2026-005", "KRI-2026-008", "KRI-2026-012"]
+        order = {i: n for n, i in enumerate(pref)}
+        feat["_o"] = feat["kri_id"].map(lambda x: order.get(x, 99))
+        feat = feat.sort_values("_o")
+        for _, row in feat.iterrows():
+            st.markdown("---")
+            _kri_detail(row, trends, expanded=True)
+            st.markdown("---")
+
+        hot_d = ed[ed["open"]].sort_values("due")
+        st.markdown(f"**Decision queue ({len(hot_d)})** — what leadership must choose")
+        for _, d in hot_d.iterrows():
+            flag = " · OVERDUE" if d["overdue"] else (" · due ≤3d" if d["due_soon"] else "")
+            with st.expander(f"{d['decision_id']} · {d['title']} · {_fmt(d['due'])}{flag}"):
+                st.write(f"**KRI:** {d['kri_id']} · **Owner:** {d['owner']} · **Status:** {d['status']}")
+                st.write(f"**Impact:** {d['impact']}")
+                st.write(f"**Options:** {d['options']}")
+                c1, c2 = st.columns(2)
+                with c1:
+                    if d["status"] != "Closed" and st.button("Mark decided / closed", key=f"dc_{d['decision_id']}"):
+                        _patch_decision(d["decision_id"], status="Closed")
+                        st.rerun()
+                with c2:
+                    if d["status"] == "Open" and st.button("Mark in progress", key=f"dp_{d['decision_id']}"):
+                        _patch_decision(d["decision_id"], status="In progress")
+                        st.rerun()
+
+        past = ev[ev["past_sla"]].sort_values("age_d", ascending=False)
+        st.markdown(f"**Vulns past SLA ({len(past)})**")
+        if not past.empty:
+            st.dataframe(
+                past[["vuln_id", "title", "severity", "asset", "age_d", "sla_d", "owner", "decision"]],
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    with kri_tab:
+        st.subheader("Outcome KRIs")
+        st.caption("Each row: value · target · direction · so-what · decision. Vanity activity metrics intentionally omitted.")
+        show = view_k[
+            [
+                "kri_id",
+                "name",
+                "domain",
+                "value",
+                "unit",
+                "target",
+                "direction",
+                "status",
+                "owner",
+                "decision",
+            ]
+        ].copy()
+        st.dataframe(show, use_container_width=True, hide_index=True)
+
+        pick = st.selectbox("KRI detail", view_k["kri_id"].tolist())
+        row = view_k[view_k["kri_id"] == pick].iloc[0]
+        _kri_detail(row, trends, expanded=True)
+
+        # Heat: domain vs status
+        heat = (
+            view_k.assign(flag=view_k["off_target"].map({True: "Off target", False: "On / near"}))
+            .groupby(["domain", "flag"])
+            .size()
+            .reset_index(name="n")
         )
-        target_shock = st.slider(
-            "What-if target tighten (%)",
-            min_value=0,
-            max_value=20,
-            value=0,
-            step=5,
-            help="Temporarily raise percentage KPI targets.",
-        )
-        st.caption("Sample / mock data only.")
-    _sync_security_metrics(seed)
-    for metric in st.session_state.security_metrics:
-        base_target = metric.get('_base_target', metric['target'])
-        metric['_base_target'] = base_target
-        if metric.get('unit') == '%':
-            metric['target'] = round(float(base_target) * (1 + target_shock / 100.0), 2)
-
-    if page == "Dashboard":
-        show_dashboard()
-    elif page == "KPI Tracking":
-        show_kpi_tracking()
-    elif page == "Security Events":
-        show_security_events()
-    elif page == "Vulnerability Metrics":
-        show_vulnerability_metrics()
-    elif page == "Compliance Metrics":
-        show_compliance_metrics()
-    elif page == "Incident Analytics":
-        show_incident_analytics()
-    elif page == "Trends":
-        show_trends()
-    elif page == "Reports":
-        show_reports()
-
-def show_dashboard():
-    st.header("Dashboard Overview")
-    
-    # Calculate key metrics
-    total_metrics = len(st.session_state.security_metrics)
-    exceeding_targets = len([m for m in st.session_state.security_metrics if m['status'] == 'Exceeding'])
-    on_track = len([m for m in st.session_state.security_metrics if m['status'] == 'On Track'])
-    needs_attention = len([m for m in st.session_state.security_metrics if m['status'] == 'Needs Attention'])
-    
-    # Display key metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Total Metrics", total_metrics)
-        st.metric("Exceeding Targets", exceeding_targets, f"{exceeding_targets}/{total_metrics}")
-    
-    with col2:
-        st.metric("On Track", on_track, f"{on_track}/{total_metrics}")
-        st.metric("Needs Attention", needs_attention, f"{needs_attention}/{total_metrics}")
-    
-    with col3:
-        avg_mttd = np.mean([m['value'] for m in st.session_state.security_metrics if m['metric_name'] == 'Mean Time to Detect (MTTD)'])
-        avg_mttr = np.mean([m['value'] for m in st.session_state.security_metrics if m['metric_name'] == 'Mean Time to Respond (MTTR)'])
-        st.metric("Avg MTTD", f"{avg_mttd:.1f} hours")
-        st.metric("Avg MTTR", f"{avg_mttr:.1f} hours")
-    
-    with col4:
-        training_completion = next((m['value'] for m in st.session_state.security_metrics if m['metric_name'] == 'Security Awareness Training Completion'), 0)
-        phishing_rate = next((m['value'] for m in st.session_state.security_metrics if m['metric_name'] == 'Phishing Click Rate'), 0)
-        st.metric("Training Completion", f"{training_completion:.1f}%")
-        st.metric("Phishing Click Rate", f"{phishing_rate:.1f}%")
-    
-    # Dashboard charts
-    st.subheader("Performance Overview")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Status distribution
-        status_counts = pd.DataFrame(st.session_state.security_metrics)['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="Metric Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        # Category distribution
-        category_counts = pd.DataFrame(st.session_state.security_metrics)['category'].value_counts()
-        fig = px.bar(x=category_counts.index, y=category_counts.values, 
-                    title="Metrics by Category")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Recent security events
-    st.subheader("Recent Security Events")
-    recent_events = sorted(st.session_state.security_events, key=lambda x: x['date'], reverse=True)[:5]
-    
-    for event in recent_events:
-        col1, col2, col3, col4 = st.columns([2, 2, 1, 1])
-        with col1:
-            st.write(f"**{event['event_type']}**")
-        with col2:
-            st.write(f"**{event['source']}** - {event['count']} events")
-        with col3:
-            if event['severity'] == 'Critical':
-                st.write("Critical")
-            elif event['severity'] == 'High':
-                st.write("High")
-            else:
-                st.write("Medium")
-        with col4:
-            st.write(f"{event['date'].strftime('%H:%M')}")
-        st.divider()
-
-def show_kpi_tracking():
-    st.header("KPI Tracking")
-    
-    # Add new KPI
-    with st.expander("Add New KPI"):
-        with st.form("new_kpi"):
-            col1, col2 = st.columns(2)
-            with col1:
-                metric_name = st.text_input("Metric Name")
-                target_value = st.number_input("Target Value", min_value=0.0, value=90.0)
-                unit = st.text_input("Unit", value="%")
-            with col2:
-                current_value = st.number_input("Current Value", min_value=0.0, value=85.0)
-                priority = st.selectbox("Priority", ["Low", "Medium", "High", "Critical"])
-                status = st.selectbox("Status", ["On Track", "Needs Attention", "At Risk", "Exceeding"])
-            
-            if st.form_submit_button("Add KPI"):
-                new_kpi = {
-                    'id': f'KPI-{len(st.session_state.kpi_targets)+1:03d}',
-                    'metric_name': metric_name,
-                    'target_value': target_value,
-                    'current_value': current_value,
-                    'unit': unit,
-                    'status': status,
-                    'priority': priority
-                }
-                st.session_state.kpi_targets.append(new_kpi)
-                st.success("KPI added successfully!")
-    
-    # Display KPIs
-    df = pd.DataFrame(st.session_state.kpi_targets)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col2:
-        priority_filter = st.selectbox("Filter by Priority", ["All"] + list(df['priority'].unique()))
-    with col3:
-        metric_filter = st.selectbox("Filter by Metric", ["All"] + list(df['metric_name'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    if priority_filter != "All":
-        filtered_df = filtered_df[filtered_df['priority'] == priority_filter]
-    if metric_filter != "All":
-        filtered_df = filtered_df[filtered_df['metric_name'] == metric_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # KPI analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Performance vs Target")
-        performance_data = filtered_df.copy()
-        performance_data['performance_ratio'] = performance_data['current_value'] / performance_data['target_value']
-        
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=performance_data['metric_name'], y=performance_data['current_value'], 
-                            name='Current Value'))
-        fig.add_trace(go.Bar(x=performance_data['metric_name'], y=performance_data['target_value'], 
-                            name='Target Value'))
-        fig.update_layout(title="KPI Performance vs Target", barmode='group')
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("KPI Status Distribution")
-        status_counts = filtered_df['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="KPI Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-
-def show_security_events():
-    st.header("Security Events")
-    
-    # Add new event
-    with st.expander("Add New Security Event"):
-        with st.form("new_event"):
-            col1, col2 = st.columns(2)
-            with col1:
-                event_type = st.text_input("Event Type")
-                severity = st.selectbox("Severity", ["Low", "Medium", "High", "Critical"])
-                count = st.number_input("Event Count", min_value=1, value=1)
-            with col2:
-                source = st.text_input("Event Source")
-                date = st.date_input("Event Date")
-                time = st.time_input("Event Time")
-            
-            if st.form_submit_button("Add Event"):
-                new_event = {
-                    'id': f'EVT-{len(st.session_state.security_events)+1:03d}',
-                    'event_type': event_type,
-                    'severity': severity,
-                    'count': count,
-                    'source': source,
-                    'date': datetime.datetime.combine(date, time)
-                }
-                st.session_state.security_events.append(new_event)
-                st.success("Security event added successfully!")
-    
-    # Display events
-    df = pd.DataFrame(st.session_state.security_events)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        severity_filter = st.selectbox("Filter by Severity", ["All"] + list(df['severity'].unique()))
-    with col2:
-        source_filter = st.selectbox("Filter by Source", ["All"] + list(df['source'].unique()))
-    with col3:
-        type_filter = st.selectbox("Filter by Type", ["All"] + list(df['event_type'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if severity_filter != "All":
-        filtered_df = filtered_df[filtered_df['severity'] == severity_filter]
-    if source_filter != "All":
-        filtered_df = filtered_df[filtered_df['source'] == source_filter]
-    if type_filter != "All":
-        filtered_df = filtered_df[filtered_df['event_type'] == type_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Event analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Events by Severity")
-        severity_counts = filtered_df['severity'].value_counts()
-        fig = px.bar(x=severity_counts.index, y=severity_counts.values, 
-                    title="Security Events by Severity",
-                    color=severity_counts.index,
-                    color_discrete_map={'Critical': 'red', 'High': 'orange', 'Medium': 'yellow', 'Low': 'green'})
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Events by Source")
-        source_counts = filtered_df['source'].value_counts()
-        fig = px.pie(values=source_counts.values, names=source_counts.index, 
-                    title="Events by Source")
-        st.plotly_chart(fig, use_container_width=True)
-
-def show_vulnerability_metrics():
-    st.header("Vulnerability Metrics")
-    
-    # Add new vulnerability
-    with st.expander("Add New Vulnerability"):
-        with st.form("new_vulnerability"):
-            col1, col2 = st.columns(2)
-            with col1:
-                title = st.text_input("Vulnerability Title")
-                severity = st.selectbox("Severity", ["Low", "Medium", "High", "Critical"])
-                cvss_score = st.number_input("CVSS Score", min_value=0.0, max_value=10.0, value=7.0)
-            with col2:
-                status = st.selectbox("Status", ["Open", "In Progress", "Resolved", "False Positive"])
-                affected_systems = st.number_input("Affected Systems", min_value=1, value=1)
-                date_discovered = st.date_input("Date Discovered")
-            
-            if st.form_submit_button("Add Vulnerability"):
-                new_vuln = {
-                    'id': f'VUL-{len(st.session_state.vulnerabilities)+1:03d}',
-                    'title': title,
-                    'severity': severity,
-                    'cvss_score': cvss_score,
-                    'status': status,
-                    'affected_systems': affected_systems,
-                    'date_discovered': datetime.datetime.combine(date_discovered, datetime.time())
-                }
-                st.session_state.vulnerabilities.append(new_vuln)
-                st.success("Vulnerability added successfully!")
-    
-    # Display vulnerabilities
-    df = pd.DataFrame(st.session_state.vulnerabilities)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        severity_filter = st.selectbox("Filter by Severity", ["All"] + list(df['severity'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col3:
-        cvss_filter = st.slider("CVSS Score Range", 0.0, 10.0, (0.0, 10.0))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if severity_filter != "All":
-        filtered_df = filtered_df[filtered_df['severity'] == severity_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    filtered_df = filtered_df[(filtered_df['cvss_score'] >= cvss_filter[0]) & (filtered_df['cvss_score'] <= cvss_filter[1])]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-
-    st.subheader("Advance remediation")
-    for vuln in st.session_state.vulnerabilities:
-        if vuln['status'] in ('Resolved', 'False Positive'):
-            continue
-        cols = st.columns([3, 1])
-        cols[0].write(f"{vuln['id']} — {vuln['title']} ({vuln['status']})")
-        if cols[1].button("Advance status", key=f"adv_vuln_{vuln['id']}"):
-            vuln['status'] = _advance_vuln_status(vuln['status'])
-            st.rerun()
-    
-    # Vulnerability analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Vulnerabilities by Severity")
-        severity_counts = filtered_df['severity'].value_counts()
-        fig = px.bar(x=severity_counts.index, y=severity_counts.values, 
-                    title="Vulnerabilities by Severity",
-                    color=severity_counts.index,
-                    color_discrete_map={'Critical': 'red', 'High': 'orange', 'Medium': 'yellow', 'Low': 'green'})
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("CVSS Score Distribution")
-        fig = px.histogram(filtered_df, x='cvss_score', nbins=10, 
-                          title="CVSS Score Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-
-def show_compliance_metrics():
-    st.header("Compliance Metrics")
-    
-    # Add new compliance metric
-    with st.expander("Add New Compliance Metric"):
-        with st.form("new_compliance"):
-            col1, col2 = st.columns(2)
-            with col1:
-                framework = st.text_input("Framework")
-                compliance_score = st.number_input("Compliance Score", min_value=0.0, max_value=100.0, value=85.0)
-                target_score = st.number_input("Target Score", min_value=0.0, max_value=100.0, value=90.0)
-            with col2:
-                status = st.selectbox("Status", ["On Track", "Needs Attention", "At Risk", "Exceeding"])
-                last_assessment = st.date_input("Last Assessment Date")
-            
-            if st.form_submit_button("Add Compliance Metric"):
-                new_compliance = {
-                    'id': f'COMP-{len(st.session_state.compliance_metrics)+1:03d}',
-                    'framework': framework,
-                    'compliance_score': compliance_score,
-                    'target_score': target_score,
-                    'status': status,
-                    'last_assessment': datetime.datetime.combine(last_assessment, datetime.time())
-                }
-                st.session_state.compliance_metrics.append(new_compliance)
-                st.success("Compliance metric added successfully!")
-    
-    # Display compliance metrics
-    df = pd.DataFrame(st.session_state.compliance_metrics)
-    
-    # Filters
-    col1, col2 = st.columns(2)
-    with col1:
-        framework_filter = st.selectbox("Filter by Framework", ["All"] + list(df['framework'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if framework_filter != "All":
-        filtered_df = filtered_df[filtered_df['framework'] == framework_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Compliance analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Compliance Scores by Framework")
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=filtered_df['framework'], y=filtered_df['compliance_score'], 
-                            name='Current Score'))
-        fig.add_trace(go.Bar(x=filtered_df['framework'], y=filtered_df['target_score'], 
-                            name='Target Score'))
-        fig.update_layout(title="Compliance Scores by Framework", barmode='group')
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Compliance Status Distribution")
-        status_counts = filtered_df['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="Compliance Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-
-def show_incident_analytics():
-    st.header("Incident Analytics")
-    
-    # Add new incident
-    with st.expander("Add New Incident"):
-        with st.form("new_incident"):
-            col1, col2 = st.columns(2)
-            with col1:
-                incident_type = st.text_input("Incident Type")
-                severity = st.selectbox("Severity", ["Low", "Medium", "High", "Critical"])
-                status = st.selectbox("Status", ["Open", "Under Investigation", "Resolved", "Closed"])
-            with col2:
-                resolution_time = st.number_input("Resolution Time (hours)", min_value=0.0, value=4.0)
-                date = st.date_input("Incident Date")
-            
-            if st.form_submit_button("Add Incident"):
-                new_incident = {
-                    'id': f'INC-{len(st.session_state.incident_metrics)+1:03d}',
-                    'incident_type': incident_type,
-                    'severity': severity,
-                    'status': status,
-                    'resolution_time': resolution_time,
-                    'date': datetime.datetime.combine(date, datetime.time())
-                }
-                st.session_state.incident_metrics.append(new_incident)
-                st.success("Incident added successfully!")
-    
-    # Display incidents
-    df = pd.DataFrame(st.session_state.incident_metrics)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        severity_filter = st.selectbox("Filter by Severity", ["All"] + list(df['severity'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col3:
-        type_filter = st.selectbox("Filter by Type", ["All"] + list(df['incident_type'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if severity_filter != "All":
-        filtered_df = filtered_df[filtered_df['severity'] == severity_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    if type_filter != "All":
-        filtered_df = filtered_df[filtered_df['incident_type'] == type_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Incident analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Incidents by Severity")
-        severity_counts = filtered_df['severity'].value_counts()
-        fig = px.bar(x=severity_counts.index, y=severity_counts.values, 
-                    title="Incidents by Severity",
-                    color=severity_counts.index,
-                    color_discrete_map={'Critical': 'red', 'High': 'orange', 'Medium': 'yellow', 'Low': 'green'})
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Resolution Time Analysis")
-        resolved_incidents = filtered_df[filtered_df['resolution_time'].notna()]
-        if not resolved_incidents.empty:
-            fig = px.box(resolved_incidents, x='severity', y='resolution_time', 
-                        title="Resolution Time by Severity")
+        if not heat.empty:
+            fig = px.bar(heat, x="domain", y="n", color="flag", title="KRIs by domain · on vs off target", barmode="stack")
+            fig.update_layout(height=320, xaxis_tickangle=-25, margin=dict(l=10, r=10, t=40, b=80))
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.write("No resolved incidents to display")
 
-def show_trends():
-    st.header("Trends Analysis")
-    
-    # Generate trend data
-    dates = pd.date_range(start=datetime.datetime.now() - timedelta(days=30), 
-                         end=datetime.datetime.now(), freq='D')
-    
-    # Simulate trend data
-    mttd_trend = [2.5 + np.random.normal(0, 0.5) for _ in range(len(dates))]
-    mttr_trend = [6.2 + np.random.normal(0, 1.0) for _ in range(len(dates))]
-    training_trend = [87.5 + np.random.normal(0, 2.0) for _ in range(len(dates))]
-    
-    trend_data = pd.DataFrame({
-        'date': dates,
-        'MTTD': mttd_trend,
-        'MTTR': mttr_trend,
-        'Training_Completion': training_trend
-    })
-    
-    # Trend charts
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("MTTD Trend")
-        fig = px.line(trend_data, x='date', y='MTTD', title="Mean Time to Detect Trend")
-        fig.add_hline(y=4.0, line_dash="dash", line_color="red", annotation_text="Target")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("MTTR Trend")
-        fig = px.line(trend_data, x='date', y='MTTR', title="Mean Time to Respond Trend")
-        fig.add_hline(y=8.0, line_dash="dash", line_color="red", annotation_text="Target")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    st.subheader("Training Completion Trend")
-    fig = px.line(trend_data, x='date', y='Training_Completion', title="Training Completion Trend")
-    fig.add_hline(y=90.0, line_dash="dash", line_color="red", annotation_text="Target")
-    st.plotly_chart(fig, use_container_width=True)
+    with soc_tab:
+        st.subheader("Detect & respond")
+        st.caption("SIEM/XDR-style funnel + response times. Volume alone is not a win.")
 
-def show_reports():
-    st.header("Security Reports")
-    
-    # Report options
-    report_type = st.selectbox("Select Report Type", [
-        "Executive Summary",
-        "KPI Performance Report",
-        "Security Events Summary",
-        "Vulnerability Assessment Report",
-        "Compliance Status Report",
-        "Incident Analysis Report"
-    ])
-    
-    if report_type == "Executive Summary":
-        st.subheader("Executive Summary")
-        
-        # Calculate summary metrics
-        total_metrics = len(st.session_state.security_metrics)
-        exceeding_targets = len([m for m in st.session_state.security_metrics if m['status'] == 'Exceeding'])
-        on_track = len([m for m in st.session_state.security_metrics if m['status'] == 'On Track'])
-        needs_attention = len([m for m in st.session_state.security_metrics if m['status'] == 'Needs Attention'])
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("**Overall Performance**")
-            st.write(f"• Total Metrics Tracked: {total_metrics}")
-            st.write(f"• Exceeding Targets: {exceeding_targets}")
-            st.write(f"• On Track: {on_track}")
-            st.write(f"• Needs Attention: {needs_attention}")
-        
-        with col2:
-            st.write("**Key Highlights**")
-            avg_mttd = np.mean([m['value'] for m in st.session_state.security_metrics if m['metric_name'] == 'Mean Time to Detect (MTTD)'])
-            avg_mttr = np.mean([m['value'] for m in st.session_state.security_metrics if m['metric_name'] == 'Mean Time to Respond (MTTR)'])
-            st.write(f"• Average MTTD: {avg_mttd:.1f} hours")
-            st.write(f"• Average MTTR: {avg_mttr:.1f} hours")
-            st.write(f"• Security Posture: Strong")
-            st.write(f"• Risk Level: Low")
-    
-    # Export functionality
-    with st.expander("Export"):
-        export_df = pd.DataFrame(st.session_state.security_metrics).copy()
-        if 'date' in export_df.columns:
-            export_df['date'] = export_df['date'].astype(str)
-        demo_kit.csv_download(export_df, "security_metrics.csv", label="Download metrics CSV")
+        fig = go.Figure(
+            go.Funnel(
+                y=funnel.sort_values("order")["stage"],
+                x=funnel.sort_values("order")["count"],
+                textinfo="value+percent initial",
+            )
+        )
+        fig.update_layout(height=420, title="7-day detection funnel (synthetic)")
+        st.plotly_chart(fig, use_container_width=True)
+
+        dr = ek[ek["domain"] == "Detection & response"]
+        c1, c2, c3, c4 = st.columns(4)
+        for col, (_, r) in zip([c1, c2, c3, c4], dr.iterrows()):
+            col.metric(r["name"].split("(")[0].strip()[:28], _fmt_val(r), delta=r["direction"])
+
+        st.markdown("**Incident scorecard (portfolio-linked)**")
+        ishow = incs.copy()
+        ishow["mttc_h"] = ishow["mttc_h"].apply(lambda x: "—" if pd.isna(x) else x)
+        st.dataframe(ishow, use_container_width=True, hide_index=True)
+        st.caption("MTTD spike on IFS and PayrollCo dominates the 90d average — don't hide that in a blended green.")
+
+    with exp_tab:
+        st.subheader("Exposure & vulnerability aging")
+        view_v = ev[ev["crown_jewel"]] if cj_vuln else ev
+        st.dataframe(
+            view_v[
+                [
+                    "vuln_id",
+                    "title",
+                    "severity",
+                    "cvss",
+                    "asset",
+                    "crown_jewel",
+                    "age_d",
+                    "sla_d",
+                    "status",
+                    "owner",
+                    "decision",
+                    "linked_exc",
+                ]
+            ],
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        # Aging chart
+        ages = view_v.copy()
+        ages["bucket"] = pd.cut(
+            ages["age_d"],
+            bins=[-1, 7, 14, 30, 90, 10_000],
+            labels=["0–7d", "8–14d", "15–30d", "31–90d", "90d+"],
+        )
+        fig = px.histogram(
+            ages,
+            x="bucket",
+            color="severity",
+            title="Open findings by age bucket",
+            category_orders={"bucket": ["0–7d", "8–14d", "15–30d", "31–90d", "90d+"]},
+        )
+        fig.update_layout(height=320, margin=dict(l=10, r=10, t=40, b=10))
+        st.plotly_chart(fig, use_container_width=True)
+
+        pick = st.selectbox("Vuln actions", view_v["vuln_id"].tolist())
+        vr = view_v[view_v["vuln_id"] == pick].iloc[0]
+        st.write(f"**Decision cue:** {vr['decision']}")
+        b1, b2 = st.columns(2)
+        with b1:
+            if "Accepted" not in str(vr["status"]) and st.button("Mark remediated", key=f"vr_{pick}"):
+                _patch_vuln(pick, status="Closed", age_d=0)
+                st.rerun()
+        with b2:
+            if "Accepted" not in str(vr["status"]) and st.button("Accept with EXC", key=f"va_{pick}"):
+                _patch_vuln(pick, status="Accepted — EXC", linked_exc=vr["linked_exc"] or "EXC-PENDING")
+                st.rerun()
+
+        exp_kri = ek[ek["kri_id"].isin(["KRI-2026-005", "KRI-2026-006", "KRI-2026-014"])]
+        for _, row in exp_kri.iterrows():
+            with st.expander(f"{row['kri_id']} · {row['name']} · {_fmt_val(row)}"):
+                st.write(row["so_what"])
+                st.write(f"**Decision:** {row['decision']} — {row['decision_detail']}")
+
+    with cov_tab:
+        st.subheader("Control coverage (crown jewel → medium)")
+        st.caption("CNAPP / CAASM energy: coverage by control family × criticality — gaps are the story.")
+        show = cov.copy()
+        st.dataframe(show, use_container_width=True, hide_index=True)
+
+        melt = cov.melt(id_vars=["control", "gap_note"], value_vars=["crown_jewel", "high", "medium"], var_name="tier", value_name="pct")
+        fig = px.bar(
+            melt,
+            x="control",
+            y="pct",
+            color="tier",
+            barmode="group",
+            title="Coverage % by control · asset tier",
+        )
+        fig.add_hline(y=95, line_dash="dash", annotation_text="95% aspirational")
+        fig.update_layout(height=380, xaxis_tickangle=-30, margin=dict(l=10, r=10, t=40, b=100))
+        st.plotly_chart(fig, use_container_width=True)
+
+        for _, r in cov.iterrows():
+            if r["crown_jewel"] < 90:
+                st.warning(f"**{r['control']}** crown-jewel {r['crown_jewel']}% — {r['gap_note']}")
+
+    with board_tab:
+        st.subheader("Board / exec brief (one page)")
+        st.caption("Limit to direction, magnitude, and asks — not 40 charts.")
+
+        for _, n in narrative.iterrows():
+            st.markdown(f"- **{n['lane']}:** {n['text']}")
+
+        board_kris = ek[ek["audience"].str.contains("Board", regex=False)].copy()
+        st.markdown("**Board-facing KRIs**")
+        bshow = board_kris[
+            ["kri_id", "name", "value", "unit", "target", "direction", "status", "so_what", "decision"]
+        ].copy()
+        st.dataframe(bshow, use_container_width=True, hide_index=True)
+
+        # Multi-trend small multiples for board set
+        board_ids = board_kris["kri_id"].tolist()
+        bt = trends[trends["kri_id"].isin(board_ids)]
+        if not bt.empty:
+            fig = px.line(
+                bt,
+                x="week",
+                y="value",
+                facet_col="kri_id",
+                facet_col_wrap=3,
+                markers=True,
+                title="Board KRI trends (13 weeks)",
+            )
+            fig.update_yaxes(matches=None, showticklabels=True)
+            fig.update_layout(height=480, margin=dict(l=10, r=10, t=50, b=10))
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown("**Asks this cycle**")
+        asks = ed[ed["open"]].sort_values("due")
+        for _, d in asks.iterrows():
+            st.write(f"- `{d['decision_id']}` due {_fmt(d['due'])}: {d['title']} ({d['owner']})")
+
+        st.info(
+            "Talking point: green MFA and training completion do not offset open processor Sev1, "
+            "jump SIEM gap, or critical SLA at 71%. Lead with outcomes and decisions."
+        )
+
+    with intake:
+        st.subheader("Register a KRI")
+        with st.form("intake_kri"):
+            c1, c2 = st.columns(2)
+            with c1:
+                name = st.text_input("KRI name")
+                domain = st.selectbox("Domain", DOMAINS)
+                value = st.number_input("Current value", value=0.0)
+                target = st.number_input("Target", value=0.0)
+            with c2:
+                unit = st.text_input("Unit", value="%")
+                direction = st.selectbox("Direction", DIRECTIONS)
+                owner = st.text_input("Owner")
+                decision = st.selectbox("Decision", DECISION_TYPES)
+            so_what = st.text_area("So what (business implication)")
+            if st.form_submit_button("Create KRI"):
+                if not name.strip():
+                    st.error("Name required.")
+                else:
+                    n = len(st.session_state.sec_kris) + 1
+                    add = {
+                        "kri_id": f"KRI-2026-{n:03d}",
+                        "name": name.strip(),
+                        "domain": domain,
+                        "value": float(value),
+                        "unit": unit.strip() or "%",
+                        "target": float(target),
+                        "direction": direction,
+                        "prior": float(value),
+                        "owner": owner.strip() or "TBD",
+                        "audience": "CISO",
+                        "formula": "TBD",
+                        "so_what": so_what.strip() or "TBD",
+                        "decision": decision,
+                        "decision_detail": "Intake stub",
+                        "linked": "",
+                        "status": "Draft",
+                        "as_of": _today(),
+                        "summary": "Intake stub — define formula and decision owner before board use.",
+                    }
+                    _save_kris(pd.concat([st.session_state.sec_kris, pd.DataFrame([add])], ignore_index=True))
+                    st.success(f"KRI-2026-{n:03d} created.")
+                    st.rerun()
+
+        st.subheader("Add decision")
+        with st.form("intake_dec"):
+            title = st.text_input("Decision title")
+            kri_link = st.text_input("Linked KRI ID")
+            owner = st.text_input("Owner", key="dec_own")
+            due_d = st.number_input("Due in days", 1, 90, 7)
+            impact = st.text_area("Impact")
+            if st.form_submit_button("Create decision"):
+                if not title.strip():
+                    st.error("Title required.")
+                else:
+                    n = len(st.session_state.sec_decisions) + 1
+                    add = {
+                        "decision_id": f"DEC-2026-{n:03d}",
+                        "title": title.strip(),
+                        "kri_id": kri_link.strip() or "TBD",
+                        "owner": owner.strip() or "CISO",
+                        "due": _today() + timedelta(days=int(due_d)),
+                        "status": "Open",
+                        "impact": impact.strip() or "TBD",
+                        "options": "TBD",
+                    }
+                    _save_decisions(
+                        pd.concat([st.session_state.sec_decisions, pd.DataFrame([add])], ignore_index=True)
+                    )
+                    st.success(f"DEC-2026-{n:03d} logged.")
+                    st.rerun()
+
+    with export:
+        st.subheader("Export")
+        out_k = ek.copy()
+        out_k["as_of"] = out_k["as_of"].apply(_fmt)
+        demo_kit.csv_download(out_k, "security_kris.csv", label="Download KRIs")
+        out_d = ed.copy()
+        out_d["due"] = out_d["due"].apply(_fmt)
+        demo_kit.csv_download(out_d, "security_decisions.csv", label="Download decisions", key="d_csv")
+        demo_kit.csv_download(ev, "vuln_aging.csv", label="Download vuln aging", key="v_csv")
+        demo_kit.csv_download(cov, "control_coverage.csv", label="Download coverage", key="c_csv")
+        demo_kit.csv_download(incs, "incident_scorecard.csv", label="Download incident scorecard", key="i_csv")
+        st.caption("Resample rebuilds demo data. Session-local edits only. Not a live SIEM/CNAPP.")
+
 
 if __name__ == "__main__":
     main()

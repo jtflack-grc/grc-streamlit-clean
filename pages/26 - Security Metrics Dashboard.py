@@ -818,8 +818,12 @@ def _fmt_val(row) -> str:
     return f"{v} {u}"
 
 
-def _kri_detail(row, trends, *, expanded=False):
-    st.markdown(f"### {row['kri_id']} · {row['name']}")
+def _kri_detail(row, trends, *, widget_key: str, expanded=False):
+    """Render one KRI. widget_key must be unique across the full page (all tabs)."""
+    kid = row["kri_id"]
+    wk = f"{widget_key}_{kid}"
+
+    st.markdown(f"### {kid} · {row['name']}")
     a, b, c, d = st.columns(4)
     a.metric("Current", _fmt_val(row), delta=f"{row['delta']:+.1f} vs prior")
     b.metric("Target", f"{row['target']:g} {row['unit']}")
@@ -835,26 +839,26 @@ def _kri_detail(row, trends, *, expanded=False):
     c2.write(f"**Decision:** {row['decision']} — {row['decision_detail']}")
     st.write(row["summary"])
 
-    t = trends[trends["kri_id"] == row["kri_id"]]
+    t = trends[trends["kri_id"] == kid]
     if not t.empty:
         fig = px.line(t, x="week", y="value", markers=True, title="13-week trend")
         fig.add_hline(y=row["target"], line_dash="dash", annotation_text="target")
         fig.update_layout(height=280, margin=dict(l=10, r=10, t=40, b=10))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key=f"plotly_kri_{wk}")
 
     with st.expander("Record decision outcome", expanded=False):
         new_dec = st.selectbox(
             "Decision type",
             DECISION_TYPES,
             index=DECISION_TYPES.index(row["decision"]) if row["decision"] in DECISION_TYPES else 0,
-            key=f"dec_sel_{row['kri_id']}",
+            key=f"dec_sel_{wk}",
         )
-        note = st.text_input("Decision note", key=f"dec_note_{row['kri_id']}")
-        if st.button("Save decision", key=f"dec_save_{row['kri_id']}"):
+        note = st.text_input("Decision note", key=f"dec_note_{wk}")
+        if st.button("Save decision", key=f"dec_save_{wk}"):
             detail = row["decision_detail"]
             if note.strip():
                 detail = f"{detail} | {note.strip()}"
-            _patch_kri(row["kri_id"], decision=new_dec, decision_detail=detail)
+            _patch_kri(kid, decision=new_dec, decision_detail=detail)
             st.rerun()
 
 
@@ -930,7 +934,7 @@ def main() -> None:
         feat = feat.sort_values("_o")
         for _, row in feat.iterrows():
             st.markdown("---")
-            _kri_detail(row, trends, expanded=True)
+            _kri_detail(row, trends, widget_key="feat", expanded=True)
             st.markdown("---")
 
         hot_d = ed[ed["open"]].sort_values("due")
@@ -979,9 +983,9 @@ def main() -> None:
         ].copy()
         st.dataframe(show, use_container_width=True, hide_index=True)
 
-        pick = st.selectbox("KRI detail", view_k["kri_id"].tolist())
+        pick = st.selectbox("KRI detail", view_k["kri_id"].tolist(), key="kri_tab_pick")
         row = view_k[view_k["kri_id"] == pick].iloc[0]
-        _kri_detail(row, trends, expanded=True)
+        _kri_detail(row, trends, widget_key="tab", expanded=True)
 
         # Heat: domain vs status
         heat = (
@@ -993,7 +997,7 @@ def main() -> None:
         if not heat.empty:
             fig = px.bar(heat, x="domain", y="n", color="flag", title="KRIs by domain · on vs off target", barmode="stack")
             fig.update_layout(height=320, xaxis_tickangle=-25, margin=dict(l=10, r=10, t=40, b=80))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key="plotly_kri_domain_heat")
 
     with soc_tab:
         st.subheader("Detect & respond")
@@ -1007,7 +1011,7 @@ def main() -> None:
             )
         )
         fig.update_layout(height=420, title="7-day detection funnel (synthetic)")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="plotly_soc_funnel")
 
         dr = ek[ek["domain"] == "Detection & response"]
         c1, c2, c3, c4 = st.columns(4)
@@ -1059,9 +1063,9 @@ def main() -> None:
             category_orders={"bucket": ["0–7d", "8–14d", "15–30d", "31–90d", "90d+"]},
         )
         fig.update_layout(height=320, margin=dict(l=10, r=10, t=40, b=10))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="plotly_vuln_age")
 
-        pick = st.selectbox("Vuln actions", view_v["vuln_id"].tolist())
+        pick = st.selectbox("Vuln actions", view_v["vuln_id"].tolist(), key="vuln_pick")
         vr = view_v[view_v["vuln_id"] == pick].iloc[0]
         st.write(f"**Decision cue:** {vr['decision']}")
         b1, b2 = st.columns(2)
@@ -1097,7 +1101,7 @@ def main() -> None:
         )
         fig.add_hline(y=95, line_dash="dash", annotation_text="95% aspirational")
         fig.update_layout(height=380, xaxis_tickangle=-30, margin=dict(l=10, r=10, t=40, b=100))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, key="plotly_cov_bars")
 
         for _, r in cov.iterrows():
             if r["crown_jewel"] < 90:
@@ -1132,7 +1136,7 @@ def main() -> None:
             )
             fig.update_yaxes(matches=None, showticklabels=True)
             fig.update_layout(height=480, margin=dict(l=10, r=10, t=50, b=10))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key="plotly_board_trends")
 
         st.markdown("**Asks this cycle**")
         asks = ed[ed["open"]].sort_values("due")

@@ -718,7 +718,11 @@ def main() -> None:
     with cal_tab:
         st.subheader("Content calendar / waves")
         st.caption("Multi-channel touchpoints — email, intranet, posters, manager toolkits, events. Campaign delivery ops.")
-        cal_view = ew.merge(campaigns[["campaign_id", "name"]], on="campaign_id", how="left")
+        cal_view = ew.merge(
+            campaigns[["campaign_id", "name"]].rename(columns={"name": "campaign_name"}),
+            on="campaign_id",
+            how="left",
+        )
         cal_view = cal_view[cal_view["campaign_id"].isin(view_c["campaign_id"])]
         show = cal_view.sort_values("scheduled").copy()
         show["scheduled"] = show["scheduled"].apply(_fmt)
@@ -727,7 +731,7 @@ def main() -> None:
                 [
                     "wave_id",
                     "campaign_id",
-                    "name_y",
+                    "campaign_name",
                     "name",
                     "channel",
                     "phase",
@@ -737,7 +741,7 @@ def main() -> None:
                     "engage_pct",
                     "owner",
                 ]
-            ].rename(columns={"name_y": "campaign"}),
+            ].rename(columns={"name": "wave", "campaign_name": "campaign"}),
             use_container_width=True,
             hide_index=True,
         )

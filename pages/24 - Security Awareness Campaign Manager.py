@@ -1,17 +1,25 @@
-import streamlit as st
-import demo_kit
-import portfolio_skin
-import pandas as pd
+#!/usr/bin/env python3
+"""Security awareness *campaign* manager — club teaching toy.
+
+Campaign ops realm (not SAT/people-risk): briefs, multi-channel waves,
+content calendar, asset library, approvals, delivery & engagement KPIs —
+the way program teams run Cybersecurity Awareness Month, themed pushes,
+and manager toolkits. Distinct from the Training Tracker. Synthetic only.
+"""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
 import numpy as np
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import datetime
-from datetime import timedelta
-import random
-import json
+import streamlit as st
 
-# Page configuration
+import demo_kit
+import portfolio_skin
+
 st.set_page_config(
     page_title="Security Awareness Campaign Manager · i on GRC",
     page_icon="assets/favicon.svg",
@@ -21,969 +29,850 @@ st.set_page_config(
 
 portfolio_skin.apply(hide_sidebar=False)
 
+CAMPAIGN_TYPES = [
+    "Themed month (e.g. Cybersecurity Awareness)",
+    "Incident-driven reactive",
+    "Role / department push",
+    "New-hire onboarding comms",
+    "Executive / board narrative",
+    "Vendor / third-party outreach",
+    "Product launch (internal tool)",
+    "Compliance deadline comms",
+]
+CHANNELS = [
+    "Email newsletter",
+    "Intranet / SharePoint",
+    "Teams / Slack",
+    "Digital signage",
+    "Poster / print",
+    "Manager toolkit",
+    "Town hall / live event",
+    "Table topic / huddle",
+    "Screensaver / lock screen",
+    "Payroll insert / HR comms",
+]
+PHASES = ["Brief", "Build", "Approve", "Teaser", "Launch", "Sustain", "Close", "Retro"]
+WAVE_STATUS = ["Planned", "Scheduled", "Live", "Delivered", "Skipped", "Blocked"]
+ASSET_TYPES = ["Email template", "Poster", "Intranet page", "Slide deck", "Manager script", "Video short", "FAQ", "Quiz embed"]
+APPROVAL = ["Draft", "In review", "Approved", "Changes requested", "Retired"]
+FEATURED = {"CMP-2026-001", "CMP-2026-003", "CMP-2026-005"}
+_SYNC_KEY = "_camp_seed_v1"
 
 
-# Initialize session state
-if 'campaigns' not in st.session_state:
-    st.session_state.campaigns = []
-if 'campaign_content' not in st.session_state:
-    st.session_state.campaign_content = []
-if 'campaign_deliveries' not in st.session_state:
-    st.session_state.campaign_deliveries = []
-if 'campaign_metrics' not in st.session_state:
-    st.session_state.campaign_metrics = []
-if 'target_audiences' not in st.session_state:
-    st.session_state.target_audiences = []
-if 'campaign_schedules' not in st.session_state:
-    st.session_state.campaign_schedules = []
+def _today() -> pd.Timestamp:
+    return pd.Timestamp.now().normalize()
 
-def generate_sample_data(seed: int = 42):
-    """Generate sample security awareness campaign data"""
+
+def _sample(seed: int):
+    today = _today()
     rng = np.random.default_rng(seed)
+
+    # ── Campaigns (program containers) ───────────────────────────────
     campaigns = [
         {
-            'id': 'CAM-001',
-            'name': 'Phishing Awareness Campaign',
-            'description': 'Comprehensive phishing awareness training for all employees',
-            'status': 'Active',
-            'start_date': datetime.datetime.now() - timedelta(days=30),
-            'end_date': datetime.datetime.now() + timedelta(days=60),
-            'target_audience': 'All Employees',
-            'budget': 15000,
-            'campaign_type': 'Training',
-            'priority': 'High',
-            'owner': 'Security Team'
+            "campaign_id": "CMP-2026-001",
+            "name": "Cybersecurity Awareness Month 2026 — Human firewall",
+            "type": "Themed month (e.g. Cybersecurity Awareness)",
+            "theme": "See something, say something — report before you click",
+            "objective": "Raise report rate 15% vs Q2; manager huddles in every dept; zero 'I didn't know the button' in IR interviews",
+            "audience_segment": "All workforce (~1,820) + manager layer",
+            "owner": "Awareness · L. Torres",
+            "sponsor": "CISO",
+            "budget_usd": 12000,
+            "phase": "Sustain",
+            "status": "Live",
+            "start": today - timedelta(days=18),
+            "end": today + timedelta(days=12),
+            "success_metrics": "Reach ≥95% · intranet unique views ≥60% · manager huddle completion ≥80% · PAB mentions in town hall",
+            "risks": "Fatigue if too many touches overlap PayrollCo IR comms — coordinate with Legal",
+            "linked_program": "Training Tracker PHISH-2026-003 (sim runs parallel — separate system)",
+            "summary": "Flagship themed month. Campaign manager tracks comms waves and assets — not who clicked a sim (that's the tracker).",
         },
         {
-            'id': 'CAM-002',
-            'name': 'Password Security Initiative',
-            'description': 'Password best practices and multi-factor authentication awareness',
-            'status': 'Planning',
-            'start_date': datetime.datetime.now() + timedelta(days=15),
-            'end_date': datetime.datetime.now() + timedelta(days=90),
-            'target_audience': 'IT Staff',
-            'budget': 8000,
-            'campaign_type': 'Awareness',
-            'priority': 'Medium',
-            'owner': 'IT Security'
+            "campaign_id": "CMP-2026-002",
+            "name": "Payroll / benefits scam alert (IR-adjacent)",
+            "type": "Incident-driven reactive",
+            "theme": "HR and payroll themes are bait right now",
+            "objective": "48h reach to 100% on email+Teams; intranet FAQ live; no duplicate conflicting HR messages",
+            "audience_segment": "All workforce — boost Finance & HR",
+            "owner": "Awareness + HR Comms",
+            "sponsor": "CISO + CHRO",
+            "budget_usd": 0,
+            "phase": "Launch",
+            "status": "Live — expedited",
+            "start": today - timedelta(days=3),
+            "end": today + timedelta(days=11),
+            "success_metrics": "Email open ≥70% · FAQ page views ≥40% · helpdesk ticket deflection on 'is this email real'",
+            "risks": "Message drift vs actual PayrollCo INC-2026-009 facts — Legal review gate",
+            "linked_program": "INC-2026-009 · Privacy PB-2026-002",
+            "summary": "Reactive campaign playbook. Speed + single source of truth beats another generic phishing poster.",
         },
         {
-            'id': 'CAM-003',
-            'name': 'Data Protection Awareness',
-            'description': 'GDPR and data protection compliance training',
-            'status': 'Completed',
-            'start_date': datetime.datetime.now() - timedelta(days=90),
-            'end_date': datetime.datetime.now() - timedelta(days=30),
-            'target_audience': 'Data Handlers',
-            'budget': 12000,
-            'campaign_type': 'Compliance',
-            'priority': 'High',
-            'owner': 'Compliance Team'
+            "campaign_id": "CMP-2026-003",
+            "name": "Finance & payment authority — wire fraud prevention",
+            "type": "Role / department push",
+            "theme": "Dual-channel verification — no exceptions",
+            "objective": "Every payment authority completes manager toolkit; poster in AP pods; exec assistant script distributed",
+            "audience_segment": "Finance / payment authority (~86)",
+            "owner": "Finance control + Awareness",
+            "sponsor": "CFO",
+            "budget_usd": 3500,
+            "phase": "Launch",
+            "status": "Live",
+            "start": today - timedelta(days=10),
+            "end": today + timedelta(days=50),
+            "success_metrics": "Toolkit delivery confirmed 100% · tabletop attendance ≥90% · campaign recall survey ≥75%",
+            "risks": "Overlaps BEC sim in Training Tracker — align dates so comms precede sim 48h",
+            "linked_program": "CMP cohort finance · PHISH-2026-002 (tracker)",
+            "summary": "Role campaign with manager enablement. Featured because campaign ops = toolkits + waves, not LMS rows.",
         },
         {
-            'id': 'CAM-004',
-            'name': 'Social Engineering Defense',
-            'description': 'Social engineering attack recognition and prevention',
-            'status': 'Active',
-            'start_date': datetime.datetime.now() - timedelta(days=15),
-            'end_date': datetime.datetime.now() + timedelta(days=45),
-            'target_audience': 'Customer Service',
-            'budget': 6000,
-            'campaign_type': 'Training',
-            'priority': 'Medium',
-            'owner': 'Security Team'
-        }
-    ]
-    
-    campaign_content = [
-        {
-            'id': 'CONT-001',
-            'campaign_id': 'CAM-001',
-            'content_type': 'Video',
-            'title': 'Phishing Email Recognition',
-            'description': 'Interactive video on identifying phishing emails',
-            'duration_minutes': 15,
-            'file_size_mb': 45,
-            'language': 'English',
-            'accessibility': 'Yes',
-            'status': 'Published'
+            "campaign_id": "CMP-2026-004",
+            "name": "Privileged / vendor admin — no shared IDs",
+            "type": "Vendor / third-party outreach",
+            "theme": "Named accounts, PAM, and reporting suspicious admin email",
+            "objective": "Orbit AMS named-ID attestation campaign; jump-host poster at colo; TPRM sends vendor pack",
+            "audience_segment": "Privileged internal + Orbit AMS admins (~64)",
+            "owner": "TPRM + SecOps comms",
+            "sponsor": "CISO",
+            "budget_usd": 1800,
+            "phase": "Build",
+            "status": "Scheduled",
+            "start": today + timedelta(days=7),
+            "end": today + timedelta(days=45),
+            "success_metrics": "Vendor pack delivered · poster install checklist 100% · attestations returned ≥95%",
+            "risks": "Vendor fatigue — single coordinated wave, not three teams emailing",
+            "linked_program": "VND-2026-003 · AST-2026-005",
+            "summary": "Third-party campaign channel is distinct from workforce SAT.",
         },
         {
-            'id': 'CONT-002',
-            'campaign_id': 'CAM-001',
-            'content_type': 'Quiz',
-            'title': 'Phishing Quiz',
-            'description': 'Interactive quiz to test phishing recognition skills',
-            'duration_minutes': 10,
-            'file_size_mb': 2,
-            'language': 'English',
-            'accessibility': 'Yes',
-            'status': 'Published'
+            "campaign_id": "CMP-2026-005",
+            "name": "New hire security culture — first 30 days",
+            "type": "New-hire onboarding comms",
+            "theme": "Security is day 1, not day 90",
+            "objective": "Automated 4-touch drip: welcome → report button → clean desk → manager check-in",
+            "audience_segment": "New hires <90d (rolling)",
+            "owner": "HR + Awareness",
+            "sponsor": "CHRO",
+            "budget_usd": 500,
+            "phase": "Sustain",
+            "status": "Live (always-on)",
+            "start": today - timedelta(days=120),
+            "end": today + timedelta(days=245),
+            "success_metrics": "Drip completion ≥85% · day-7 report button awareness survey · manager check-in logged",
+            "risks": "Mailbox enabled before drip touch 1 — HRIS timing bug",
+            "linked_program": "PHISH-2026-006 (tracker sim after touch 2)",
+            "summary": "Always-on drip campaign. Calendar-driven waves, not a one-shot blast.",
         },
         {
-            'id': 'CONT-003',
-            'campaign_id': 'CAM-002',
-            'content_type': 'Infographic',
-            'title': 'Password Best Practices',
-            'description': 'Visual guide to creating strong passwords',
-            'duration_minutes': 5,
-            'file_size_mb': 8,
-            'language': 'English',
-            'accessibility': 'Yes',
-            'status': 'Draft'
+            "campaign_id": "CMP-2026-006",
+            "name": "Q2 deepfake / vishing executive briefing",
+            "type": "Executive / board narrative",
+            "theme": "Voice + email combo attacks on wire requests",
+            "objective": "EA + CFO staff briefing; board slide one-pager; no full workforce blast",
+            "audience_segment": "Executive · EAs · Finance leadership (~42)",
+            "owner": "Awareness + CFO office",
+            "sponsor": "CEO",
+            "budget_usd": 0,
+            "phase": "Close",
+            "status": "Completed",
+            "start": today - timedelta(days=75),
+            "end": today - timedelta(days=60),
+            "success_metrics": "Briefing held · callback-verify procedure adopted · board slide filed",
+            "risks": "—",
+            "linked_program": "PHISH-2026-005 retro input",
+            "summary": "Closed exec campaign — feeds retro library for reuse.",
         },
         {
-            'id': 'CONT-004',
-            'campaign_id': 'CAM-003',
-            'content_type': 'Webinar',
-            'title': 'GDPR Compliance Training',
-            'description': 'Live webinar on GDPR requirements and compliance',
-            'duration_minutes': 60,
-            'file_size_mb': 120,
-            'language': 'English',
-            'accessibility': 'Yes',
-            'status': 'Published'
-        }
-    ]
-    
-    campaign_deliveries = [
-        {
-            'id': 'DEL-001',
-            'campaign_id': 'CAM-001',
-            'content_id': 'CONT-001',
-            'delivery_method': 'Email',
-            'recipient_count': 250,
-            'delivered_count': 245,
-            'opened_count': 180,
-            'completed_count': 165,
-            'delivery_date': datetime.datetime.now() - timedelta(days=25),
-            'status': 'Completed'
+            "campaign_id": "CMP-2026-007",
+            "name": "Privacy awareness — workforce notice refresh",
+            "type": "Compliance deadline comms",
+            "theme": "RoPA / rights / report privacy questions to DPO",
+            "objective": "Intranet publish + Teams post + poster; link privacy portal; not a duplicate of SAT privacy module",
+            "audience_segment": "All with HRIS profile",
+            "owner": "DPO office + Awareness",
+            "sponsor": "GC",
+            "budget_usd": 2200,
+            "phase": "Approve",
+            "status": "Awaiting Legal",
+            "start": today + timedelta(days=14),
+            "end": today + timedelta(days=44),
+            "success_metrics": "Publish by deadline · acknowledgment tracking via intranet · DPO inbox categorization",
+            "risks": "ISO 27701 wording review — don't ship before Legal",
+            "linked_program": "Privacy app RoPA comms",
+            "summary": "Compliance comms campaign — content approval is the gating artifact.",
         },
-        {
-            'id': 'DEL-002',
-            'campaign_id': 'CAM-001',
-            'content_id': 'CONT-002',
-            'delivery_method': 'LMS',
-            'recipient_count': 250,
-            'delivered_count': 250,
-            'opened_count': 200,
-            'completed_count': 185,
-            'delivery_date': datetime.datetime.now() - timedelta(days=20),
-            'status': 'Completed'
-        },
-        {
-            'id': 'DEL-003',
-            'campaign_id': 'CAM-003',
-            'content_id': 'CONT-004',
-            'delivery_method': 'Webinar',
-            'recipient_count': 100,
-            'delivered_count': 95,
-            'opened_count': 85,
-            'completed_count': 80,
-            'delivery_date': datetime.datetime.now() - timedelta(days=60),
-            'status': 'Completed'
-        },
-        {
-            'id': 'DEL-004',
-            'campaign_id': 'CAM-004',
-            'content_id': 'CONT-001',
-            'delivery_method': 'Email',
-            'recipient_count': 75,
-            'delivered_count': 72,
-            'opened_count': 55,
-            'completed_count': 45,
-            'delivery_date': datetime.datetime.now() - timedelta(days=10),
-            'status': 'In Progress'
-        }
-    ]
-    
-    campaign_metrics = [
-        {
-            'campaign_id': 'CAM-001',
-            'metric_name': 'Engagement Rate',
-            'value': 73.5,
-            'target': 75.0,
-            'unit': '%',
-            'date': datetime.datetime.now() - timedelta(days=1),
-            'status': 'On Track'
-        },
-        {
-            'campaign_id': 'CAM-001',
-            'metric_name': 'Completion Rate',
-            'value': 67.3,
-            'target': 70.0,
-            'unit': '%',
-            'date': datetime.datetime.now() - timedelta(days=1),
-            'status': 'Needs Attention'
-        },
-        {
-            'campaign_id': 'CAM-003',
-            'metric_name': 'Engagement Rate',
-            'value': 84.2,
-            'target': 80.0,
-            'unit': '%',
-            'date': datetime.datetime.now() - timedelta(days=1),
-            'status': 'Exceeding'
-        },
-        {
-            'campaign_id': 'CAM-003',
-            'metric_name': 'Completion Rate',
-            'value': 78.9,
-            'target': 75.0,
-            'unit': '%',
-            'date': datetime.datetime.now() - timedelta(days=1),
-            'status': 'Exceeding'
-        },
-        {
-            'campaign_id': 'CAM-004',
-            'metric_name': 'Engagement Rate',
-            'value': 62.5,
-            'target': 70.0,
-            'unit': '%',
-            'date': datetime.datetime.now() - timedelta(days=1),
-            'status': 'Needs Attention'
-        }
-    ]
-    
-    target_audiences = [
-        {
-            'id': 'AUD-001',
-            'name': 'All Employees',
-            'description': 'Complete employee population',
-            'size': 250,
-            'department': 'All',
-            'risk_level': 'Medium',
-            'training_frequency': 'Quarterly'
-        },
-        {
-            'id': 'AUD-002',
-            'name': 'IT Staff',
-            'description': 'Information technology personnel',
-            'size': 25,
-            'department': 'IT',
-            'risk_level': 'High',
-            'training_frequency': 'Monthly'
-        },
-        {
-            'id': 'AUD-003',
-            'name': 'Data Handlers',
-            'description': 'Employees who handle sensitive data',
-            'size': 50,
-            'department': 'Multiple',
-            'risk_level': 'High',
-            'training_frequency': 'Monthly'
-        },
-        {
-            'id': 'AUD-004',
-            'name': 'Customer Service',
-            'description': 'Customer-facing employees',
-            'size': 75,
-            'department': 'Customer Service',
-            'risk_level': 'Medium',
-            'training_frequency': 'Quarterly'
-        }
-    ]
-    
-    campaign_schedules = [
-        {
-            'id': 'SCH-001',
-            'campaign_id': 'CAM-001',
-            'delivery_date': datetime.datetime.now() + timedelta(days=7),
-            'delivery_method': 'Email',
-            'target_audience': 'All Employees',
-            'content_type': 'Reminder',
-            'status': 'Scheduled'
-        },
-        {
-            'id': 'SCH-002',
-            'campaign_id': 'CAM-002',
-            'delivery_date': datetime.datetime.now() + timedelta(days=15),
-            'delivery_method': 'LMS',
-            'target_audience': 'IT Staff',
-            'content_type': 'Initial',
-            'status': 'Scheduled'
-        },
-        {
-            'id': 'SCH-003',
-            'campaign_id': 'CAM-004',
-            'delivery_date': datetime.datetime.now() + timedelta(days=5),
-            'delivery_method': 'Email',
-            'target_audience': 'Customer Service',
-            'content_type': 'Follow-up',
-            'status': 'Scheduled'
-        }
     ]
 
-    campaign_statuses = ['Planning', 'Active', 'Completed', 'Paused']
-    for campaign in campaigns:
-        campaign['budget'] = int(max(1000, campaign['budget'] + int(rng.integers(-2000, 2001))))
-        if int(rng.integers(0, 4)) == 0:
-            campaign['status'] = str(rng.choice(campaign_statuses))
-    for delivery in campaign_deliveries:
-        jitter = int(rng.integers(-10, 11))
-        delivery['opened_count'] = max(0, min(delivery['delivered_count'], delivery['opened_count'] + jitter))
-        delivery['completed_count'] = max(0, min(delivery['opened_count'], delivery['completed_count'] + int(rng.integers(-5, 6))))
-    for metric in campaign_metrics:
-        metric['value'] = round(float(np.clip(metric['value'] + float(rng.uniform(-5, 5)), 10, 100)), 1)
+    # ── Audience segments (targeting definitions — not people-risk) ─
+    segments = [
+        {
+            "segment_id": "SEG-2026-001",
+            "name": "All workforce",
+            "definition": "Active HRIS · corporate email",
+            "est_size": 1820,
+            "channels_ok": "Email · Intranet · Teams · Signage",
+            "owner": "Awareness",
+        },
+        {
+            "segment_id": "SEG-2026-002",
+            "name": "People managers",
+            "definition": "Manager flag in HRIS · responsible for ≥1 FTE",
+            "est_size": 210,
+            "channels_ok": "Manager toolkit · Email · Huddle guides",
+            "owner": "HR + Awareness",
+        },
+        {
+            "segment_id": "SEG-2026-003",
+            "name": "Finance / payment authority",
+            "definition": "Payment system role · AP/AR approvers",
+            "est_size": 86,
+            "channels_ok": "Email · Poster · Live tabletop",
+            "owner": "Finance control",
+        },
+        {
+            "segment_id": "SEG-2026-004",
+            "name": "Privileged + vendor admins",
+            "definition": "PAM users · Orbit AMS named IDs",
+            "est_size": 64,
+            "channels_ok": "Email · Vendor pack · Colo poster",
+            "owner": "TPRM",
+        },
+        {
+            "segment_id": "SEG-2026-005",
+            "name": "New hires <90d",
+            "definition": "Hire date rolling window",
+            "est_size": 38,
+            "channels_ok": "Drip email · HRIS task · Manager script",
+            "owner": "HR",
+        },
+        {
+            "segment_id": "SEG-2026-006",
+            "name": "Executive / EA",
+            "definition": "C-suite · direct EAs",
+            "est_size": 42,
+            "channels_ok": "Briefing · Slide · Secure email",
+            "owner": "CFO/CEO office",
+        },
+    ]
 
-    return campaigns, campaign_content, campaign_deliveries, campaign_metrics, target_audiences, campaign_schedules
+    # ── Content assets (creative library) ────────────────────────────
+    assets = [
+        {"asset_id": "AST-C-001", "campaign_id": "CMP-2026-001", "type": "Email template", "title": "CSAM Week 1 — Report button hero", "version": "v3", "approval": "Approved", "owner": "Awareness", "locale": "EN", "notes": "A/B subject lines in wave 1"},
+        {"asset_id": "AST-C-002", "campaign_id": "CMP-2026-001", "type": "Poster", "title": "See it · Report it — break room", "version": "v2", "approval": "Approved", "owner": "Awareness", "locale": "EN", "notes": "Print vendor PO-4481"},
+        {"asset_id": "AST-C-003", "campaign_id": "CMP-2026-001", "type": "Manager script", "title": "5-min huddle — phishing reporting", "version": "v1", "approval": "Approved", "owner": "HR", "locale": "EN", "notes": "Mandatory week 2"},
+        {"asset_id": "AST-C-004", "campaign_id": "CMP-2026-001", "type": "Intranet page", "title": "CSAM 2026 hub", "version": "v4", "approval": "Approved", "owner": "Comms", "locale": "EN", "notes": "Embed FAQ + report how-to"},
+        {"asset_id": "AST-C-005", "campaign_id": "CMP-2026-002", "type": "Email template", "title": "Payroll scam alert — single source", "version": "v2", "approval": "Approved", "owner": "HR Comms", "locale": "EN", "notes": "Legal footnote INC-2026-009"},
+        {"asset_id": "AST-C-006", "campaign_id": "CMP-2026-002", "type": "FAQ", "title": "Is this HR email real?", "version": "v1", "approval": "Approved", "owner": "Awareness", "locale": "EN", "notes": "Intranet only"},
+        {"asset_id": "AST-C-007", "campaign_id": "CMP-2026-003", "type": "Manager script", "title": "Dual-channel wire verify", "version": "v2", "approval": "Approved", "owner": "Finance control", "locale": "EN", "notes": "CFO intro video linked"},
+        {"asset_id": "AST-C-008", "campaign_id": "CMP-2026-003", "type": "Poster", "title": "Stop · Call · Verify", "version": "v1", "approval": "Approved", "owner": "Finance", "locale": "EN", "notes": "AP pod install"},
+        {"asset_id": "AST-C-009", "campaign_id": "CMP-2026-003", "type": "Slide deck", "title": "BEC tabletop facilitator", "version": "v1", "approval": "In review", "owner": "Awareness", "locale": "EN", "notes": "Waiting CFO EA comment"},
+        {"asset_id": "AST-C-010", "campaign_id": "CMP-2026-004", "type": "Email template", "title": "Vendor admin — named ID policy", "version": "v1", "approval": "Draft", "owner": "TPRM", "locale": "EN", "notes": "Orbit AMS co-brand"},
+        {"asset_id": "AST-C-011", "campaign_id": "CMP-2026-005", "type": "Email template", "title": "Day 1 — Welcome security", "version": "v3", "approval": "Approved", "owner": "HR", "locale": "EN", "notes": "Drip step 1"},
+        {"asset_id": "AST-C-012", "campaign_id": "CMP-2026-005", "type": "Email template", "title": "Day 7 — Report button", "version": "v2", "approval": "Approved", "owner": "Awareness", "locale": "EN", "notes": "Drip step 2"},
+        {"asset_id": "AST-C-013", "campaign_id": "CMP-2026-007", "type": "Intranet page", "title": "Privacy at Acme — 2026 notice", "version": "v1", "approval": "In review", "owner": "DPO", "locale": "EN", "notes": "Legal redlines open"},
+    ]
+
+    # ── Waves / touchpoints (delivery schedule) ──────────────────────
+    waves = [
+        {"wave_id": "WAV-2026-001", "campaign_id": "CMP-2026-001", "name": "Teaser — intranet save-the-date", "channel": "Intranet / SharePoint", "segment": "SEG-2026-001", "phase": "Teaser", "scheduled": today - timedelta(days=20), "status": "Delivered", "owner": "Comms", "reach_pct": 42.0, "engage_pct": 18.0, "notes": "Hub bookmarked"},
+        {"wave_id": "WAV-2026-002", "campaign_id": "CMP-2026-001", "name": "Launch email — report button", "channel": "Email newsletter", "segment": "SEG-2026-001", "phase": "Launch", "scheduled": today - timedelta(days=14), "status": "Delivered", "owner": "Awareness", "reach_pct": 96.0, "engage_pct": 61.0, "notes": "Open 61% · click 22% to hub"},
+        {"wave_id": "WAV-2026-003", "campaign_id": "CMP-2026-001", "name": "Manager huddle week", "channel": "Manager toolkit", "segment": "SEG-2026-002", "phase": "Sustain", "scheduled": today - timedelta(days=7), "status": "Live", "owner": "HR", "reach_pct": 78.0, "engage_pct": 72.0, "notes": "Managers confirm in form — 78% so far"},
+        {"wave_id": "WAV-2026-004", "campaign_id": "CMP-2026-001", "name": "Break-room posters", "channel": "Poster / print", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today - timedelta(days=5), "status": "Delivered", "owner": "Facilities", "reach_pct": 88.0, "engage_pct": None, "notes": "Install checklist 44/50 sites"},
+        {"wave_id": "WAV-2026-005", "campaign_id": "CMP-2026-001", "name": "Teams tip — report in Outlook", "channel": "Teams / Slack", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today + timedelta(days=2), "status": "Scheduled", "owner": "Awareness", "reach_pct": None, "engage_pct": None, "notes": "GIF demo"},
+        {"wave_id": "WAV-2026-006", "campaign_id": "CMP-2026-001", "name": "Close — thank you + metrics", "channel": "Email newsletter", "segment": "SEG-2026-001", "phase": "Close", "scheduled": today + timedelta(days=12), "status": "Planned", "owner": "Awareness", "reach_pct": None, "engage_pct": None, "notes": "Include report rate uplift"},
+        {"wave_id": "WAV-2026-007", "campaign_id": "CMP-2026-002", "name": "Emergency all-hands email", "channel": "Email newsletter", "segment": "SEG-2026-001", "phase": "Launch", "scheduled": today - timedelta(days=3), "status": "Delivered", "owner": "HR Comms", "reach_pct": 99.0, "engage_pct": 74.0, "notes": "Legal approved v2"},
+        {"wave_id": "WAV-2026-008", "campaign_id": "CMP-2026-002", "name": "Teams urgent post", "channel": "Teams / Slack", "segment": "SEG-2026-001", "phase": "Launch", "scheduled": today - timedelta(days=3), "status": "Delivered", "owner": "Awareness", "reach_pct": 91.0, "engage_pct": 35.0, "notes": "Pin 72h"},
+        {"wave_id": "WAV-2026-009", "campaign_id": "CMP-2026-002", "name": "FAQ intranet publish", "channel": "Intranet / SharePoint", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today - timedelta(days=2), "status": "Delivered", "owner": "Awareness", "reach_pct": 38.0, "engage_pct": 31.0, "notes": "Growing — promote in wave 10"},
+        {"wave_id": "WAV-2026-010", "campaign_id": "CMP-2026-002", "name": "Payroll insert reminder", "channel": "Payroll insert / HR comms", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today + timedelta(days=4), "status": "Blocked", "owner": "HR", "reach_pct": None, "engage_pct": None, "notes": "Blocked — PayrollCo IR freeze; use email only"},
+        {"wave_id": "WAV-2026-011", "campaign_id": "CMP-2026-003", "name": "CFO video + toolkit email", "channel": "Email newsletter", "segment": "SEG-2026-003", "phase": "Launch", "scheduled": today - timedelta(days=8), "status": "Delivered", "owner": "Finance", "reach_pct": 100.0, "engage_pct": 82.0, "notes": "Toolkit PDF attached"},
+        {"wave_id": "WAV-2026-012", "campaign_id": "CMP-2026-003", "name": "AP pod posters", "channel": "Poster / print", "segment": "SEG-2026-003", "phase": "Sustain", "scheduled": today - timedelta(days=3), "status": "Delivered", "owner": "Finance", "reach_pct": 95.0, "engage_pct": None, "notes": "6/6 pods"},
+        {"wave_id": "WAV-2026-013", "campaign_id": "CMP-2026-003", "name": "BEC tabletop sessions", "channel": "Town hall / live event", "segment": "SEG-2026-003", "phase": "Sustain", "scheduled": today + timedelta(days=7), "status": "Scheduled", "owner": "Finance control", "reach_pct": None, "engage_pct": None, "notes": "3 sessions scheduled"},
+        {"wave_id": "WAV-2026-014", "campaign_id": "CMP-2026-005", "name": "Drip 1 — welcome", "channel": "Email newsletter", "segment": "SEG-2026-005", "phase": "Launch", "scheduled": today - timedelta(days=1), "status": "Delivered", "owner": "HR", "reach_pct": 100.0, "engage_pct": 88.0, "notes": "Auto on hire"},
+        {"wave_id": "WAV-2026-015", "campaign_id": "CMP-2026-005", "name": "Drip 2 — report button", "channel": "Email newsletter", "segment": "SEG-2026-005", "phase": "Sustain", "scheduled": today + timedelta(days=6), "status": "Scheduled", "owner": "Awareness", "reach_pct": None, "engage_pct": None, "notes": "Day 7 trigger"},
+        {"wave_id": "WAV-2026-016", "campaign_id": "CMP-2026-004", "name": "Vendor pack send", "channel": "Email newsletter", "segment": "SEG-2026-004", "phase": "Launch", "scheduled": today + timedelta(days=10), "status": "Planned", "owner": "TPRM", "reach_pct": None, "engage_pct": None, "notes": "Await AST-C-010 approval"},
+    ]
+
+    # ── Approvals queue ──────────────────────────────────────────────
+    approvals = [
+        {"appr_id": "APR-2026-001", "asset_id": "AST-C-009", "campaign_id": "CMP-2026-003", "title": "BEC tabletop deck", "reviewer": "CFO EA", "due": today + timedelta(days=2), "status": "In review"},
+        {"appr_id": "APR-2026-002", "asset_id": "AST-C-010", "campaign_id": "CMP-2026-004", "title": "Vendor named-ID email", "reviewer": "TPRM + Legal", "due": today + timedelta(days=5), "status": "Draft"},
+        {"appr_id": "APR-2026-003", "asset_id": "AST-C-013", "campaign_id": "CMP-2026-007", "title": "Privacy notice intranet", "reviewer": "GC / DPO", "due": today + timedelta(days=3), "status": "In review"},
+        {"appr_id": "APR-2026-004", "asset_id": "AST-C-005", "campaign_id": "CMP-2026-002", "title": "Payroll scam email v2", "reviewer": "Legal", "due": today - timedelta(days=4), "status": "Approved"},
+    ]
+
+    # ── Campaign-level KPIs (engagement, not people-risk) ───────────
+    kpis = [
+        {"kpi_id": "CKPI-001", "campaign_id": "CMP-2026-001", "name": "Reach (any touch)", "value": 94.0, "target": 95.0, "unit": "%", "as_of": today},
+        {"kpi_id": "CKPI-002", "campaign_id": "CMP-2026-001", "name": "Manager huddle confirmed", "value": 78.0, "target": 80.0, "unit": "%", "as_of": today},
+        {"kpi_id": "CKPI-003", "campaign_id": "CMP-2026-001", "name": "Intranet hub unique viewers", "value": 58.0, "target": 60.0, "unit": "%", "as_of": today},
+        {"kpi_id": "CKPI-004", "campaign_id": "CMP-2026-002", "name": "Emergency email open", "value": 74.0, "target": 70.0, "unit": "%", "as_of": today},
+        {"kpi_id": "CKPI-005", "campaign_id": "CMP-2026-003", "name": "Toolkit delivered", "value": 100.0, "target": 100.0, "unit": "%", "as_of": today},
+        {"kpi_id": "CKPI-006", "campaign_id": "CMP-2026-003", "name": "Tabletop scheduled", "value": 3.0, "target": 3.0, "unit": "sessions", "as_of": today},
+    ]
+
+    # Deep packs for featured campaigns
+    deep = {
+        "CMP-2026-001": {
+            "brief": {
+                "problem": "Report rate flat; users still forward suspicious mail instead of using PAB.",
+                "key_messages": ["Report first", "When in doubt, forward to security@", "Managers reinforce weekly"],
+                "cta": "Use Phish Alert Button · visit CSAM hub",
+                "non_goals": "Not replacing SAT modules or sims — comms only",
+            },
+            "checklist": [
+                {"item": "Legal review on INC-adjacent wording", "done": True},
+                {"item": "Poster print PO", "done": True},
+                {"item": "Manager form live", "done": True},
+                {"item": "Signage at remote sites", "done": False},
+                {"item": "Retro survey drafted", "done": False},
+            ],
+            "retro": None,
+        },
+        "CMP-2026-003": {
+            "brief": {
+                "problem": "Finance cohort click rate on BEC sims unacceptable; need behavior message before next sim.",
+                "key_messages": ["Dual-channel verify", "No wire changes on email alone", "CFO backs procedure"],
+                "cta": "Complete toolkit · attend tabletop",
+                "non_goals": "Not individual risk scoring — see Training Tracker for that",
+            },
+            "checklist": [
+                {"item": "CFO video recorded", "done": True},
+                {"item": "AP posters installed", "done": True},
+                {"item": "Tabletop deck approved", "done": False},
+                {"item": "Align sim date +48h after launch email", "done": True},
+            ],
+            "retro": None,
+        },
+        "CMP-2026-005": {
+            "brief": {
+                "problem": "New hires get mailbox before security culture message; 21% click on onboarding phish.",
+                "key_messages": ["Security day 1", "Report button before first week ends", "Manager check-in day 14"],
+                "cta": "Complete HRIS security tasks",
+                "non_goals": "Not a one-time blast — drip automation",
+            },
+            "checklist": [
+                {"item": "HRIS trigger wired", "done": True},
+                {"item": "Drip 1/4 live", "done": True},
+                {"item": "Manager script in onboarding kit", "done": True},
+                {"item": "Fix mailbox-before-drip race", "done": False},
+            ],
+            "retro": None,
+        },
+    }
+
+    narrative = [
+        {"lane": "Live now", "text": "CSAM sustain week · Payroll scam reactive · Finance wire campaign · always-on new-hire drip."},
+        {"lane": "Blocked", "text": "Payroll insert wave blocked by PayrollCo IR — reroute to email/Teams only."},
+        {"lane": "Pipeline", "text": "Vendor admin campaign builds next week; privacy notice awaits Legal."},
+        {"lane": "Not this app", "text": "Phishing sim clicks and people-risk scores live in Training Tracker — this is comms orchestration."},
+    ]
+
+    df_c = pd.DataFrame(campaigns)
+    for col in ("start", "end"):
+        df_c[col] = pd.to_datetime(df_c[col], errors="coerce")
+    df_c["brief_pack"] = df_c["campaign_id"].map(lambda i: deep.get(i, {}).get("brief"))
+    df_c["checklist"] = df_c["campaign_id"].map(lambda i: deep.get(i, {}).get("checklist", []))
+
+    df_s = pd.DataFrame(segments)
+    df_a = pd.DataFrame(assets)
+    df_w = pd.DataFrame(waves)
+    df_w["scheduled"] = pd.to_datetime(df_w["scheduled"], errors="coerce")
+    df_ap = pd.DataFrame(approvals)
+    df_ap["due"] = pd.to_datetime(df_ap["due"], errors="coerce")
+    df_k = pd.DataFrame(kpis)
+    df_k["as_of"] = pd.to_datetime(df_k["as_of"], errors="coerce")
+    df_n = pd.DataFrame(narrative)
+
+    return df_c, df_s, df_a, df_w, df_ap, df_k, df_n
 
 
-_CAMPAIGN_STATUS_ORDER = ['Planning', 'Active', 'Completed']
+def _enrich_campaign(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    today = _today()
+    out["days_left"] = (out["end"] - today).dt.days
+    out["pct_elapsed"] = ((today - out["start"]) / (out["end"] - out["start"]).clip(lower=pd.Timedelta(days=1)) * 100).round(0)
+    out["live"] = out["status"].astype(str).str.contains("Live", case=False)
+    return out
 
 
-def _advance_campaign_status(status: str) -> str:
-    if status not in _CAMPAIGN_STATUS_ORDER or status == _CAMPAIGN_STATUS_ORDER[-1]:
-        return status
-    return _CAMPAIGN_STATUS_ORDER[_CAMPAIGN_STATUS_ORDER.index(status) + 1]
+def _enrich_wave(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+    today = _today()
+    out["overdue"] = out["status"].isin(["Planned", "Scheduled"]) & (out["scheduled"] < today)
+    out["this_week"] = (out["scheduled"] >= today - timedelta(days=today.weekday())) & (
+        out["scheduled"] <= today + timedelta(days=6 - today.weekday())
+    )
+    return out
 
 
-def _sync_campaigns(seed: int) -> None:
-    if st.session_state.get('_campaign_seed') != seed or not st.session_state.get('campaigns'):
-        campaigns, content, deliveries, metrics, audiences, schedules = generate_sample_data(seed)
-        st.session_state.campaigns = campaigns
-        st.session_state.campaign_content = content
-        st.session_state.campaign_deliveries = deliveries
-        st.session_state.campaign_metrics = metrics
-        st.session_state.target_audiences = audiences
-        st.session_state.campaign_schedules = schedules
-        st.session_state._campaign_seed = seed
+def _sync(seed: int):
+    need = st.session_state.get(_SYNC_KEY) != seed or "camp_campaigns" not in st.session_state
+    if need:
+        c, s, a, w, ap, k, n = _sample(seed)
+        st.session_state.camp_campaigns = c
+        st.session_state.camp_segments = s
+        st.session_state.camp_assets = a
+        st.session_state.camp_waves = w
+        st.session_state.camp_approvals = ap
+        st.session_state.camp_kpis = k
+        st.session_state.camp_narrative = n
+        st.session_state[_SYNC_KEY] = seed
+    return (
+        st.session_state.camp_campaigns,
+        st.session_state.camp_segments,
+        st.session_state.camp_assets,
+        st.session_state.camp_waves,
+        st.session_state.camp_approvals,
+        st.session_state.camp_kpis,
+        st.session_state.camp_narrative,
+    )
 
 
-def main():
+def _save_campaigns(df):
+    st.session_state.camp_campaigns = df.reset_index(drop=True)
+
+
+def _save_waves(df):
+    st.session_state.camp_waves = df.reset_index(drop=True)
+
+
+def _save_assets(df):
+    st.session_state.camp_assets = df.reset_index(drop=True)
+
+
+def _save_approvals(df):
+    st.session_state.camp_approvals = df.reset_index(drop=True)
+
+
+def _patch_campaign(cid, **fields):
+    df = st.session_state.camp_campaigns.copy()
+    loc = df.index[df["campaign_id"] == cid]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_campaigns(df)
+
+
+def _patch_wave(wid, **fields):
+    df = st.session_state.camp_waves.copy()
+    loc = df.index[df["wave_id"] == wid]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_waves(df)
+
+
+def _patch_approval(aid, **fields):
+    df = st.session_state.camp_approvals.copy()
+    loc = df.index[df["appr_id"] == aid]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_approvals(df)
+
+
+def _patch_asset(asid, **fields):
+    df = st.session_state.camp_assets.copy()
+    loc = df.index[df["asset_id"] == asid]
+    if len(loc) == 0:
+        return
+    for k, v in fields.items():
+        df.at[loc[0], k] = v
+    _save_assets(df)
+
+
+def _fmt(ts) -> str:
+    try:
+        if ts is None or pd.isna(ts):
+            return "—"
+        return pd.Timestamp(ts).strftime("%Y-%m-%d")
+    except (ValueError, TypeError, OverflowError):
+        return "—"
+
+
+def _campaign_detail(row, waves, assets, kpis, *, widget_key: str):
+    cid = row["campaign_id"]
+    wk = widget_key
+    st.markdown(f"### {cid} · {row['name']}")
+    a, b, c, d = st.columns(4)
+    a.metric("Phase", row["phase"])
+    b.metric("Status", row["status"].split("—")[0].strip()[:20])
+    c.metric("Days left", int(row["days_left"]) if row["days_left"] >= 0 else 0)
+    d.metric("Budget", f"${int(row['budget_usd']):,}")
+
+    c1, c2 = st.columns(2)
+    c1.write(f"**Type:** {row['type']}")
+    c1.write(f"**Theme:** {row['theme']}")
+    c1.write(f"**Audience:** {row['audience_segment']}")
+    c1.write(f"**Owner / sponsor:** {row['owner']} · {row['sponsor']}")
+    c1.write(f"**Window:** {_fmt(row['start'])} → {_fmt(row['end'])} ({int(row['pct_elapsed'])}% elapsed)")
+    c2.write(f"**Objective:** {row['objective']}")
+    c2.write(f"**Success metrics:** {row['success_metrics']}")
+    c2.write(f"**Risks:** {row['risks']}")
+    c2.write(f"**Linked:** {row['linked_program']}")
+    st.write(row["summary"])
+
+    brief = row.get("brief_pack")
+    if brief:
+        with st.expander("Campaign brief", expanded=True):
+            st.write(f"**Problem:** {brief.get('problem', '')}")
+            st.write(f"**Key messages:** {brief.get('key_messages', '')}")
+            st.write(f"**CTA:** {brief.get('cta', '')}")
+            st.write(f"**Non-goals:** {brief.get('non_goals', '')}")
+
+    checklist = row.get("checklist") or []
+    if checklist:
+        with st.expander(f"Runbook checklist ({len(checklist)})", expanded=True):
+            st.dataframe(pd.DataFrame(checklist), use_container_width=True, hide_index=True)
+
+    cw = waves[waves["campaign_id"] == cid].sort_values("scheduled")
+    if not cw.empty:
+        with st.expander(f"Waves / touchpoints ({len(cw)})", expanded=True):
+            show = cw.copy()
+            show["scheduled"] = show["scheduled"].apply(_fmt)
+            st.dataframe(
+                show[
+                    [
+                        "wave_id",
+                        "name",
+                        "channel",
+                        "phase",
+                        "scheduled",
+                        "status",
+                        "reach_pct",
+                        "engage_pct",
+                        "notes",
+                    ]
+                ],
+                use_container_width=True,
+                hide_index=True,
+            )
+
+    ca = assets[assets["campaign_id"] == cid]
+    if not ca.empty:
+        with st.expander(f"Assets ({len(ca)})", expanded=False):
+            st.dataframe(ca, use_container_width=True, hide_index=True)
+
+    ck = kpis[kpis["campaign_id"] == cid]
+    if not ck.empty:
+        with st.expander(f"Campaign KPIs ({len(ck)})", expanded=False):
+            st.dataframe(ck, use_container_width=True, hide_index=True)
+
+    # Mini Gantt for waves
+    if not cw.empty and cw["scheduled"].notna().any():
+        g = cw.copy()
+        g["scheduled"] = pd.to_datetime(g["scheduled"], errors="coerce")
+        g = g.dropna(subset=["scheduled"])
+        if not g.empty:
+            fig = px.scatter(
+                g,
+                x="scheduled",
+                y="channel",
+                color="status",
+                symbol="phase",
+                hover_name="name",
+                title="Touchpoint calendar",
+            )
+            fig.update_layout(height=max(260, len(g["channel"].unique()) * 40), margin=dict(l=10, r=10, t=40, b=10))
+            st.plotly_chart(fig, use_container_width=True, key=f"plotly_gantt_{wk}_{cid}")
+
+
+def main() -> None:
     portfolio_skin.page_header(
         title="Security Awareness Campaign Manager",
-        lede="Interactive GRC tool — #RUNGRCRaleigh build-in-public.",
-        kicker="Awareness",
+        lede="Comms campaign orchestration — briefs, segments, multi-channel waves, assets, approvals, reach/engagement KPIs. Not the Training Tracker (sims/people-risk). Club demo — synthetic.",
+        kicker="Awareness · Campaigns",
     )
-    st.markdown("Comprehensive platform for managing security awareness campaigns, content creation, delivery tracking, and effectiveness measurement")
 
-    with st.sidebar:
-        st.title("Navigation")
-        seed = demo_kit.seed_controls()
-        st.markdown("---")
-        page = st.selectbox(
-            "Select Module",
-            ["Dashboard", "Campaign Management", "Content Management", "Delivery Tracking", "Audience Management", "Metrics & Analytics", "Scheduling", "Reports"]
+    seed = demo_kit.seed_controls()
+    campaigns, segments, assets, waves, approvals, kpis, narrative = _sync(seed)
+    ec = _enrich_campaign(campaigns)
+    ew = _enrich_wave(waves)
+
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Filters")
+    live_only = st.sidebar.checkbox("Live campaigns only", value=False)
+    type_f = st.sidebar.multiselect("Campaign types", CAMPAIGN_TYPES, default=CAMPAIGN_TYPES)
+
+    view_c = ec[ec["type"].isin(type_f)]
+    if live_only:
+        view_c = view_c[view_c["live"]]
+
+    live_n = int(ec["live"].sum())
+    blocked_w = int(ew["status"].eq("Blocked").sum())
+    od_w = int(ew["overdue"].sum())
+    pend_ap = int(approvals["status"].isin(["Draft", "In review"]).sum())
+    week_w = int(ew["this_week"].sum())
+
+    k1, k2, k3, k4, k5, k6 = st.columns(6)
+    k1.metric("Campaigns", len(ec))
+    k2.metric("Live", live_n)
+    k3.metric("Waves this week", week_w)
+    k4.metric("Blocked waves", blocked_w)
+    k5.metric("Overdue scheduled", od_w)
+    k6.metric("Assets in review", pend_ap)
+
+    if blocked_w:
+        st.warning(f"{blocked_w} wave(s) blocked — check IR/legal dependencies before forcing send.")
+
+    work, cal_tab, assets_tab, segments_tab, approvals_tab, intake, export = st.tabs(
+        [
+            "Workbench",
+            "Calendar / waves",
+            "Asset library",
+            "Segments",
+            "Approvals",
+            "Intake",
+            "Export",
+        ]
+    )
+
+    with work:
+        st.subheader("Campaign workbench")
+        for _, n in narrative.iterrows():
+            st.write(f"**{n['lane']}:** {n['text']}")
+
+        feat = view_c[view_c["campaign_id"].isin(FEATURED)].copy()
+        order = {i: n for n, i in enumerate(["CMP-2026-001", "CMP-2026-003", "CMP-2026-005"])}
+        feat["_o"] = feat["campaign_id"].map(lambda x: order.get(x, 99))
+        st.markdown(f"**Featured campaigns — statement of record ({len(feat)})**")
+        for _, row in feat.sort_values("_o").iterrows():
+            st.markdown("---")
+            _campaign_detail(row, ew, assets, kpis, widget_key=f"feat_{row['campaign_id']}")
+            st.markdown("---")
+
+        hot_w = ew[(ew["overdue"] | ew["status"].eq("Blocked")) & ew["campaign_id"].isin(view_c["campaign_id"])]
+        st.markdown(f"**Attention waves ({len(hot_w)})**")
+        if hot_w.empty:
+            st.info("No blocked/overdue waves in filter.")
+        else:
+            for _, w in hot_w.sort_values("scheduled").iterrows():
+                with st.expander(f"{w['wave_id']} · {w['name']} · {w['status']}"):
+                    st.write(f"**Campaign:** {w['campaign_id']} · **Channel:** {w['channel']}")
+                    st.write(f"**Scheduled:** {_fmt(w['scheduled'])} · **Owner:** {w['owner']}")
+                    st.write(w["notes"])
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        if w["status"] == "Blocked" and st.button("Mark delivered (override)", key=f"wb_{w['wave_id']}"):
+                            _patch_wave(w["wave_id"], status="Delivered", notes=(w["notes"] or "") + " [Override send.]")
+                            st.rerun()
+                    with c2:
+                        if w["status"] in {"Planned", "Scheduled", "Blocked"} and st.button(
+                            "Skip wave", key=f"ws_{w['wave_id']}"
+                        ):
+                            _patch_wave(w["wave_id"], status="Skipped")
+                            st.rerun()
+                    with c3:
+                        if w["overdue"] and st.button("Mark live", key=f"wl_{w['wave_id']}"):
+                            _patch_wave(w["wave_id"], status="Live")
+                            st.rerun()
+
+        st.markdown("**All campaigns**")
+        show = view_c[
+            ["campaign_id", "name", "type", "phase", "status", "start", "end", "owner", "budget_usd"]
+        ].copy()
+        show["start"] = show["start"].apply(_fmt)
+        show["end"] = show["end"].apply(_fmt)
+        st.dataframe(show, use_container_width=True, hide_index=True)
+
+    with cal_tab:
+        st.subheader("Content calendar / waves")
+        st.caption("Multi-channel touchpoints — email, intranet, posters, manager toolkits, events. Campaign delivery ops.")
+        cal_view = ew.merge(campaigns[["campaign_id", "name"]], on="campaign_id", how="left")
+        cal_view = cal_view[cal_view["campaign_id"].isin(view_c["campaign_id"])]
+        show = cal_view.sort_values("scheduled").copy()
+        show["scheduled"] = show["scheduled"].apply(_fmt)
+        st.dataframe(
+            show[
+                [
+                    "wave_id",
+                    "campaign_id",
+                    "name_y",
+                    "name",
+                    "channel",
+                    "phase",
+                    "scheduled",
+                    "status",
+                    "reach_pct",
+                    "engage_pct",
+                    "owner",
+                ]
+            ].rename(columns={"name_y": "campaign"}),
+            use_container_width=True,
+            hide_index=True,
         )
-        engagement_floor = st.slider(
-            "What-if engagement floor (%)",
-            min_value=40,
-            max_value=90,
-            value=70,
-            step=5,
-            help="Highlight campaigns below this engagement rate.",
+
+        fig = px.timeline(
+            cal_view.assign(
+                Start=cal_view["scheduled"],
+                Finish=cal_view["scheduled"] + pd.Timedelta(days=1),
+            ),
+            x_start="Start",
+            x_end="Finish",
+            y="name",
+            color="channel",
+            hover_name="wave_id",
+            title="Wave timeline (by touchpoint)",
         )
-        st.session_state._campaign_engagement_floor = engagement_floor
-        st.caption("Sample / mock data only.")
-    _sync_campaigns(seed)
+        fig.update_yaxes(autorange="reversed")
+        fig.update_layout(height=500, margin=dict(l=10, r=10, t=40, b=10))
+        st.plotly_chart(fig, use_container_width=True, key="plotly_cal_timeline")
 
-    if page == "Dashboard":
-        show_dashboard()
-    elif page == "Campaign Management":
-        show_campaign_management()
-    elif page == "Content Management":
-        show_content_management()
-    elif page == "Delivery Tracking":
-        show_delivery_tracking()
-    elif page == "Audience Management":
-        show_audience_management()
-    elif page == "Metrics & Analytics":
-        show_metrics_analytics()
-    elif page == "Scheduling":
-        show_scheduling()
-    elif page == "Reports":
-        show_reports()
+        # Channel mix for live campaigns
+        live_ids = view_c[view_c["live"]]["campaign_id"]
+        mix = ew[ew["campaign_id"].isin(live_ids)].groupby("channel").size().reset_index(name="waves")
+        if not mix.empty:
+            fig2 = px.pie(mix, names="channel", values="waves", title="Live campaign — channel mix (# waves)")
+            fig2.update_layout(height=320, margin=dict(l=10, r=10, t=40, b=10))
+            st.plotly_chart(fig2, use_container_width=True, key="plotly_channel_mix")
 
-def show_dashboard():
-    st.header("Campaign Dashboard")
-    
-    # Calculate key metrics
-    active_campaigns = len([c for c in st.session_state.campaigns if c['status'] == 'Active'])
-    total_campaigns = len(st.session_state.campaigns)
-    avg_engagement = np.mean([m['value'] for m in st.session_state.campaign_metrics if m['metric_name'] == 'Engagement Rate'])
-    avg_completion = np.mean([m['value'] for m in st.session_state.campaign_metrics if m['metric_name'] == 'Completion Rate'])
-    
-    # Display key metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Active Campaigns", active_campaigns, f"{active_campaigns}/{total_campaigns}")
-        st.metric("Total Content", len(st.session_state.campaign_content))
-    
-    with col2:
-        st.metric("Avg Engagement Rate", f"{avg_engagement:.1f}%")
-        st.metric("Avg Completion Rate", f"{avg_completion:.1f}%")
-    
-    with col3:
-        total_recipients = sum([d['recipient_count'] for d in st.session_state.campaign_deliveries])
-        total_delivered = sum([d['delivered_count'] for d in st.session_state.campaign_deliveries])
-        st.metric("Total Recipients", total_recipients)
-        st.metric("Total Delivered", total_delivered)
-    
-    with col4:
-        scheduled_deliveries = len([s for s in st.session_state.campaign_schedules if s['status'] == 'Scheduled'])
-        st.metric("Scheduled Deliveries", scheduled_deliveries)
-        st.metric("Target Audiences", len(st.session_state.target_audiences))
-
-    floor = st.session_state.get('_campaign_engagement_floor', 70)
-    below_floor = [
-        m for m in st.session_state.campaign_metrics
-        if m['metric_name'] == 'Engagement Rate' and m['value'] < floor
-    ]
-    st.caption(f"Engagement metrics below floor ({floor}%): {len(below_floor)}")
-    
-    # Campaign overview charts
-    st.subheader("Campaign Overview")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Campaign status distribution
-        status_counts = pd.DataFrame(st.session_state.campaigns)['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="Campaign Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        # Campaign type distribution
-        type_counts = pd.DataFrame(st.session_state.campaigns)['campaign_type'].value_counts()
-        fig = px.bar(x=type_counts.index, y=type_counts.values, 
-                    title="Campaigns by Type")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Recent campaign activities
-    st.subheader("Recent Campaign Activities")
-    recent_deliveries = sorted(st.session_state.campaign_deliveries, key=lambda x: x['delivery_date'], reverse=True)[:5]
-    
-    for delivery in recent_deliveries:
-        campaign = next((c for c in st.session_state.campaigns if c['id'] == delivery['campaign_id']), None)
-        content = next((c for c in st.session_state.campaign_content if c['id'] == delivery['content_id']), None)
-        
-        col1, col2, col3, col4 = st.columns([2, 2, 1, 1])
-        with col1:
-            st.write(f"**{campaign['name'] if campaign else 'Unknown Campaign'}**")
-        with col2:
-            st.write(f"**{content['title'] if content else 'Unknown Content'}** - {delivery['delivery_method']}")
-        with col3:
-            engagement_rate = (delivery['opened_count'] / delivery['delivered_count'] * 100) if delivery['delivered_count'] > 0 else 0
-            st.write(f"**{engagement_rate:.1f}%** engagement")
-        with col4:
-            if delivery['status'] == 'Completed':
-                st.write("Completed")
-            elif delivery['status'] == 'In Progress':
-                st.write("Active")
-            else:
-                st.write("Scheduled")
-        st.divider()
-
-def show_campaign_management():
-    st.header("Campaign Management")
-    
-    # Add new campaign
-    with st.expander("Add New Campaign"):
-        with st.form("new_campaign"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Campaign Name")
-                description = st.text_area("Description")
-                start_date = st.date_input("Start Date")
-                end_date = st.date_input("End Date")
-            with col2:
-                target_audience = st.selectbox("Target Audience", [a['name'] for a in st.session_state.target_audiences])
-                budget = st.number_input("Budget ($)", min_value=0, value=10000)
-                campaign_type = st.selectbox("Campaign Type", ["Training", "Awareness", "Compliance", "Reminder"])
-                priority = st.selectbox("Priority", ["Low", "Medium", "High", "Critical"])
-                owner = st.text_input("Campaign Owner")
-            
-            if st.form_submit_button("Add Campaign"):
-                new_campaign = {
-                    'id': f'CAM-{len(st.session_state.campaigns)+1:03d}',
-                    'name': name,
-                    'description': description,
-                    'status': 'Planning',
-                    'start_date': datetime.datetime.combine(start_date, datetime.time()),
-                    'end_date': datetime.datetime.combine(end_date, datetime.time()),
-                    'target_audience': target_audience,
-                    'budget': budget,
-                    'campaign_type': campaign_type,
-                    'priority': priority,
-                    'owner': owner
-                }
-                st.session_state.campaigns.append(new_campaign)
-                st.success("Campaign added successfully!")
-    
-    # Display campaigns
-    df = pd.DataFrame(st.session_state.campaigns)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col2:
-        type_filter = st.selectbox("Filter by Type", ["All"] + list(df['campaign_type'].unique()))
-    with col3:
-        priority_filter = st.selectbox("Filter by Priority", ["All"] + list(df['priority'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    if type_filter != "All":
-        filtered_df = filtered_df[filtered_df['campaign_type'] == type_filter]
-    if priority_filter != "All":
-        filtered_df = filtered_df[filtered_df['priority'] == priority_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-
-    st.subheader("Advance campaign")
-    for campaign in st.session_state.campaigns:
-        if campaign['status'] not in _CAMPAIGN_STATUS_ORDER or campaign['status'] == 'Completed':
-            continue
-        cols = st.columns([3, 1])
-        cols[0].write(f"{campaign['id']} — {campaign['name']} ({campaign['status']})")
-        if cols[1].button("Advance status", key=f"adv_cam_{campaign['id']}"):
-            campaign['status'] = _advance_campaign_status(campaign['status'])
+    with assets_tab:
+        st.subheader("Creative / asset library")
+        st.dataframe(assets, use_container_width=True, hide_index=True)
+        pick = st.selectbox("Asset", assets["asset_id"].tolist(), key="asset_pick")
+        ar = assets[assets["asset_id"] == pick].iloc[0]
+        st.markdown(f"#### {ar['asset_id']} · {ar['title']}")
+        st.write(f"**Campaign:** {ar['campaign_id']} · **Type:** {ar['type']} · **v{ar['version']}")
+        st.write(f"**Approval:** {ar['approval']} · **Owner:** {ar['owner']}")
+        st.write(ar["notes"])
+        if ar["approval"] != "Approved" and st.button("Submit for approval", key=f"aa_{pick}"):
+            _patch_asset(pick, approval="In review")
             st.rerun()
-    
-    # Campaign analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Campaigns by Status")
-        status_counts = df['status'].value_counts()
-        fig = px.bar(x=status_counts.index, y=status_counts.values, 
-                    title="Campaign Distribution by Status")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Budget Allocation by Type")
-        budget_by_type = df.groupby('campaign_type')['budget'].sum().reset_index()
-        fig = px.pie(values=budget_by_type['budget'], names=budget_by_type['campaign_type'], 
-                    title="Budget Allocation by Campaign Type")
-        st.plotly_chart(fig, use_container_width=True)
 
-def show_content_management():
-    st.header("Content Management")
-    
-    # Add new content
-    with st.expander("Add New Content"):
-        with st.form("new_content"):
-            col1, col2 = st.columns(2)
-            with col1:
-                campaign_id = st.selectbox("Campaign", [c['id'] for c in st.session_state.campaigns])
-                content_type = st.selectbox("Content Type", ["Video", "Quiz", "Infographic", "Webinar", "Document", "Interactive"])
-                title = st.text_input("Title")
-                description = st.text_area("Description")
-            with col2:
-                duration_minutes = st.number_input("Duration (minutes)", min_value=1, value=15)
-                file_size_mb = st.number_input("File Size (MB)", min_value=0, value=10)
-                language = st.selectbox("Language", ["English", "Spanish", "French", "German", "Other"])
-                accessibility = st.selectbox("Accessibility", ["Yes", "No", "In Progress"])
-                status = st.selectbox("Status", ["Draft", "In Review", "Published", "Archived"])
-            
-            if st.form_submit_button("Add Content"):
-                new_content = {
-                    'id': f'CONT-{len(st.session_state.campaign_content)+1:03d}',
-                    'campaign_id': campaign_id,
-                    'content_type': content_type,
-                    'title': title,
-                    'description': description,
-                    'duration_minutes': duration_minutes,
-                    'file_size_mb': file_size_mb,
-                    'language': language,
-                    'accessibility': accessibility,
-                    'status': status
-                }
-                st.session_state.campaign_content.append(new_content)
-                st.success("Content added successfully!")
-    
-    # Display content
-    df = pd.DataFrame(st.session_state.campaign_content)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        type_filter = st.selectbox("Filter by Content Type", ["All"] + list(df['content_type'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col3:
-        language_filter = st.selectbox("Filter by Language", ["All"] + list(df['language'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if type_filter != "All":
-        filtered_df = filtered_df[filtered_df['content_type'] == type_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    if language_filter != "All":
-        filtered_df = filtered_df[filtered_df['language'] == language_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Content analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Content by Type")
-        type_counts = df['content_type'].value_counts()
-        fig = px.pie(values=type_counts.values, names=type_counts.index, 
-                    title="Content Distribution by Type")
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Content Status Distribution")
-        status_counts = df['status'].value_counts()
-        fig = px.bar(x=status_counts.index, y=status_counts.values, 
-                    title="Content by Status")
-        st.plotly_chart(fig, use_container_width=True)
+    with segments_tab:
+        st.subheader("Audience segments (targeting)")
+        st.caption("Who the campaign reaches — not individual risk scores (see Training Tracker).")
+        st.dataframe(segments, use_container_width=True, hide_index=True)
 
-def show_delivery_tracking():
-    st.header("Delivery Tracking")
-    
-    # Add new delivery
-    with st.expander("Add New Delivery"):
-        with st.form("new_delivery"):
-            col1, col2 = st.columns(2)
-            with col1:
-                campaign_id = st.selectbox("Campaign", [c['id'] for c in st.session_state.campaigns])
-                content_id = st.selectbox("Content", [c['id'] for c in st.session_state.campaign_content])
-                delivery_method = st.selectbox("Delivery Method", ["Email", "LMS", "Webinar", "In-Person", "Social Media"])
-                recipient_count = st.number_input("Recipient Count", min_value=1, value=100)
-            with col2:
-                delivered_count = st.number_input("Delivered Count", min_value=0, value=95)
-                opened_count = st.number_input("Opened Count", min_value=0, value=70)
-                completed_count = st.number_input("Completed Count", min_value=0, value=65)
-                delivery_date = st.date_input("Delivery Date")
-                status = st.selectbox("Status", ["Scheduled", "In Progress", "Completed", "Failed"])
-            
-            if st.form_submit_button("Add Delivery"):
-                new_delivery = {
-                    'id': f'DEL-{len(st.session_state.campaign_deliveries)+1:03d}',
-                    'campaign_id': campaign_id,
-                    'content_id': content_id,
-                    'delivery_method': delivery_method,
-                    'recipient_count': recipient_count,
-                    'delivered_count': delivered_count,
-                    'opened_count': opened_count,
-                    'completed_count': completed_count,
-                    'delivery_date': datetime.datetime.combine(delivery_date, datetime.time()),
-                    'status': status
-                }
-                st.session_state.campaign_deliveries.append(new_delivery)
-                st.success("Delivery added successfully!")
-    
-    # Display deliveries
-    df = pd.DataFrame(st.session_state.campaign_deliveries)
-    
-    # Calculate engagement rates
-    df['engagement_rate'] = (df['opened_count'] / df['delivered_count'] * 100).fillna(0)
-    df['completion_rate'] = (df['completed_count'] / df['delivered_count'] * 100).fillna(0)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        method_filter = st.selectbox("Filter by Method", ["All"] + list(df['delivery_method'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col3:
-        date_filter = st.date_input("Filter by Date")
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if method_filter != "All":
-        filtered_df = filtered_df[filtered_df['delivery_method'] == method_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    if date_filter:
-        filtered_df = filtered_df[filtered_df['delivery_date'].dt.date == date_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Delivery analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Delivery Performance by Method")
-        method_performance = filtered_df.groupby('delivery_method').agg({
-            'engagement_rate': 'mean',
-            'completion_rate': 'mean'
-        }).reset_index()
-        
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=method_performance['delivery_method'], y=method_performance['engagement_rate'], 
-                            name='Engagement Rate'))
-        fig.add_trace(go.Bar(x=method_performance['delivery_method'], y=method_performance['completion_rate'], 
-                            name='Completion Rate'))
-        fig.update_layout(title="Performance by Delivery Method", barmode='group')
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Delivery Status Distribution")
-        status_counts = filtered_df['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="Delivery Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
+        # Reach rollup from delivered waves
+        deliv = ew[ew["status"].eq("Delivered") & ew["reach_pct"].notna()]
+        if not deliv.empty:
+            fig = px.bar(
+                deliv.groupby("campaign_id")["reach_pct"].max().reset_index(),
+                x="campaign_id",
+                y="reach_pct",
+                title="Best reach % among delivered waves (by campaign)",
+            )
+            fig.update_layout(height=300, margin=dict(l=10, r=10, t=40, b=10))
+            st.plotly_chart(fig, use_container_width=True, key="plotly_reach_bar")
 
-def show_audience_management():
-    st.header("Audience Management")
-    
-    # Add new audience
-    with st.expander("Add New Target Audience"):
-        with st.form("new_audience"):
-            col1, col2 = st.columns(2)
-            with col1:
-                name = st.text_input("Audience Name")
-                description = st.text_area("Description")
-                size = st.number_input("Audience Size", min_value=1, value=50)
-            with col2:
-                department = st.text_input("Department")
-                risk_level = st.selectbox("Risk Level", ["Low", "Medium", "High", "Critical"])
-                training_frequency = st.selectbox("Training Frequency", ["Monthly", "Quarterly", "Semi-annually", "Annually"])
-            
-            if st.form_submit_button("Add Audience"):
-                new_audience = {
-                    'id': f'AUD-{len(st.session_state.target_audiences)+1:03d}',
-                    'name': name,
-                    'description': description,
-                    'size': size,
-                    'department': department,
-                    'risk_level': risk_level,
-                    'training_frequency': training_frequency
-                }
-                st.session_state.target_audiences.append(new_audience)
-                st.success("Target audience added successfully!")
-    
-    # Display audiences
-    df = pd.DataFrame(st.session_state.target_audiences)
-    
-    # Filters
-    col1, col2 = st.columns(2)
-    with col1:
-        risk_filter = st.selectbox("Filter by Risk Level", ["All"] + list(df['risk_level'].unique()))
-    with col2:
-        frequency_filter = st.selectbox("Filter by Training Frequency", ["All"] + list(df['training_frequency'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if risk_filter != "All":
-        filtered_df = filtered_df[filtered_df['risk_level'] == risk_filter]
-    if frequency_filter != "All":
-        filtered_df = filtered_df[filtered_df['training_frequency'] == frequency_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Audience analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Audience Size by Risk Level")
-        risk_size = filtered_df.groupby('risk_level')['size'].sum().reset_index()
-        fig = px.bar(x=risk_size['risk_level'], y=risk_size['size'], 
-                    title="Total Audience Size by Risk Level",
-                    color=risk_size['risk_level'],
-                    color_discrete_map={'Critical': 'red', 'High': 'orange', 'Medium': 'yellow', 'Low': 'green'})
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Training Frequency Distribution")
-        frequency_counts = filtered_df['training_frequency'].value_counts()
-        fig = px.pie(values=frequency_counts.values, names=frequency_counts.index, 
-                    title="Audience Distribution by Training Frequency")
-        st.plotly_chart(fig, use_container_width=True)
+    with approvals_tab:
+        st.subheader("Content approvals")
+        for _, ap in approvals.sort_values("due").iterrows():
+            flag = " · DUE" if ap["due"] < _today() and ap["status"] in {"Draft", "In review"} else ""
+            with st.expander(f"{ap['appr_id']} · {ap['title']} · {ap['status']}{flag}"):
+                st.write(f"**Campaign:** {ap['campaign_id']} · **Asset:** {ap['asset_id']}")
+                st.write(f"**Reviewer:** {ap['reviewer']} · **Due:** {_fmt(ap['due'])}")
+                if ap["status"] in {"Draft", "In review"} and st.button("Approve", key=f"ap_{ap['appr_id']}"):
+                    _patch_approval(ap["appr_id"], status="Approved")
+                    _patch_asset(ap["asset_id"], approval="Approved")
+                    st.rerun()
 
-def show_metrics_analytics():
-    st.header("Metrics & Analytics")
-    
-    # Add new metric
-    with st.expander("Add New Metric"):
-        with st.form("new_metric"):
-            col1, col2 = st.columns(2)
-            with col1:
-                campaign_id = st.selectbox("Campaign", [c['id'] for c in st.session_state.campaigns])
-                metric_name = st.text_input("Metric Name")
-                value = st.number_input("Value", min_value=0.0, value=75.0)
-            with col2:
-                target = st.number_input("Target", min_value=0.0, value=80.0)
-                unit = st.text_input("Unit", value="%")
-                status = st.selectbox("Status", ["On Track", "Needs Attention", "At Risk", "Exceeding"])
-            
-            if st.form_submit_button("Add Metric"):
-                new_metric = {
-                    'campaign_id': campaign_id,
-                    'metric_name': metric_name,
-                    'value': value,
-                    'target': target,
-                    'unit': unit,
-                    'date': datetime.datetime.now(),
-                    'status': status
-                }
-                st.session_state.campaign_metrics.append(new_metric)
-                st.success("Metric added successfully!")
-    
-    # Display metrics
-    df = pd.DataFrame(st.session_state.campaign_metrics)
-    
-    # Filters
-    col1, col2 = st.columns(2)
-    with col1:
-        metric_filter = st.selectbox("Filter by Metric", ["All"] + list(df['metric_name'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if metric_filter != "All":
-        filtered_df = filtered_df[filtered_df['metric_name'] == metric_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Metrics analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Performance vs Target")
-        performance_data = filtered_df.groupby('metric_name').agg({
-            'value': 'mean',
-            'target': 'mean'
-        }).reset_index()
-        
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=performance_data['metric_name'], y=performance_data['value'], 
-                            name='Current Performance'))
-        fig.add_trace(go.Bar(x=performance_data['metric_name'], y=performance_data['target'], 
-                            name='Target'))
-        fig.update_layout(title="Performance vs Target by Metric", barmode='group')
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Metric Status Distribution")
-        status_counts = filtered_df['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="Metric Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
+        # Campaign KPIs board
+        st.markdown("**Campaign KPIs (engagement)**")
+        kshow = kpis.merge(campaigns[["campaign_id", "name"]], on="campaign_id")
+        kshow["as_of"] = kshow["as_of"].apply(_fmt)
+        st.dataframe(kshow, use_container_width=True, hide_index=True)
 
-def show_scheduling():
-    st.header("Campaign Scheduling")
-    
-    # Add new schedule
-    with st.expander("Add New Schedule"):
-        with st.form("new_schedule"):
-            col1, col2 = st.columns(2)
-            with col1:
-                campaign_id = st.selectbox("Campaign", [c['id'] for c in st.session_state.campaigns])
-                delivery_date = st.date_input("Delivery Date")
-                delivery_method = st.selectbox("Delivery Method", ["Email", "LMS", "Webinar", "In-Person", "Social Media"])
-            with col2:
-                target_audience = st.selectbox("Target Audience", [a['name'] for a in st.session_state.target_audiences])
-                content_type = st.selectbox("Content Type", ["Initial", "Reminder", "Follow-up", "Assessment"])
-                status = st.selectbox("Status", ["Scheduled", "In Progress", "Completed", "Cancelled"])
-            
-            if st.form_submit_button("Add Schedule"):
-                new_schedule = {
-                    'id': f'SCH-{len(st.session_state.campaign_schedules)+1:03d}',
-                    'campaign_id': campaign_id,
-                    'delivery_date': datetime.datetime.combine(delivery_date, datetime.time()),
-                    'delivery_method': delivery_method,
-                    'target_audience': target_audience,
-                    'content_type': content_type,
-                    'status': status
-                }
-                st.session_state.campaign_schedules.append(new_schedule)
-                st.success("Schedule added successfully!")
-    
-    # Display schedules
-    df = pd.DataFrame(st.session_state.campaign_schedules)
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        method_filter = st.selectbox("Filter by Method", ["All"] + list(df['delivery_method'].unique()))
-    with col2:
-        status_filter = st.selectbox("Filter by Status", ["All"] + list(df['status'].unique()))
-    with col3:
-        content_filter = st.selectbox("Filter by Content Type", ["All"] + list(df['content_type'].unique()))
-    
-    # Apply filters
-    filtered_df = df.copy()
-    if method_filter != "All":
-        filtered_df = filtered_df[filtered_df['delivery_method'] == method_filter]
-    if status_filter != "All":
-        filtered_df = filtered_df[filtered_df['status'] == status_filter]
-    if content_filter != "All":
-        filtered_df = filtered_df[filtered_df['content_type'] == content_filter]
-    
-    st.dataframe(filtered_df, use_container_width=True)
-    
-    # Scheduling analytics
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("Scheduled Deliveries by Method")
-        method_counts = filtered_df['delivery_method'].value_counts()
-        fig = px.bar(x=method_counts.index, y=method_counts.values, 
-                    title="Scheduled Deliveries by Method")
-        fig.update_layout(xaxis_tickangle=-45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    with col2:
-        st.subheader("Schedule Status Distribution")
-        status_counts = filtered_df['status'].value_counts()
-        fig = px.pie(values=status_counts.values, names=status_counts.index, 
-                    title="Schedule Status Distribution")
-        st.plotly_chart(fig, use_container_width=True)
+    with intake:
+        st.subheader("New campaign brief")
+        with st.form("intake_camp"):
+            c1, c2 = st.columns(2)
+            with c1:
+                name = st.text_input("Campaign name")
+                ctype = st.selectbox("Type", CAMPAIGN_TYPES)
+                theme = st.text_input("Theme")
+                owner = st.text_input("Owner")
+            with c2:
+                audience = st.text_input("Audience segment")
+                budget = st.number_input("Budget USD", 0, 100000, 0)
+                days = st.number_input("Duration (days)", 7, 365, 30)
+            objective = st.text_area("Objective")
+            if st.form_submit_button("Create campaign"):
+                if not name.strip():
+                    st.error("Name required.")
+                else:
+                    n = len(st.session_state.camp_campaigns) + 1
+                    today = _today()
+                    add = {
+                        "campaign_id": f"CMP-2026-{n:03d}",
+                        "name": name.strip(),
+                        "type": ctype,
+                        "theme": theme.strip() or "TBD",
+                        "objective": objective.strip() or "TBD",
+                        "audience_segment": audience.strip() or "TBD",
+                        "owner": owner.strip() or "Awareness",
+                        "sponsor": "CISO",
+                        "budget_usd": int(budget),
+                        "phase": "Brief",
+                        "status": "Planning",
+                        "start": today,
+                        "end": today + timedelta(days=int(days)),
+                        "success_metrics": "TBD",
+                        "risks": "",
+                        "linked_program": "",
+                        "summary": "Intake stub — build waves and assets before launch.",
+                        "brief_pack": None,
+                        "checklist": [],
+                    }
+                    _save_campaigns(
+                        pd.concat([st.session_state.camp_campaigns, pd.DataFrame([add])], ignore_index=True)
+                    )
+                    st.success(f"CMP-2026-{n:03d} created.")
+                    st.rerun()
 
-def show_reports():
-    st.header("Campaign Reports")
-    
-    # Report options
-    report_type = st.selectbox("Select Report Type", [
-        "Campaign Performance Summary",
-        "Content Effectiveness Report",
-        "Audience Engagement Report",
-        "Delivery Performance Report",
-        "Budget Utilization Report",
-        "Compliance Training Report"
-    ])
-    
-    if report_type == "Campaign Performance Summary":
-        st.subheader("Campaign Performance Summary")
-        
-        # Calculate summary metrics
-        total_campaigns = len(st.session_state.campaigns)
-        active_campaigns = len([c for c in st.session_state.campaigns if c['status'] == 'Active'])
-        completed_campaigns = len([c for c in st.session_state.campaigns if c['status'] == 'Completed'])
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("**Campaign Overview**")
-            st.write(f"• Total Campaigns: {total_campaigns}")
-            st.write(f"• Active Campaigns: {active_campaigns}")
-            st.write(f"• Completed Campaigns: {completed_campaigns}")
-            st.write(f"• Success Rate: {(completed_campaigns/total_campaigns*100):.1f}%")
-        
-        with col2:
-            st.write("**Performance Metrics**")
-            avg_engagement = np.mean([m['value'] for m in st.session_state.campaign_metrics if m['metric_name'] == 'Engagement Rate'])
-            avg_completion = np.mean([m['value'] for m in st.session_state.campaign_metrics if m['metric_name'] == 'Completion Rate'])
-            st.write(f"• Average Engagement Rate: {avg_engagement:.1f}%")
-            st.write(f"• Average Completion Rate: {avg_completion:.1f}%")
-            st.write(f"• Total Content Created: {len(st.session_state.campaign_content)}")
-            st.write(f"• Total Deliveries: {len(st.session_state.campaign_deliveries)}")
-    
-    # Export functionality
-    with st.expander("Export"):
-        export_df = pd.DataFrame(st.session_state.campaigns).copy()
-        for col in ('start_date', 'end_date'):
-            if col in export_df.columns:
-                export_df[col] = export_df[col].astype(str)
-        demo_kit.csv_download(export_df, "security_awareness_campaigns.csv", label="Download campaigns CSV")
+        st.subheader("Schedule wave")
+        with st.form("intake_wave"):
+            camp = st.selectbox("Campaign", campaigns["campaign_id"].tolist())
+            wname = st.text_input("Wave name")
+            channel = st.selectbox("Channel", CHANNELS)
+            phase = st.selectbox("Phase", PHASES)
+            seg = st.selectbox("Segment", segments["segment_id"].tolist())
+            sched = st.number_input("Days from today", -30, 90, 7)
+            if st.form_submit_button("Add wave"):
+                if not wname.strip():
+                    st.error("Wave name required.")
+                else:
+                    n = len(st.session_state.camp_waves) + 1
+                    add = {
+                        "wave_id": f"WAV-2026-{n:03d}",
+                        "campaign_id": camp,
+                        "name": wname.strip(),
+                        "channel": channel,
+                        "segment": seg,
+                        "phase": phase,
+                        "scheduled": _today() + timedelta(days=int(sched)),
+                        "status": "Planned",
+                        "owner": "Awareness",
+                        "reach_pct": None,
+                        "engage_pct": None,
+                        "notes": "",
+                    }
+                    _save_waves(pd.concat([st.session_state.camp_waves, pd.DataFrame([add])], ignore_index=True))
+                    st.success(f"WAV-2026-{n:03d} scheduled.")
+                    st.rerun()
+
+    with export:
+        st.subheader("Export")
+        out_c = ec.copy()
+        out_c["start"] = out_c["start"].apply(_fmt)
+        out_c["end"] = out_c["end"].apply(_fmt)
+        for col in ("brief_pack", "checklist"):
+            if col in out_c.columns:
+                out_c = out_c.drop(columns=[col])
+        demo_kit.csv_download(out_c, "campaigns.csv", label="Download campaigns")
+        out_w = ew.copy()
+        out_w["scheduled"] = out_w["scheduled"].apply(_fmt)
+        demo_kit.csv_download(out_w, "campaign_waves.csv", label="Download waves", key="w_csv")
+        demo_kit.csv_download(assets, "campaign_assets.csv", label="Download assets", key="a_csv")
+        demo_kit.csv_download(segments, "audience_segments.csv", label="Download segments", key="s_csv")
+        demo_kit.csv_download(kpis, "campaign_kpis.csv", label="Download KPIs", key="k_csv")
+        st.caption("Campaign comms only. Phishing sims & people-risk → Training Tracker app.")
+
 
 if __name__ == "__main__":
     main()

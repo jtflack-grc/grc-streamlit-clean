@@ -3,7 +3,7 @@
 
 Campaign ops realm (not SAT/people-risk): briefs, multi-channel waves,
 content calendar, asset library, approvals, delivery & engagement KPIs —
-the way program teams run Cybersecurity Awareness Month, themed pushes,
+the way program teams run quarterly themed pushes,
 and manager toolkits. Distinct from the Training Tracker. Synthetic only.
 """
 
@@ -30,7 +30,7 @@ st.set_page_config(
 portfolio_skin.apply(hide_sidebar=False)
 
 CAMPAIGN_TYPES = [
-    "Themed month (e.g. Cybersecurity Awareness)",
+    "Themed month (e.g. annual security awareness)",
     "Incident-driven reactive",
     "Role / department push",
     "New-hire onboarding comms",
@@ -56,7 +56,7 @@ WAVE_STATUS = ["Planned", "Scheduled", "Live", "Delivered", "Skipped", "Blocked"
 ASSET_TYPES = ["Email template", "Poster", "Intranet page", "Slide deck", "Manager script", "Video short", "FAQ", "Quiz embed"]
 APPROVAL = ["Draft", "In review", "Approved", "Changes requested", "Retired"]
 FEATURED = {"CMP-2026-001", "CMP-2026-003", "CMP-2026-005"}
-_SYNC_KEY = "_camp_seed_v2"
+_SYNC_KEY = "_camp_seed_v3"
 
 
 def _today() -> pd.Timestamp:
@@ -71,22 +71,22 @@ def _sample(seed: int):
     campaigns = [
         {
             "campaign_id": "CMP-2026-001",
-            "name": "Q4 report-first reinforcement — post-INC board commit",
-            "type": "Themed month (e.g. Cybersecurity Awareness)",
-            "theme": "Stop forwarding suspicious mail to helpdesk — use PAB / security@ before you click",
-            "objective": "Board commit after INC-2026-001/005/009 cluster: PAB reports +22% vs 12-wk SOC baseline; helpdesk 'is this phishing?' misroutes −40%; manager attestation 100% in Finance/IT/Ops; zero IR interviews citing 'didn't know how to report'",
-            "audience_segment": "All workforce (~1,820) — overweight IBM i/colo shifts, Marketing, Customer Support (lagging reporters per SOC)",
-            "owner": "Awareness · L. Torres + SOC liaison",
-            "sponsor": "CISO (board deck 2026-09-12)",
+            "name": "Q4 reporting reinforcement — after recent security incidents",
+            "type": "Incident-driven reinforcement",
+            "theme": "Stop forwarding suspicious mail to the helpdesk — use the Phish Alert Button in Outlook or email security@ before you click",
+            "objective": "Board commitment after incidents INC-2026-001, 005, and 009: increase Phish Alert Button reports by 22% versus the 12-week security-team baseline; cut helpdesk 'is this phishing?' misroutes by 40%; get manager attestation to 100% in Finance, IT, and Operations; zero incident interviews where someone says they did not know how to report",
+            "audience_segment": "All workforce (~1,820) — extra focus on IBM i / colocation site shifts, Marketing, and Customer Support (departments that report least often, per security team data)",
+            "owner": "Awareness · L. Torres + security operations liaison",
+            "sponsor": "Chief Information Security Officer (board deck 2026-09-12)",
             "budget_usd": 8400,
             "phase": "Sustain",
             "status": "Live — week 3 of 4",
             "start": today - timedelta(days=18),
             "end": today + timedelta(days=12),
-            "success_metrics": "PAB reports/wk +22% vs baseline · helpdesk misroute tickets −40% · manager attestation ≥95% (currently 78%) · colo/NOC poster install 8/8 · NOT vanity completion %",
-            "risks": "Message collision with CMP-2026-002 PayrollCo IR comms — Legal owns single HR/payroll wording. IBM i ops low email read-rate — need shift huddles not another blast. Marketing wants mascot October content — explicitly descoped.",
-            "linked_program": "INC-2026-001 (portal stuffing) · INC-2026-005 (IFS) · INC-2026-009 · PHISH-2026-003 runs parallel in Training Tracker · KRI-2026-010",
-            "summary": "Not a generic Cybersecurity Awareness Month poster program. This campaign exists because the board asked what we changed after three Sev1/2 incidents — and IR found users forwarding phish to helpdesk instead of reporting. Comms waves are incident-shaped: portal lesson week, colo shift huddles, redacted real samples, manager accountability by dept.",
+            "success_metrics": "Phish Alert Button reports per week +22% vs baseline · helpdesk misroute tickets −40% · manager attestation ≥95% (currently 78%) · colocation / network operations poster install 8/8 · not training completion percentage",
+            "risks": "Message collision with CMP-2026-002 PayrollCo incident comms — Legal owns single HR/payroll wording. IBM i operations staff rarely read email — shift huddles required, not another blast. Marketing proposed generic October mascot posters — explicitly descoped.",
+            "linked_program": "Incident INC-2026-001 (portal stuffing) · INC-2026-005 (file share) · INC-2026-009 (payroll vendor) · phishing simulation PHISH-2026-003 runs in Training Tracker · security metric KRI-2026-010",
+            "summary": "Not a generic October security poster program. The board asked what changed after three major incidents — and incident response found people forwarding phishing mail to the helpdesk instead of reporting it. Communications are shaped around those events: portal lesson week, colocation shift huddles, redacted real samples, and manager accountability by department.",
         },
         {
             "campaign_id": "CMP-2026-002",
@@ -258,14 +258,14 @@ def _sample(seed: int):
 
     # ── Content assets (creative library) ────────────────────────────
     assets = [
-        {"asset_id": "AST-C-001", "campaign_id": "CMP-2026-001", "type": "Email template", "title": "After INC-001 — report in Outlook, don't forward to helpdesk", "version": "v4", "approval": "Approved", "owner": "Awareness + Legal", "locale": "EN", "notes": "Subject A/B: '340 of you forwarded this' vs 'Report button — 10 seconds'. Legal cleared redacted screenshot."},
-        {"asset_id": "AST-C-002", "campaign_id": "CMP-2026-001", "type": "Poster", "title": "NOC/colo — PAB on mail + mobile (NorthStack)", "version": "v2", "approval": "Approved", "owner": "Facilities + IBM i Ops", "locale": "EN", "notes": "PRODBOX/NOC break areas — not generic break-room art. PO-4481."},
-        {"asset_id": "AST-C-003", "campaign_id": "CMP-2026-001", "type": "Manager script", "title": "Dept attestation — who still forwards instead of reports", "version": "v2", "approval": "Approved", "owner": "HR + SOC", "locale": "EN", "notes": "Names lagging units: Marketing 62%, Support 58%, Warehouse 71% attested. Finance/IT template."},
-        {"asset_id": "AST-C-004", "campaign_id": "CMP-2026-001", "type": "Intranet page", "title": "Report hub — PAB, security@, mobile, what happens next", "version": "v5", "approval": "Approved", "owner": "Comms + SOC", "locale": "EN", "notes": "Replaced generic CSAM hub. FAQ from real helpdesk tickets (redacted)."},
-        {"asset_id": "AST-C-014", "campaign_id": "CMP-2026-001", "type": "FAQ", "title": "Helpdesk vs security@ — when to use which", "version": "v2", "approval": "Approved", "owner": "SOC", "locale": "EN", "notes": "Deflect password resets; route phish to PAB."},
-        {"asset_id": "AST-C-015", "campaign_id": "CMP-2026-001", "type": "Slide deck", "title": "CISO town hall — INC cluster timeline (board commit)", "version": "v1", "approval": "Approved", "owner": "CISO office", "locale": "EN", "notes": "Used day −16. Sets why October is reporting, not mascots."},
-        {"asset_id": "AST-C-016", "campaign_id": "CMP-2026-001", "type": "Video short", "title": "90s PAB demo — mobile + desktop", "version": "v1", "approval": "Approved", "owner": "Awareness", "locale": "EN", "notes": "For warehouse/colo staff without daily Outlook habits."},
-        {"asset_id": "AST-C-017", "campaign_id": "CMP-2026-001", "type": "Manager script", "title": "IBM i / colo shift huddle (5 min)", "version": "v1", "approval": "Approved", "owner": "IBM i Ops", "locale": "EN", "notes": "Read-rate on email <40% in ops — mandatory shift start."},
+        {"asset_id": "AST-C-001", "campaign_id": "CMP-2026-001", "type": "Email template", "title": "After portal incident — report in Outlook, do not forward to helpdesk", "version": "v4", "approval": "Approved", "owner": "Awareness + Legal", "locale": "EN", "notes": "Subject A/B: '340 of you forwarded this' vs 'Report button — 10 seconds'. Legal cleared redacted screenshot."},
+        {"asset_id": "AST-C-002", "campaign_id": "CMP-2026-001", "type": "Poster", "title": "Colocation / network operations — Phish Alert Button on mail and mobile (NorthStack)", "version": "v2", "approval": "Approved", "owner": "Facilities + IBM i Ops", "locale": "EN", "notes": "Production system / network operations break areas — not generic break-room art. PO-4481."},
+        {"asset_id": "AST-C-003", "campaign_id": "CMP-2026-001", "type": "Manager script", "title": "Department attestation — who still forwards instead of reports", "version": "v2", "approval": "Approved", "owner": "HR + security operations", "locale": "EN", "notes": "Names lagging departments: Marketing 62%, Support 58%, Warehouse 71% attested. Finance and IT template."},
+        {"asset_id": "AST-C-004", "campaign_id": "CMP-2026-001", "type": "Intranet page", "title": "Report hub — Phish Alert Button, security@, mobile, what happens next", "version": "v5", "approval": "Approved", "owner": "Comms + security operations", "locale": "EN", "notes": "Replaced generic seasonal awareness landing page. FAQ from real helpdesk tickets (redacted)."},
+        {"asset_id": "AST-C-014", "campaign_id": "CMP-2026-001", "type": "FAQ", "title": "Helpdesk vs security@ — when to use which", "version": "v2", "approval": "Approved", "owner": "Security operations", "locale": "EN", "notes": "Deflect password resets; route phishing to the Phish Alert Button."},
+        {"asset_id": "AST-C-015", "campaign_id": "CMP-2026-001", "type": "Slide deck", "title": "Chief Information Security Officer town hall — recent incident timeline", "version": "v1", "approval": "Approved", "owner": "CISO office", "locale": "EN", "notes": "Used day −16. Explains why October communications focus on reporting, not mascot posters."},
+        {"asset_id": "AST-C-016", "campaign_id": "CMP-2026-001", "type": "Video short", "title": "90-second Phish Alert Button demo — mobile and desktop", "version": "v1", "approval": "Approved", "owner": "Awareness", "locale": "EN", "notes": "For warehouse and colocation staff who do not use Outlook daily."},
+        {"asset_id": "AST-C-017", "campaign_id": "CMP-2026-001", "type": "Manager script", "title": "IBM i / colocation site shift huddle (5 min)", "version": "v1", "approval": "Approved", "owner": "IBM i Ops", "locale": "EN", "notes": "Email read rate under 40% in operations — mandatory at shift start."},
         {"asset_id": "AST-C-005", "campaign_id": "CMP-2026-002", "type": "Email template", "title": "Payroll scam alert — single source", "version": "v2", "approval": "Approved", "owner": "HR Comms", "locale": "EN", "notes": "Legal footnote INC-2026-009"},
         {"asset_id": "AST-C-006", "campaign_id": "CMP-2026-002", "type": "FAQ", "title": "Is this HR email real?", "version": "v1", "approval": "Approved", "owner": "Awareness", "locale": "EN", "notes": "Intranet only"},
         {"asset_id": "AST-C-007", "campaign_id": "CMP-2026-003", "type": "Manager script", "title": "Dual-channel wire verify", "version": "v2", "approval": "Approved", "owner": "Finance control", "locale": "EN", "notes": "CFO intro video linked"},
@@ -279,16 +279,16 @@ def _sample(seed: int):
 
     # ── Waves / touchpoints (delivery schedule) ──────────────────────
     waves = [
-        {"wave_id": "WAV-2026-001", "campaign_id": "CMP-2026-001", "name": "CISO town hall — why reporting failed in INC-001", "channel": "Town hall / live event", "segment": "SEG-2026-001", "phase": "Teaser", "scheduled": today - timedelta(days=16), "status": "Delivered", "owner": "CISO office", "reach_pct": 68.0, "engage_pct": 54.0, "notes": "Recording on intranet · board commit read verbatim"},
-        {"wave_id": "WAV-2026-002", "campaign_id": "CMP-2026-001", "name": "Launch email — '340 forwarded to helpdesk' + PAB how-to", "channel": "Email newsletter", "segment": "SEG-2026-001", "phase": "Launch", "scheduled": today - timedelta(days=14), "status": "Delivered", "owner": "Awareness", "reach_pct": 96.0, "engage_pct": 58.0, "notes": "Open 58% · hub click 31% · subject B won (+4% open)"},
-        {"wave_id": "WAV-2026-003", "campaign_id": "CMP-2026-001", "name": "Manager attestation — lagging dept call-out", "channel": "Manager toolkit", "segment": "SEG-2026-002", "phase": "Sustain", "scheduled": today - timedelta(days=7), "status": "Live", "owner": "HR + SOC", "reach_pct": 78.0, "engage_pct": 72.0, "notes": "Marketing/Support/Warehouse below 65% — exec ping sent"},
-        {"wave_id": "WAV-2026-004", "campaign_id": "CMP-2026-001", "name": "IBM i / colo shift huddles (NorthStack)", "channel": "Table topic / huddle", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today - timedelta(days=5), "status": "Live", "owner": "IBM i Ops", "reach_pct": 62.0, "engage_pct": 88.0, "notes": "6/8 colo shifts done · PRODBOX night crew Thu"},
-        {"wave_id": "WAV-2026-005", "campaign_id": "CMP-2026-001", "name": "Teams — redacted real phish from INC-001", "channel": "Teams / Slack", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today + timedelta(days=2), "status": "Scheduled", "owner": "SOC", "reach_pct": None, "engage_pct": None, "notes": "Show actual stuffing lure · quiz poll 'report or delete?'"},
+        {"wave_id": "WAV-2026-001", "campaign_id": "CMP-2026-001", "name": "Chief Information Security Officer town hall — why reporting failed after portal incident", "channel": "Town hall / live event", "segment": "SEG-2026-001", "phase": "Teaser", "scheduled": today - timedelta(days=16), "status": "Delivered", "owner": "CISO office", "reach_pct": 68.0, "engage_pct": 54.0, "notes": "Recording on intranet · board commitment read verbatim"},
+        {"wave_id": "WAV-2026-002", "campaign_id": "CMP-2026-001", "name": "Launch email — '340 forwarded to helpdesk' plus Phish Alert Button how-to", "channel": "Email newsletter", "segment": "SEG-2026-001", "phase": "Launch", "scheduled": today - timedelta(days=14), "status": "Delivered", "owner": "Awareness", "reach_pct": 96.0, "engage_pct": 58.0, "notes": "Open 58% · hub click 31% · subject B won (+4% open)"},
+        {"wave_id": "WAV-2026-003", "campaign_id": "CMP-2026-001", "name": "Manager attestation — departments behind on reporting", "channel": "Manager toolkit", "segment": "SEG-2026-002", "phase": "Sustain", "scheduled": today - timedelta(days=7), "status": "Live", "owner": "HR + security operations", "reach_pct": 78.0, "engage_pct": 72.0, "notes": "Marketing, Support, and Warehouse below 65% — executive reminder sent"},
+        {"wave_id": "WAV-2026-004", "campaign_id": "CMP-2026-001", "name": "IBM i / colocation site shift huddles (NorthStack)", "channel": "Table topic / huddle", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today - timedelta(days=5), "status": "Live", "owner": "IBM i Ops", "reach_pct": 62.0, "engage_pct": 88.0, "notes": "6 of 8 colocation shifts done · production system night crew Thursday"},
+        {"wave_id": "WAV-2026-005", "campaign_id": "CMP-2026-001", "name": "Teams — redacted real phishing mail from portal stuffing incident", "channel": "Teams / Slack", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today + timedelta(days=2), "status": "Scheduled", "owner": "Security operations", "reach_pct": None, "engage_pct": None, "notes": "Show actual stuffing lure · poll: report or delete?"},
         {"wave_id": "WAV-2026-006", "campaign_id": "CMP-2026-001", "name": "Intranet — report vs forward decision tree", "channel": "Intranet / SharePoint", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today - timedelta(days=10), "status": "Delivered", "owner": "Comms", "reach_pct": 44.0, "engage_pct": 36.0, "notes": "Linked from helpdesk auto-reply template"},
-        {"wave_id": "WAV-2026-017", "campaign_id": "CMP-2026-001", "name": "NOC/colo posters (8 sites)", "channel": "Poster / print", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today - timedelta(days=4), "status": "Delivered", "owner": "Facilities", "reach_pct": 75.0, "engage_pct": None, "notes": "6/8 installed — remote warehouse + DR tape room pending"},
-        {"wave_id": "WAV-2026-018", "campaign_id": "CMP-2026-001", "name": "SOC office hours — bring suspicious email", "channel": "Town hall / live event", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today + timedelta(days=5), "status": "Scheduled", "owner": "SOC", "reach_pct": None, "engage_pct": None, "notes": "3×30min slots · target Support/Marketing"},
-        {"wave_id": "WAV-2026-019", "campaign_id": "CMP-2026-001", "name": "Close — board metrics email (PAB delta)", "channel": "Email newsletter", "segment": "SEG-2026-001", "phase": "Close", "scheduled": today + timedelta(days=12), "status": "Planned", "owner": "CISO + Awareness", "reach_pct": None, "engage_pct": None, "notes": "Include SOC baseline chart · what we still owe for IFS lesson"},
-        {"wave_id": "WAV-2026-020", "campaign_id": "CMP-2026-001", "name": "DESCOPED — generic October mascot / puzzle poster", "channel": "Poster / print", "segment": "SEG-2026-001", "phase": "Build", "scheduled": today - timedelta(days=25), "status": "Skipped", "owner": "Marketing", "reach_pct": None, "engage_pct": None, "notes": "Killed — CISO: 'We're not doing CSAM clipart after three incidents.'"},
+        {"wave_id": "WAV-2026-017", "campaign_id": "CMP-2026-001", "name": "Colocation / network operations posters (8 sites)", "channel": "Poster / print", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today - timedelta(days=4), "status": "Delivered", "owner": "Facilities", "reach_pct": 75.0, "engage_pct": None, "notes": "6 of 8 installed — remote warehouse and disaster-recovery tape room pending"},
+        {"wave_id": "WAV-2026-018", "campaign_id": "CMP-2026-001", "name": "Security team office hours — bring a suspicious email", "channel": "Town hall / live event", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today + timedelta(days=5), "status": "Scheduled", "owner": "Security operations", "reach_pct": None, "engage_pct": None, "notes": "Three 30-minute slots · target Support and Marketing"},
+        {"wave_id": "WAV-2026-019", "campaign_id": "CMP-2026-001", "name": "Close — board metrics email (reporting trend)", "channel": "Email newsletter", "segment": "SEG-2026-001", "phase": "Close", "scheduled": today + timedelta(days=12), "status": "Planned", "owner": "CISO + Awareness", "reach_pct": None, "engage_pct": None, "notes": "Include pre-campaign baseline chart · lessons still open from file-share incident"},
+        {"wave_id": "WAV-2026-020", "campaign_id": "CMP-2026-001", "name": "DESCOPED — generic October mascot / puzzle poster", "channel": "Poster / print", "segment": "SEG-2026-001", "phase": "Build", "scheduled": today - timedelta(days=25), "status": "Skipped", "owner": "Marketing", "reach_pct": None, "engage_pct": None, "notes": "Killed — CISO declined cartoon mascot posters; incident-specific reporting comms only"},
         {"wave_id": "WAV-2026-007", "campaign_id": "CMP-2026-002", "name": "Emergency all-hands email", "channel": "Email newsletter", "segment": "SEG-2026-001", "phase": "Launch", "scheduled": today - timedelta(days=3), "status": "Delivered", "owner": "HR Comms", "reach_pct": 99.0, "engage_pct": 74.0, "notes": "Legal approved v2"},
         {"wave_id": "WAV-2026-008", "campaign_id": "CMP-2026-002", "name": "Teams urgent post", "channel": "Teams / Slack", "segment": "SEG-2026-001", "phase": "Launch", "scheduled": today - timedelta(days=3), "status": "Delivered", "owner": "Awareness", "reach_pct": 91.0, "engage_pct": 35.0, "notes": "Pin 72h"},
         {"wave_id": "WAV-2026-009", "campaign_id": "CMP-2026-002", "name": "FAQ intranet publish", "channel": "Intranet / SharePoint", "segment": "SEG-2026-001", "phase": "Sustain", "scheduled": today - timedelta(days=2), "status": "Delivered", "owner": "Awareness", "reach_pct": 38.0, "engage_pct": 31.0, "notes": "Growing — promote in wave 10"},
@@ -311,10 +311,10 @@ def _sample(seed: int):
 
     # ── Campaign-level KPIs (engagement, not people-risk) ───────────
     kpis = [
-        {"kpi_id": "CKPI-001", "campaign_id": "CMP-2026-001", "name": "PAB reports / week vs 12-wk baseline", "value": 18.0, "target": 22.0, "unit": "% uplift", "as_of": today},
-        {"kpi_id": "CKPI-002", "campaign_id": "CMP-2026-001", "name": "Helpdesk phish misroutes (wkly avg)", "value": 41.0, "target": 40.0, "unit": "% reduction", "as_of": today},
-        {"kpi_id": "CKPI-003", "campaign_id": "CMP-2026-001", "name": "Manager attestation (all depts)", "value": 78.0, "target": 95.0, "unit": "%", "as_of": today},
-        {"kpi_id": "CKPI-007", "campaign_id": "CMP-2026-001", "name": "Colo/NOC poster sites installed", "value": 6.0, "target": 8.0, "unit": "sites", "as_of": today},
+        {"kpi_id": "CKPI-001", "campaign_id": "CMP-2026-001", "name": "Phish Alert Button reports per week vs 12-week baseline", "value": 18.0, "target": 22.0, "unit": "% uplift", "as_of": today},
+        {"kpi_id": "CKPI-002", "campaign_id": "CMP-2026-001", "name": "Helpdesk phishing misroutes (weekly average)", "value": 41.0, "target": 40.0, "unit": "% reduction", "as_of": today},
+        {"kpi_id": "CKPI-003", "campaign_id": "CMP-2026-001", "name": "Manager attestation (all departments)", "value": 78.0, "target": 95.0, "unit": "%", "as_of": today},
+        {"kpi_id": "CKPI-007", "campaign_id": "CMP-2026-001", "name": "Colocation / network operations poster sites installed", "value": 6.0, "target": 8.0, "unit": "sites", "as_of": today},
         {"kpi_id": "CKPI-008", "campaign_id": "CMP-2026-001", "name": "Ops shift huddle completion", "value": 75.0, "target": 100.0, "unit": "% shifts", "as_of": today},
         {"kpi_id": "CKPI-004", "campaign_id": "CMP-2026-002", "name": "Emergency email open", "value": 74.0, "target": 70.0, "unit": "%", "as_of": today},
         {"kpi_id": "CKPI-005", "campaign_id": "CMP-2026-003", "name": "Toolkit delivered", "value": 100.0, "target": 100.0, "unit": "%", "as_of": today},
@@ -325,30 +325,30 @@ def _sample(seed: int):
     deep = {
         "CMP-2026-001": {
             "brief": {
-                "trigger": "Board ask (2026-09-12): 'What changed after INC-001, 005, 009?' IR interviews: users forwarded phish to helpdesk, didn't know PAB, ops shifts never got email.",
-                "problem": "SOC baseline: 41 PAB reports/wk vs 127 helpdesk 'is this real?' tickets/wk. Portal stuffing (INC-001) — 340 users forwarded alerts internally instead of reporting.",
-                "board_commit": "Measurable reporting behavior change by end of Q4 — not another awareness month poster.",
+                "trigger": "Board question (2026-09-12): 'What changed after incidents INC-2026-001, 005, and 009?' Incident interviews: people forwarded phishing mail to the helpdesk, did not know the Phish Alert Button, and operations shifts never saw email.",
+                "problem": "Pre-campaign baseline: 41 Phish Alert Button reports per week versus 127 helpdesk 'is this real?' tickets per week. Portal stuffing incident — 340 people forwarded alerts internally instead of reporting.",
+                "board_commit": "Measurable reporting behavior change by end of Q4 — not another generic security awareness poster campaign.",
                 "key_messages": [
-                    "Report with PAB or security@ — never forward to helpdesk",
-                    "Helpdesk resets passwords; SOC triages threats — different jobs",
-                    "Managers attest their team knows the difference (named lagging depts)",
-                    "Colo/IBM i: shift huddle + poster — email alone fails here",
+                    "Report with the Phish Alert Button in Outlook or email security@ — never forward to helpdesk",
+                    "Helpdesk resets passwords; the security operations center triages threats — different jobs",
+                    "Managers attest their team knows the difference (named lagging departments)",
+                    "Colocation / IBM i: shift huddle + poster — email alone fails here",
                 ],
-                "baseline": "12-wk pre-campaign: PAB 41/wk · misroute tickets 127/wk · Marketing attestation 0%",
+                "baseline": "12-week pre-campaign: 41 Phish Alert reports/wk · 127 misrouted helpdesk tickets/wk · Marketing attestation 0%",
                 "lagging_units": "Marketing (62% attested) · Customer Support (58%) · Warehouse (71%) · IBM i night crew (pending)",
-                "cta": "Report suspicious mail now · managers complete attestation · ops shifts attend huddle",
-                "non_goals": "No mascot/puzzle CSAM content (WAV-2026-020 killed). Not SAT modules or phishing sim scores — see Training Tracker.",
+                "cta": "Report suspicious mail now · managers complete attestation · operations shifts attend huddle",
+                "non_goals": "No mascot or puzzle poster content (wave WAV-2026-020 killed). Not training modules or phishing simulation scores — those live in the Training Tracker app.",
             },
             "checklist": [
-                {"item": "Legal sign-off on redacted INC-001 screenshot in email", "done": True},
-                {"item": "CISO town hall delivered + recording posted", "done": True},
+                {"item": "Legal sign-off on redacted portal-incident screenshot in email", "done": True},
+                {"item": "Chief Information Security Officer town hall delivered + recording posted", "done": True},
                 {"item": "Helpdesk auto-reply links to report hub (AST-C-004)", "done": True},
-                {"item": "Manager attestation form live with dept leaderboard", "done": True},
-                {"item": "IBM i / colo shift huddles 6/8 complete", "done": False},
-                {"item": "NOC posters 6/8 sites (warehouse + DR room outstanding)", "done": False},
+                {"item": "Manager attestation form live with department leaderboard", "done": True},
+                {"item": "IBM i / colocation shift huddles 6 of 8 complete", "done": False},
+                {"item": "Network operations posters 6 of 8 sites (warehouse + disaster-recovery room outstanding)", "done": False},
                 {"item": "Coordinate wording with CMP-2026-002 PayrollCo IR comms", "done": True},
                 {"item": "Board close-out metrics draft for WAV-2026-019", "done": False},
-                {"item": "Kill generic October mascot creative (WAV-2026-020)", "done": True},
+                {"item": "Kill generic October mascot poster creative (wave WAV-2026-020)", "done": True},
             ],
             "retro": None,
         },
@@ -385,7 +385,7 @@ def _sample(seed: int):
     }
 
     narrative = [
-        {"lane": "Live now", "text": "Q4 report-first campaign (post-INC board commit) week 3 · Payroll IR comms · Finance wire push · new-hire drip."},
+        {"lane": "Live now", "text": "Q4 reporting reinforcement campaign (after recent incidents) week 3 · payroll vendor incident comms · finance wire push · new-hire drip."},
         {"lane": "Blocked", "text": "Payroll insert wave blocked by PayrollCo IR — reroute to email/Teams only."},
         {"lane": "Pipeline", "text": "Vendor admin campaign builds next week; privacy notice awaits Legal."},
         {"lane": "Not this app", "text": "Phishing sim clicks and people-risk scores live in Training Tracker — this is comms orchestration."},
@@ -548,7 +548,7 @@ def _campaign_detail(row, waves, assets, kpis, *, widget_key: str):
                 st.write(f"**Board commit:** {brief['board_commit']}")
             st.write(f"**Problem:** {brief.get('problem', '')}")
             if brief.get("baseline"):
-                st.write(f"**SOC baseline:** {brief['baseline']}")
+                st.write(f"**Pre-campaign baseline:** {brief['baseline']}")
             msgs = brief.get("key_messages", "")
             if isinstance(msgs, list):
                 for m in msgs:

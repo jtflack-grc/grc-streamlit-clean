@@ -64,7 +64,15 @@ FEATURED = {
     "RS.MA-02",
     "RC.RP-03",
 }
-_SYNC_KEY = "_csf_seed_v1"
+_SYNC_KEY = "_csf_seed_v2"
+INDUSTRY_BENCHMARK = {
+    "Technology": {"Govern": 2.8, "Identify": 3.0, "Protect": 3.2, "Detect": 2.7, "Respond": 2.9, "Recover": 2.6},
+    "Financial Services": {"Govern": 3.2, "Identify": 3.1, "Protect": 3.4, "Detect": 3.0, "Respond": 3.1, "Recover": 2.9},
+    "Healthcare": {"Govern": 2.6, "Identify": 2.8, "Protect": 3.0, "Detect": 2.5, "Respond": 2.7, "Recover": 2.5},
+    "Manufacturing": {"Govern": 2.4, "Identify": 2.6, "Protect": 2.8, "Detect": 2.3, "Respond": 2.5, "Recover": 2.4},
+    "Government": {"Govern": 2.9, "Identify": 2.9, "Protect": 3.1, "Detect": 2.6, "Respond": 2.8, "Recover": 2.7},
+    "Other": {"Govern": 2.7, "Identify": 2.8, "Protect": 3.0, "Detect": 2.6, "Respond": 2.7, "Recover": 2.6},
+}
 
 
 def _today() -> pd.Timestamp:
@@ -409,26 +417,99 @@ def _sample(seed: int):
 
     evidence_tests = pd.DataFrame(
         [
-            {"test_id": "T-CSF-001", "subcat_id": "PR.AA-03", "name": "MFA coverage — workforce", "status": "Passing", "last_run": today - timedelta(days=1), "source": "IdP integration"},
-            {"test_id": "T-CSF-002", "subcat_id": "PR.AA-05", "name": "Privileged access review ≤90d", "status": "Failing", "last_run": today - timedelta(days=2), "source": "IAM / GRC"},
-            {"test_id": "T-CSF-003", "subcat_id": "ID.AM-05", "name": "Crown-jewel CMDB match", "status": "Failing", "last_run": today - timedelta(days=3), "source": "CAASM"},
-            {"test_id": "T-CSF-004", "subcat_id": "DE.CM-01", "name": "Network sensor coverage", "status": "Passing", "last_run": today - timedelta(days=1), "source": "SIEM"},
-            {"test_id": "T-CSF-005", "subcat_id": "DE.CM-03", "name": "UEBA — ops / colo users", "status": "Not monitored", "last_run": None, "source": "UEBA"},
-            {"test_id": "T-CSF-006", "subcat_id": "RC.RP-03", "name": "Backup restore test evidence", "status": "Failing", "last_run": today - timedelta(days=7), "source": "BCP / vendor portal"},
-            {"test_id": "T-CSF-007", "subcat_id": "GV.PO-01", "name": "Policy acknowledgment current", "status": "Passing", "last_run": today - timedelta(days=4), "source": "GRC"},
-            {"test_id": "T-CSF-008", "subcat_id": "RS.MA-02", "name": "IR triage SLA ≤1h Sev2", "status": "Failing", "last_run": today - timedelta(days=5), "source": "IR ticketing"},
+            {"test_id": "T-CSF-001", "subcat_id": "PR.AA-03", "name": "MFA coverage — workforce", "status": "Passing", "last_run": today - timedelta(days=1), "source": "IdP integration", "frequency": "Daily"},
+            {"test_id": "T-CSF-002", "subcat_id": "PR.AA-05", "name": "Privileged access review ≤90d", "status": "Failing", "last_run": today - timedelta(days=2), "source": "IAM / GRC", "frequency": "Weekly"},
+            {"test_id": "T-CSF-003", "subcat_id": "ID.AM-05", "name": "Crown-jewel CMDB match", "status": "Failing", "last_run": today - timedelta(days=3), "source": "CAASM", "frequency": "Daily"},
+            {"test_id": "T-CSF-004", "subcat_id": "DE.CM-01", "name": "Network sensor coverage", "status": "Passing", "last_run": today - timedelta(days=1), "source": "SIEM", "frequency": "Continuous"},
+            {"test_id": "T-CSF-005", "subcat_id": "DE.CM-03", "name": "UEBA — ops / colo users", "status": "Not monitored", "last_run": None, "source": "UEBA", "frequency": "—"},
+            {"test_id": "T-CSF-006", "subcat_id": "RC.RP-03", "name": "Backup restore test evidence", "status": "Failing", "last_run": today - timedelta(days=7), "source": "BCP / vendor portal", "frequency": "Quarterly"},
+            {"test_id": "T-CSF-007", "subcat_id": "GV.PO-01", "name": "Policy acknowledgment current", "status": "Passing", "last_run": today - timedelta(days=4), "source": "GRC", "frequency": "Monthly"},
+            {"test_id": "T-CSF-008", "subcat_id": "RS.MA-02", "name": "IR triage SLA ≤1h Sev2", "status": "Failing", "last_run": today - timedelta(days=5), "source": "IR ticketing", "frequency": "Daily"},
+            {"test_id": "T-CSF-009", "subcat_id": "GV.RR-02", "name": "RACI published for incident reporting", "status": "Failing", "last_run": today - timedelta(days=6), "source": "GRC / Confluence", "frequency": "Quarterly"},
+            {"test_id": "T-CSF-010", "subcat_id": "PR.PS-01", "name": "Jump host config drift detection", "status": "Failing", "last_run": today - timedelta(days=2), "source": "Config mgmt", "frequency": "Daily"},
+            {"test_id": "T-CSF-011", "subcat_id": "ID.RA-01", "name": "Critical vuln SLA compliance", "status": "Passing", "last_run": today - timedelta(days=1), "source": "Vuln platform", "frequency": "Daily"},
+            {"test_id": "T-CSF-012", "subcat_id": "GV.SC-04", "name": "Tier-1 supplier inventory current", "status": "Manual only", "last_run": today - timedelta(days=20), "source": "TPRM", "frequency": "Monthly"},
         ]
     )
 
-    return sub_df, gaps_df, hist_df, tier, narrative, evidence_tests
+    crosswalk_map = {
+        "GV.RR-02": ("A.5.2", "CC1.3", "12.1"),
+        "GV.PO-01": ("A.5.1", "CC1.1", "12.1"),
+        "GV.SC-04": ("A.5.19", "CC9.2", "12.8"),
+        "ID.AM-05": ("A.5.9", "CC6.1", "2.4"),
+        "ID.RA-01": ("A.8.8", "CC7.1", "6.2"),
+        "ID.RA-07": ("A.5.29", "CC3.2", "—"),
+        "PR.AA-03": ("A.5.17", "CC6.1", "8.3"),
+        "PR.AA-05": ("A.5.15", "CC6.3", "7.1"),
+        "PR.AT-01": ("A.6.3", "CC1.4", "12.6"),
+        "PR.DS-01": ("A.8.24", "CC6.7", "3.4"),
+        "PR.PS-01": ("A.8.9", "CC8.1", "2.2"),
+        "DE.CM-01": ("A.8.16", "CC7.2", "10.6"),
+        "DE.CM-03": ("A.8.16", "CC7.2", "10.2"),
+        "RS.MA-02": ("A.5.24", "CC7.3", "12.10"),
+        "RC.RP-03": ("A.8.13", "CC7.5", "12.10"),
+    }
+    crosswalk = []
+    for row in subcats:
+        sid = row["subcat_id"]
+        iso, soc, pci = crosswalk_map.get(sid, ("—", "—", "—"))
+        reuse = "High" if iso != "—" and soc != "—" else ("Medium" if iso != "—" or soc != "—" else "Low")
+        crosswalk.append(
+            {
+                "subcat_id": sid,
+                "function": row["function"],
+                "title": row["title"][:60],
+                "iso_27001": iso,
+                "soc2_tsc": soc,
+                "pci_dss": pci,
+                "reuse_potential": reuse,
+                "evidence_shared": int(rng.integers(0, 5)) if reuse != "Low" else 0,
+            }
+        )
+    crosswalk_df = pd.DataFrame(crosswalk)
+
+    evidence_register = []
+    for i, row in enumerate(subcats):
+        if row["evidence_count"] <= 0:
+            continue
+        for j in range(min(row["evidence_count"], 3)):
+            evidence_register.append(
+                {
+                    "evidence_id": f"EVD-CSF-{i+1:03d}-{j+1}",
+                    "subcat_id": row["subcat_id"],
+                    "name": f"{row['subcat_id']} — artifact {j+1}",
+                    "type": rng.choice(["Policy", "Screenshot", "Log export", "Attestation", "Ticket"]),
+                    "status": row["evidence_status"] if j == 0 else rng.choice(EVIDENCE_STATUS),
+                    "collected": today - timedelta(days=int(rng.integers(1, 120))),
+                    "owner": row["owner"],
+                }
+            )
+    evidence_df = pd.DataFrame(evidence_register)
+
+    # Prior assessment period (Q3) for delta badges
+    prior_scores = {}
+    for row in subcats:
+        sid = row["subcat_id"]
+        prior_scores[sid] = max(0, min(5, row["current"] + int(rng.choice([-1, 0, 0, 1]))))
+
+    prior_df = pd.DataFrame([{"subcat_id": k, "prior_current": v} for k, v in prior_scores.items()])
+
+    return sub_df, gaps_df, hist_df, tier, narrative, evidence_tests, crosswalk_df, evidence_df, prior_df
 
 
-def _enrich_subcats(df: pd.DataFrame) -> pd.DataFrame:
+def _enrich_subcats(df: pd.DataFrame, prior: pd.DataFrame | None = None) -> pd.DataFrame:
     out = df.copy()
     out["at_target"] = out["current"] >= out["target"]
     out["readiness_pct"] = (out["current"] / out["target"].clip(lower=1) * 100).clip(0, 100)
     out["failing_test"] = out["test_status"] == "Failing"
     out["evidence_risk"] = out["evidence_status"].isin(["Missing", "Stale"])
+    if prior is not None and not prior.empty:
+        out = out.merge(prior, on="subcat_id", how="left")
+        out["prior_current"] = out["prior_current"].fillna(out["current"])
+        out["delta_q"] = out["current"] - out["prior_current"]
+    else:
+        out["prior_current"] = out["current"]
+        out["delta_q"] = 0
     return out
 
 
@@ -470,13 +551,16 @@ def _overall_readiness(df: pd.DataFrame, *, weighted: bool = False) -> float:
 def _sync(seed: int):
     need = st.session_state.get(_SYNC_KEY) != seed or "csf_subcats" not in st.session_state
     if need:
-        s, g, h, t, n, e = _sample(seed)
+        s, g, h, t, n, e, cw, ev, pr = _sample(seed)
         st.session_state.csf_subcats = s
         st.session_state.csf_gaps = g
         st.session_state.csf_history = h
         st.session_state.csf_tier = t
         st.session_state.csf_narrative = n
         st.session_state.csf_tests = e
+        st.session_state.csf_crosswalk = cw
+        st.session_state.csf_evidence = ev
+        st.session_state.csf_prior = pr
         st.session_state[_SYNC_KEY] = seed
     return (
         st.session_state.csf_subcats,
@@ -485,6 +569,9 @@ def _sync(seed: int):
         st.session_state.csf_tier,
         st.session_state.csf_narrative,
         st.session_state.csf_tests,
+        st.session_state.csf_crosswalk,
+        st.session_state.csf_evidence,
+        st.session_state.csf_prior,
     )
 
 
@@ -525,16 +612,79 @@ def _maturity_color(score: int) -> str:
     return palette.get(int(score), "#6b7280")
 
 
-def _heatmap(subcats: pd.DataFrame, *, key: str):
-    pivot = subcats.pivot_table(index="category", columns="function", values="current", aggfunc="mean")
+def _sort_subcats(df: pd.DataFrame) -> pd.DataFrame:
+    fn_ord = {f[0]: i for i, f in enumerate(FUNCTIONS)}
+    out = df.copy()
+    out["_fo"] = out["function"].map(fn_ord)
+    return out.sort_values(["_fo", "category", "subcat_id"]).drop(columns="_fo")
+
+
+def _heatmap_function_summary(subcats: pd.DataFrame, *, key: str):
+    """Function × metric matrix — every cell populated (no cross-function category NaNs)."""
+    fr = _function_readiness(subcats)
     fn_order = [f[0] for f in FUNCTIONS]
-    pivot = pivot.reindex(columns=[c for c in fn_order if c in pivot.columns])
-    z = pivot.values
+    fr = fr.set_index("function").reindex(fn_order)
+    metrics = [
+        ("Avg current", fr["avg_current"].tolist(), 0, 5),
+        ("Avg target", fr["avg_target"].tolist(), 0, 5),
+        ("Readiness %", fr["readiness_pct"].tolist(), 0, 100),
+        ("Below target", fr["gaps"].tolist(), 0, max(1, fr["gaps"].max())),
+    ]
+    y_labels = [m[0] for m in metrics]
+    z = np.array([m[1] for m in metrics], dtype=float)
+    text = np.array(
+        [
+            [f"{v:.1f}" if row_i < 2 else (f"{v:.0f}%" if row_i == 2 else f"{int(v)}") for v in row]
+            for row_i, row in enumerate(z)
+        ]
+    )
+    # Normalize each row to 0-1 for shared colorscale display
+    z_norm = np.zeros_like(z)
+    for i, (_, _, lo, hi) in enumerate(metrics):
+        span = max(hi - lo, 0.001)
+        z_norm[i] = (z[i] - lo) / span
+
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=z_norm,
+            x=fn_order,
+            y=y_labels,
+            text=text,
+            texttemplate="%{text}",
+            hovertemplate="%{y} · %{x}<br>Value: %{text}<extra></extra>",
+            colorscale=[
+                [0, "#7f1d1d"],
+                [0.35, "#d97706"],
+                [0.65, "#ca8a04"],
+                [1, "#059669"],
+            ],
+            zmin=0,
+            zmax=1,
+            showscale=False,
+        )
+    )
+    fig.update_layout(
+        title="Function posture summary (all cells populated)",
+        height=280,
+        margin=dict(l=10, r=10, t=40, b=10),
+        yaxis=dict(autorange="reversed"),
+    )
+    st.plotly_chart(fig, use_container_width=True, key=key)
+
+
+def _heatmap_subcategory_grid(subcats: pd.DataFrame, *, key: str):
+    """Subcategory × [Current, Target, Gap] — dense grid, no NaNs."""
+    df = _sort_subcats(subcats)
+    z = np.column_stack([df["current"].values, df["target"].values, df["gap_pts"].values])
+    text = np.where(z == z, np.round(z, 0).astype(int).astype(str), "")
     fig = go.Figure(
         data=go.Heatmap(
             z=z,
-            x=pivot.columns.tolist(),
-            y=pivot.index.tolist(),
+            x=["Current", "Target", "Gap pts"],
+            y=df["subcat_id"].tolist(),
+            text=text,
+            texttemplate="%{text}",
+            hovertemplate="%{y}<br>%{x}: %{z}<extra></extra>",
             colorscale=[
                 [0, "#7f1d1d"],
                 [0.2, "#b91c1c"],
@@ -545,21 +695,118 @@ def _heatmap(subcats: pd.DataFrame, *, key: str):
             ],
             zmin=0,
             zmax=5,
-            text=np.round(z, 1),
-            texttemplate="%{text}",
-            hovertemplate="Category %{y}<br>%{x}<br>Avg maturity: %{z:.1f}<extra></extra>",
         )
     )
     fig.update_layout(
-        title="Subcategory maturity heatmap (avg current 0–5)",
-        height=max(320, 40 * len(pivot.index)),
+        title="Subcategory maturity grid (every row = one CSF subcategory)",
+        height=max(480, 14 * len(df)),
         margin=dict(l=10, r=10, t=40, b=10),
+        yaxis=dict(tickfont=dict(size=9)),
     )
     st.plotly_chart(fig, use_container_width=True, key=key)
 
 
-def _profile_radar(subcats: pd.DataFrame, *, key: str):
+def _treemap_csf(subcats: pd.DataFrame, *, key: str, color_mode: str = "current"):
+    df = subcats.copy()
+    df["size"] = df["gap_pts"].clip(lower=1) + 1
+    color_col = "readiness_pct" if color_mode == "readiness" else "current"
+    fig = px.treemap(
+        df,
+        path=["function", "category", "subcat_id"],
+        values="size",
+        color=color_col,
+        color_continuous_scale=[
+            [0, "#7f1d1d"],
+            [0.35, "#d97706"],
+            [0.65, "#ca8a04"],
+            [1, "#059669"],
+        ],
+        range_color=[0, 5] if color_col == "current" else [0, 100],
+        title=f"CSF hierarchy treemap (color = {color_col})",
+    )
+    fig.update_layout(height=520, margin=dict(l=10, r=10, t=40, b=10))
+    st.plotly_chart(fig, use_container_width=True, key=key)
+
+
+def _sunburst_csf(subcats: pd.DataFrame, *, key: str):
+    df = subcats.copy()
+    fig = px.sunburst(
+        df,
+        path=["function", "category", "subcat_id"],
+        values="target",
+        color="current",
+        color_continuous_scale="RdYlGn",
+        range_color=[0, 5],
+        title="CSF sunburst — arc size = target maturity, color = current",
+    )
+    fig.update_layout(height=520, margin=dict(l=10, r=10, t=40, b=10))
+    st.plotly_chart(fig, use_container_width=True, key=key)
+
+
+def _sankey_gaps(gaps: pd.DataFrame, subcats: pd.DataFrame, *, key: str):
+    merged = gaps.merge(subcats[["subcat_id", "function"]], on="subcat_id", how="left")
+    labels = list(dict.fromkeys(
+        merged["function"].tolist() + merged["priority"].tolist() + merged["owner"].tolist()
+    ))
+    idx = {l: i for i, l in enumerate(labels)}
+    sources, targets, values = [], [], []
+    for _, row in merged.iterrows():
+        sources.append(idx[row["function"]])
+        targets.append(idx[row["priority"]])
+        values.append(1)
+        sources.append(idx[row["priority"]])
+        targets.append(idx[row["owner"]])
+        values.append(1)
+    fig = go.Figure(
+        data=[
+            go.Sankey(
+                node=dict(label=labels, pad=12, thickness=14),
+                link=dict(source=sources, target=targets, value=values),
+            )
+        ]
+    )
+    fig.update_layout(title="Gap flow: function → priority → owner", height=400, margin=dict(l=10, r=10, t=40, b=10))
+    st.plotly_chart(fig, use_container_width=True, key=key)
+
+
+def _gap_timeline(gaps: pd.DataFrame, *, key: str):
+    open_g = gaps[gaps["status"] != "Closed"].copy()
+    if open_g.empty:
+        st.info("No open gaps to plot.")
+        return
+    today = _today()
+    open_g["days_to_due"] = (open_g["due"] - today).dt.days
+    open_g = open_g.sort_values("days_to_due")
+    colors = {"Critical": "#ef4444", "High": "#f59e0b", "Medium": "#3b82f6", "Low": "#6b7280"}
+    fig = px.bar(
+        open_g,
+        x="days_to_due",
+        y="gap_id",
+        color="priority",
+        color_discrete_map=colors,
+        orientation="h",
+        title="Remediation roadmap — days until due (negative = overdue)",
+        hover_data=["title", "owner", "status"],
+    )
+    fig.add_vline(x=0, line_dash="dash", line_color="#38e881", annotation_text="Today")
+    fig.update_layout(height=max(300, 36 * len(open_g)), margin=dict(l=10, r=10, t=40, b=10))
+    st.plotly_chart(fig, use_container_width=True, key=key)
+
+
+def _function_pillars(fn_ready: pd.DataFrame):
+    cols = st.columns(6)
+    for col, (_, row) in zip(cols, fn_ready.iterrows()):
+        with col:
+            st.markdown(f"**{row['function']}**")
+            st.progress(min(1.0, row["readiness_pct"] / 100))
+            st.caption(f"{row['readiness_pct']:.0f}% ready · {int(row['gaps'])} gaps")
+            st.caption(f"Avg {row['avg_current']:.1f} → {row['avg_target']:.1f}")
+
+
+def _profile_radar(subcats: pd.DataFrame, *, key: str, industry: str = "Technology"):
     fr = _function_readiness(subcats)
+    bench = INDUSTRY_BENCHMARK.get(industry, INDUSTRY_BENCHMARK["Technology"])
+    bench_vals = [bench.get(fn, 2.7) for fn in fr["function"]]
     fig = go.Figure()
     fig.add_trace(
         go.Scatterpolar(
@@ -580,9 +827,19 @@ def _profile_radar(subcats: pd.DataFrame, *, key: str):
             opacity=0.35,
         )
     )
+    fig.add_trace(
+        go.Scatterpolar(
+            r=bench_vals,
+            theta=fr["function"].tolist(),
+            fill="toself",
+            name=f"{industry} peer (demo)",
+            line_color="#f59e0b",
+            opacity=0.2,
+        )
+    )
     fig.update_layout(
         polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
-        title="Current vs target profile (function average maturity)",
+        title="Current vs target vs industry peer",
         height=420,
         margin=dict(l=40, r=40, t=50, b=10),
     )
@@ -633,18 +890,23 @@ def _subcat_detail(row, *, widget_key: str):
 def main() -> None:
     portfolio_skin.page_header(
         title="NIST CSF 2.0 Maturity & Readiness",
-        lede="Framework posture workbench — subcategory maturity, implementation tier, evidence tests, gap queue, and board narrative. Vanta/Drata-style readiness view; synthetic portfolio data.",
+        lede="Framework posture workbench — subcategory maturity, implementation tier, evidence tests, cross-framework reuse, gap queue, and board narrative. Vanta/Drata-style readiness view; synthetic portfolio data.",
         kicker="NIST CSF 2.0",
     )
 
     seed = demo_kit.seed_controls()
-    subcats, gaps, history, tier, narrative, tests = _sync(seed)
-    enriched = _enrich_subcats(subcats)
+    subcats, gaps, history, tier, narrative, tests, crosswalk, evidence, prior = _sync(seed)
+    enriched = _enrich_subcats(subcats, prior)
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("Profile")
     profile_name = st.sidebar.text_input("Organization", "Acme Corp (sample)")
     assess_period = st.sidebar.selectbox("Assessment period", ["FY26 Q3", "FY26 Q4 (current)", "FY27 Q1 target"])
+    industry = st.sidebar.selectbox(
+        "Industry peer benchmark",
+        list(INDUSTRY_BENCHMARK.keys()),
+        index=0,
+    )
     view_mode = st.sidebar.radio(
         "Readiness lens",
         ["Subcategory at target", "Weighted by gap size"],
@@ -660,31 +922,22 @@ def main() -> None:
     open_gaps = int(gaps[gaps["status"].isin(["Open", "In progress", "Blocked"])].shape[0])
     failing_tests = int((tests["status"] == "Failing").sum())
     evidence_risk = int(enriched["evidence_risk"].sum())
+    improved_q = int((enriched["delta_q"] > 0).sum())
+    regressed_q = int((enriched["delta_q"] < 0).sum())
 
-    k1, k2, k3, k4, k5, k6 = st.columns(6)
-    k1.metric("Overall readiness", f"{overall}%", delta=f"{at_target}/{in_scope} at target · {view_mode.split(' ')[0].lower()}")
+    k1, k2, k3, k4, k5, k6, k7 = st.columns(7)
+    k1.metric("Overall readiness", f"{overall}%", delta=f"{at_target}/{in_scope} at target")
     k2.metric("Implementation tier", tier["overall_label"].replace("Tier ", "T"), delta=f"Target {tier['target_label'].split(' —')[0]}")
     k3.metric("Open gaps", open_gaps)
     k4.metric("Failing tests", failing_tests)
-    k5.metric("Evidence risk", evidence_risk, help="Stale or missing evidence on in-scope subcategories")
-    k6.metric("Subcategories", in_scope)
+    k5.metric("Evidence risk", evidence_risk)
+    k6.metric("QoQ improved", improved_q, delta=f"{regressed_q} regressed", delta_color="inverse")
+    k7.metric("Subcategories", in_scope)
 
     if overall < 60:
         st.error("Readiness below 60% — board narrative should lead with gaps, not green averages.")
     elif open_gaps >= 6:
         st.warning(f"{open_gaps} open CSF gaps — prioritize GAP-CSF-001/006 before claiming Tier 3.")
-
-    work, controls, gaps_tab, profile_tab, tests_tab, board_tab, export_tab = st.tabs(
-        [
-            "Workbench",
-            "Subcategories",
-            "Gap register",
-            "Profiles & trends",
-            "Evidence & tests",
-            "Board brief",
-            "Export",
-        ]
-    )
 
     fn_filter = st.sidebar.multiselect(
         "Functions",
@@ -698,8 +951,24 @@ def main() -> None:
     if gap_only:
         view = view[~view["at_target"]]
 
+    work, fmap, controls, workshop, gaps_tab, cross_tab, profile_tab, tests_tab, board_tab, export_tab = st.tabs(
+        [
+            "Workbench",
+            "Framework map",
+            "Subcategories",
+            "Workshop",
+            "Gap register",
+            "Crosswalk",
+            "Profiles & trends",
+            "Evidence & tests",
+            "Board brief",
+            "Export",
+        ]
+    )
+
     with work:
         st.subheader("CSF posture workbench")
+        _function_pillars(fn_ready)
 
         st.markdown("**Executive narrative**")
         for _, n in narrative.iterrows():
@@ -721,10 +990,17 @@ def main() -> None:
             fig.update_layout(showlegend=False, height=360, yaxis_range=[0, 105])
             st.plotly_chart(fig, use_container_width=True, key="plotly_fn_ready_work")
         with c2:
-            _profile_radar(enriched, key="plotly_radar_work")
+            _profile_radar(enriched, key="plotly_radar_work", industry=industry)
 
         st.markdown("---")
-        _heatmap(enriched, key="plotly_heat_work")
+        h1, h2 = st.columns(2)
+        with h1:
+            _heatmap_function_summary(enriched, key="plotly_heat_fn_summary")
+        with h2:
+            _sankey_gaps(gaps, enriched, key="plotly_sankey_gaps")
+
+        st.markdown("---")
+        _heatmap_subcategory_grid(enriched, key="plotly_heat_subcat_grid")
 
         st.markdown(f"**Featured subcategories ({len(FEATURED)})** — incident-shaped gaps")
         pref = ["GV.RR-02", "ID.AM-05", "PR.AA-05", "DE.CM-03", "RS.MA-02", "RC.RP-03"]
@@ -747,6 +1023,27 @@ def main() -> None:
                 st.write(f"**Remediation:** {g['remediation']}")
                 st.write(f"**Linked:** {g['linked']}")
 
+    with fmap:
+        st.subheader("Interactive framework map")
+        viz = st.segmented_control(
+            "Visualization",
+            ["Treemap", "Sunburst"],
+            default="Treemap",
+            key="csf_map_viz",
+        )
+        if viz == "Treemap":
+            color_mode = st.radio("Color by", ["current", "readiness"], horizontal=True, key="treemap_color")
+            _treemap_csf(enriched, key="plotly_treemap", color_mode=color_mode)
+        else:
+            _sunburst_csf(enriched, key="plotly_sunburst")
+
+        st.markdown("**Function reference**")
+        for name, code, desc, color in FUNCTIONS:
+            with st.expander(f"{code} · {name}"):
+                st.write(desc)
+                cats = enriched[enriched["function"] == name]["category"].unique()
+                st.write(f"Categories in scope: {', '.join(sorted(cats))}")
+
     with controls:
         st.subheader("Subcategory register")
         st.caption(
@@ -754,6 +1051,7 @@ def main() -> None:
             "Readiness = at or above target maturity (Drata control-ready analogue)."
         )
 
+        search = st.text_input("Search subcategories", placeholder="e.g. AM-05, access, backup…", key="csf_search")
         display = view[
             [
                 "subcat_id",
@@ -763,18 +1061,77 @@ def main() -> None:
                 "current",
                 "target",
                 "gap_pts",
+                "delta_q",
                 "owner",
                 "evidence_status",
                 "test_status",
                 "last_assessed",
             ]
         ].copy()
+        if search.strip():
+            q = search.strip().lower()
+            mask = display.apply(lambda r: q in " ".join(str(v).lower() for v in r), axis=1)
+            display = display[mask]
         display["last_assessed"] = display["last_assessed"].map(_fmt)
-        st.dataframe(display, use_container_width=True, hide_index=True)
+        st.dataframe(
+            display,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "current": st.column_config.ProgressColumn("Current", min_value=0, max_value=5),
+                "target": st.column_config.ProgressColumn("Target", min_value=0, max_value=5),
+                "delta_q": st.column_config.NumberColumn("QoQ Δ", format="%+d"),
+            },
+        )
 
         pick = st.selectbox("Drill into subcategory", view["subcat_id"].tolist(), key="ctrl_pick")
         row = view[view["subcat_id"] == pick].iloc[0]
         _subcat_detail(row, widget_key="ctrl")
+
+        ev_for = evidence[evidence["subcat_id"] == pick]
+        if not ev_for.empty:
+            st.markdown("**Evidence artifacts**")
+            st.dataframe(ev_for.assign(collected=ev_for["collected"].map(_fmt)), use_container_width=True, hide_index=True)
+
+    with workshop:
+        st.subheader("Assessment workshop")
+        st.caption("Bulk-edit maturity scores for the current session — like a facilitated CSF assessment workshop.")
+
+        edit_view = view[
+            ["subcat_id", "function", "title", "current", "target", "owner", "notes"]
+        ].copy()
+        edited = st.data_editor(
+            edit_view,
+            num_rows="fixed",
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "current": st.column_config.SelectboxColumn("Current", options=list(range(6)), required=True),
+                "target": st.column_config.SelectboxColumn("Target", options=list(range(1, 6)), required=True),
+                "notes": st.column_config.TextColumn("Notes", width="large"),
+            },
+            key="csf_workshop_editor",
+        )
+        if st.button("Apply workshop changes", type="primary", key="csf_apply_workshop"):
+            df = st.session_state.csf_subcats.copy()
+            for _, row in edited.iterrows():
+                loc = df.index[df["subcat_id"] == row["subcat_id"]]
+                if len(loc) == 0:
+                    continue
+                df.at[loc[0], "current"] = int(row["current"])
+                df.at[loc[0], "target"] = int(row["target"])
+                df.at[loc[0], "notes"] = row["notes"]
+                df.at[loc[0], "current_label"] = MATURITY_LABELS[int(row["current"])]
+                df.at[loc[0], "target_label"] = MATURITY_LABELS[int(row["target"])]
+                df.at[loc[0], "gap"] = int(row["current"]) < int(row["target"])
+                df.at[loc[0], "gap_pts"] = max(0, int(row["target"]) - int(row["current"]))
+            _save_subcats(df)
+            st.toast("Workshop scores applied to session", icon="✅")
+            st.rerun()
+
+        with st.expander("Maturity rubric (CMMI 0–5)"):
+            for lvl, label in MATURITY_LABELS.items():
+                st.write(f"**{lvl} — {label}**")
 
     with gaps_tab:
         st.subheader("Gap register")
@@ -795,11 +1152,37 @@ def main() -> None:
             fig2.update_layout(height=300)
             st.plotly_chart(fig2, use_container_width=True, key="plotly_gap_fn")
 
+        _gap_timeline(gaps, key="plotly_gap_timeline")
+
         st.dataframe(
             gaps.assign(due=gaps["due"].map(_fmt)),
             use_container_width=True,
             hide_index=True,
         )
+
+    with cross_tab:
+        st.subheader("Cross-framework crosswalk")
+        st.caption("Reuse evidence across CSF, ISO 27001, SOC 2, and PCI — the Vanta/Drata efficiency play.")
+
+        cw_view = crosswalk[crosswalk["subcat_id"].isin(view["subcat_id"])]
+        c1, c2, c3 = st.columns(3)
+        c1.metric("High reuse mappings", int((cw_view["reuse_potential"] == "High").sum()))
+        c2.metric("Shared evidence (demo)", int(cw_view["evidence_shared"].sum()))
+        c3.metric("Mapped subcategories", len(cw_view))
+
+        fig = px.scatter(
+            cw_view,
+            x="iso_27001",
+            y="soc2_tsc",
+            size="evidence_shared",
+            color="reuse_potential",
+            hover_data=["subcat_id", "title"],
+            title="ISO 27001 ↔ SOC 2 mapping density (bubble = shared evidence count)",
+        )
+        fig.update_layout(height=360)
+        st.plotly_chart(fig, use_container_width=True, key="plotly_crosswalk_scatter")
+
+        st.dataframe(cw_view, use_container_width=True, hide_index=True)
 
     with profile_tab:
         st.subheader("Profiles & trend")
@@ -813,7 +1196,7 @@ def main() -> None:
             dim = pd.DataFrame(tier["dimensions"])
             st.dataframe(dim, use_container_width=True, hide_index=True)
         with c2:
-            _profile_radar(enriched, key="plotly_radar_profile")
+            _profile_radar(enriched, key="plotly_radar_profile", industry=industry)
 
         st.markdown("**Quarterly readiness trend (function)**")
         fig = px.line(
@@ -827,6 +1210,21 @@ def main() -> None:
         fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True, key="plotly_hist")
 
+        st.markdown("**QoQ subcategory deltas**")
+        delta_chart = enriched[enriched["delta_q"] != 0].copy()
+        if not delta_chart.empty:
+            fig_d = px.bar(
+                delta_chart.sort_values("delta_q"),
+                x="delta_q",
+                y="subcat_id",
+                color="delta_q",
+                color_continuous_scale="RdYlGn",
+                orientation="h",
+                title="Change vs prior quarter (current maturity)",
+            )
+            fig_d.update_layout(height=max(280, 14 * len(delta_chart)))
+            st.plotly_chart(fig_d, use_container_width=True, key="plotly_delta_q")
+
         st.markdown("**Maturity level guide (CMMI-style)**")
         guide = pd.DataFrame([{"level": k, "label": v} for k, v in MATURITY_LABELS.items()])
         st.dataframe(guide, use_container_width=True, hide_index=True)
@@ -835,14 +1233,20 @@ def main() -> None:
         st.subheader("Evidence & automated tests")
         st.caption("Continuous monitoring analogue — passing/failing tests drive readiness, not self-attestation alone.")
 
-        t1, t2, t3 = st.columns(3)
+        t1, t2, t3, t4 = st.columns(4)
         t1.metric("Passing", int((tests["status"] == "Passing").sum()))
         t2.metric("Failing", failing_tests)
         t3.metric("Not monitored", int((tests["status"] == "Not monitored").sum()))
+        t4.metric("Evidence artifacts", len(evidence))
 
         show = tests.copy()
         show["last_run"] = show["last_run"].map(_fmt)
         st.dataframe(show, use_container_width=True, hide_index=True)
+
+        st.markdown("**Evidence register**")
+        ev_show = evidence.copy()
+        ev_show["collected"] = ev_show["collected"].map(_fmt)
+        st.dataframe(ev_show, use_container_width=True, hide_index=True)
 
         st.markdown("**Evidence status by function**")
         ev = (
@@ -856,13 +1260,14 @@ def main() -> None:
 
     with board_tab:
         st.subheader("Board / executive brief")
-        st.markdown(f"**Organization:** {profile_name} · **Period:** {assess_period}")
+        st.markdown(f"**Organization:** {profile_name} · **Period:** {assess_period} · **Peer:** {industry}")
 
         st.markdown("#### Headline")
         st.write(
             f"NIST CSF 2.0 readiness is **{overall}%** ({at_target} of {in_scope} in-scope subcategories at target maturity). "
             f"Organizational implementation tier: **{tier['overall_label']}** (target {tier['target_label']}). "
-            f"{open_gaps} remediation gaps open; {failing_tests} automated tests failing."
+            f"{open_gaps} remediation gaps open; {failing_tests} automated tests failing. "
+            f"QoQ: **{improved_q}** subcategories improved, **{regressed_q}** regressed."
         )
 
         st.markdown("#### Function summary")
@@ -885,12 +1290,21 @@ def main() -> None:
         with st.expander("Tier dimension detail"):
             st.dataframe(pd.DataFrame(tier["dimensions"]), use_container_width=True, hide_index=True)
 
+        with st.expander("Printable summary metrics"):
+            b1, b2, b3, b4 = st.columns(4)
+            b1.metric("Readiness", f"{overall}%")
+            b2.metric("Tier gap", f"{tier['target_tier'] - tier['overall_tier']} levels")
+            b3.metric("Critical/High gaps", int(gaps[gaps["priority"].isin(["Critical", "High"])].shape[0]))
+            b4.metric("Crosswalk high-reuse", int((crosswalk["reuse_potential"] == "High").sum()))
+
     with export_tab:
         st.subheader("Export")
         pack = enriched.assign(last_assessed=enriched["last_assessed"].map(_fmt))
         demo_kit.csv_download(pack, "csf_subcategory_register.csv", label="Download subcategory register")
         demo_kit.csv_download(gaps.assign(due=gaps["due"].map(_fmt)), "csf_gap_register.csv", label="Download gap register")
         demo_kit.csv_download(tests.assign(last_run=tests["last_run"].map(_fmt)), "csf_evidence_tests.csv", label="Download evidence tests")
+        demo_kit.csv_download(crosswalk, "csf_crosswalk.csv", label="Download cross-framework crosswalk")
+        demo_kit.csv_download(evidence.assign(collected=evidence["collected"].map(_fmt)), "csf_evidence_register.csv", label="Download evidence register")
 
         summary = pd.DataFrame(
             [
@@ -900,8 +1314,11 @@ def main() -> None:
                 {"metric": "subcategories_in_scope", "value": in_scope},
                 {"metric": "at_target", "value": at_target},
                 {"metric": "open_gaps", "value": open_gaps},
+                {"metric": "qoq_improved", "value": improved_q},
+                {"metric": "qoq_regressed", "value": regressed_q},
                 {"metric": "organization", "value": profile_name},
                 {"metric": "period", "value": assess_period},
+                {"metric": "industry_peer", "value": industry},
             ]
         )
         demo_kit.csv_download(summary, "csf_executive_summary.csv", label="Download executive summary")

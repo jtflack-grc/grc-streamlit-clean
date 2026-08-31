@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """NIST CSF 2.0 maturity & readiness workbench — club teaching toy.
 
-Vanta/Drata-style posture view: six CSF functions, subcategory maturity (CMMI 0–5),
+Posture workbench: six CSF functions, subcategory maturity (CMMI 0–5),
 implementation tier, evidence/tests, current vs target profile, gap queue, and
 board narrative. Synthetic portfolio cross-links — not a live GRC integration.
 """
@@ -890,7 +890,7 @@ def _subcat_detail(row, *, widget_key: str):
 def main() -> None:
     portfolio_skin.page_header(
         title="NIST CSF 2.0 Maturity & Readiness",
-        lede="Framework posture workbench — subcategory maturity, implementation tier, evidence tests, cross-framework reuse, gap queue, and board narrative. Vanta/Drata-style readiness view; synthetic portfolio data.",
+        lede="Framework posture workbench — subcategory maturity, implementation tier, evidence tests, cross-framework reuse, gap queue, and board narrative. Synthetic portfolio data.",
         kicker="NIST CSF 2.0",
     )
 
@@ -910,7 +910,7 @@ def main() -> None:
     view_mode = st.sidebar.radio(
         "Readiness lens",
         ["Subcategory at target", "Weighted by gap size"],
-        help="Drata-style toggle: strict at-target vs gap-weighted readiness.",
+        help="Strict at-target vs gap-weighted readiness.",
     )
     weighted = view_mode == "Weighted by gap size"
     st.sidebar.caption("Sample / mock assessment — session edits are local.")
@@ -1048,7 +1048,7 @@ def main() -> None:
         st.subheader("Subcategory register")
         st.caption(
             "CMMI-style 0–5 maturity per NIST CSF 2.0 subcategory. "
-            "Readiness = at or above target maturity (Drata control-ready analogue)."
+            "Readiness = at or above target maturity."
         )
 
         search = st.text_input("Search subcategories", placeholder="e.g. AM-05, access, backup…", key="csf_search")
@@ -1162,7 +1162,7 @@ def main() -> None:
 
     with cross_tab:
         st.subheader("Cross-framework crosswalk")
-        st.caption("Reuse evidence across CSF, ISO 27001, SOC 2, and PCI — the Vanta/Drata efficiency play.")
+        st.caption("Reuse evidence across CSF, ISO 27001, SOC 2, and PCI.")
 
         cw_view = crosswalk[crosswalk["subcat_id"].isin(view["subcat_id"])]
         c1, c2, c3 = st.columns(3)

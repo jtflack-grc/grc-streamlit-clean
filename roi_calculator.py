@@ -30,8 +30,8 @@ portfolio_skin.apply(hide_sidebar=False)
 
 HORIZON = 3
 DISCOUNT_DEFAULT = 0.10
-FEATURED = {"INV-ROI-001", "INV-ROI-002", "INV-ROI-003"}
-_SYNC_KEY = "_roi_seed_v1"
+FEATURED = {"INV-ROI-001", "INV-ROI-002", "INV-ROI-003", "INV-ROI-005"}
+_SYNC_KEY = "_roi_seed_v2"
 
 BENEFIT_CATS = [
     "Labor / productivity",
@@ -161,13 +161,17 @@ def _sample(seed: int):
             "init_id": "INV-ROI-001",
             "name": "Integrated GRC platform (TEI composite)",
             "sponsor": "CISO · CFO co-sponsor",
+            "owner": "GRC Director · L. Torres",
             "status": "Board review — Q4",
+            "next_gate": "Board capital committee 2026-10-15",
+            "budget_request_y1": 815_000,
+            "capex_pct": 55,
             "horizon_years": 3,
             "discount_rate": 0.10,
-            "summary": "Replace spreadsheet GRC + consultant-heavy audit prep with integrated controls, evidence, and workflow — ServiceNow TEI pattern.",
-            "linked": "CSF GAP-CSF-001 · Control Tracker · KRI-2026-012",
-            "so_what": "Audit prep still costs ~2,400 hours/year; board wants one source of truth after INC cluster.",
-            "decision": "Fund Y1 implementation",
+            "summary": "Replace spreadsheet GRC + consultant-heavy audit prep with integrated controls, evidence, and workflow.",
+            "linked": "CSF GAP-CSF-001 · Control Tracker · KRI-2026-012 · AST-2026-005",
+            "so_what": "Audit prep still ~2,400 hours/year ($204K blended labor); three auditors flagged evidence gaps on IBM i and JD Edwards scopes last cycle.",
+            "decision": "Fund Y1 implementation — CFO wants phased benefit recognition",
             "benefits": [
                 {"category": "Labor / productivity", "y1": 180_000, "y2": 320_000, "y3": 380_000, "driver": "70% test automation; attestation workflow"},
                 {"category": "Audit & attestation efficiency", "y1": 90_000, "y2": 140_000, "y3": 155_000, "driver": "Evidence reuse SOC2+ISO; −45% external audit prep"},
@@ -198,13 +202,17 @@ def _sample(seed: int):
             "init_id": "INV-ROI-002",
             "name": "Crown-jewel coverage & CAASM program",
             "sponsor": "CISO",
+            "owner": "CAASM lead · D. Okonkwo",
             "status": "Approved — in flight",
+            "next_gate": "Coverage attestation to board 2026-09-28",
+            "budget_request_y1": 360_000,
+            "capex_pct": 40,
             "horizon_years": 3,
             "discount_rate": 0.12,
             "summary": "Close GAP-2026-001 after portal stuffing — EDR+SIEM+backup on 100% crown jewels, not vanity agent counts.",
-            "linked": "GAP-2026-001 · KRI-2026-001 · INC-2026-001 · AST-2026-005",
-            "so_what": "KRI-2026-001 off target; board slide shows 14% crown jewels with telemetry gaps.",
-            "decision": "Remediate now",
+            "linked": "GAP-2026-001 · KRI-2026-001 · INC-2026-001 · AST-2026-005 · JUMP-DMZ-03",
+            "so_what": "KRI-2026-001 at 86% vs 98% target; 14% crown jewels missing SIEM+backup combo — includes PayrollCo-adjacent payroll LPAR.",
+            "decision": "Remediate now — no defer past Q4 board",
             "benefits": [
                 {"category": "Breach loss avoided (ALE reduction)", "y1": 280_000, "y2": 420_000, "y3": 450_000, "driver": "ALE ↓ from $1.1M → $0.55M (modeled)"},
                 {"category": "Labor / productivity", "y1": 40_000, "y2": 85_000, "y3": 95_000, "driver": "CAASM replaces manual CMDB reconciliations"},
@@ -230,13 +238,17 @@ def _sample(seed: int):
             "init_id": "INV-ROI-003",
             "name": "TPRM uplift — PayrollCo & Tier-1 suppliers",
             "sponsor": "CISO + Procurement",
+            "owner": "TPRM · S. Nguyen",
             "status": "CFO challenge — need ROSI",
+            "next_gate": "CFO 1:1 review 2026-09-12",
+            "budget_request_y1": 250_000,
+            "capex_pct": 25,
             "horizon_years": 3,
             "discount_rate": 0.10,
-            "summary": "Continuous monitoring + tiering after INC-2026-009 — Citalid-style ALE reduction narrative for CFO.",
-            "linked": "INC-2026-009 · CMP-2026-004 · GAP-CSF-006",
-            "so_what": "Processor backup attestation expired mid-IR; Orbit AMS onboarding without tier refresh.",
-            "decision": "Approve if ROSI > 150%",
+            "summary": "Continuous monitoring + tiering after INC-2026-009 — ALE reduction narrative for CFO.",
+            "linked": "INC-2026-009 · CMP-2026-004 · GAP-CSF-006 · DST-2026-001",
+            "so_what": "Processor backup attestation expired mid-IR; Orbit AMS onboarded without tier refresh — Legal wants contract language before continuous monitoring.",
+            "decision": "Approve if ROSI > 150% and Y1 benefits ≤ 40% of total",
             "benefits": [
                 {"category": "Vendor / incident cost avoidance", "y1": 150_000, "y2": 320_000, "y3": 380_000, "driver": "Processor incident frequency ↓; faster attestations"},
                 {"category": "Breach loss avoided (ALE reduction)", "y1": 200_000, "y2": 350_000, "y3": 400_000, "driver": "ALE €6.2M → €2.4M pattern (scaled)"},
@@ -262,12 +274,16 @@ def _sample(seed: int):
             "init_id": "INV-ROI-004",
             "name": "SOC 2 Type II acceleration",
             "sponsor": "CRO + CISO",
+            "owner": "GRC · audit lead",
             "status": "Pipeline enablement",
+            "next_gate": "RevOps pipeline review 2026-09-20",
+            "budget_request_y1": 245_000,
+            "capex_pct": 15,
             "horizon_years": 3,
             "discount_rate": 0.10,
             "summary": "Compress audit cycle; reduce questionnaire drag for enterprise deals.",
             "linked": "Control Testing · Privacy PB-2026-002",
-            "so_what": "Two enterprise deals stalled on security review in Q3.",
+            "so_what": "Deals AcmeCorp ($1.2M ARR) and NorthStack ($800K) stalled on security review — questionnaire backlog 23 days avg.",
             "decision": "Monitor",
             "benefits": [
                 {"category": "Deal velocity & revenue enablement", "y1": 250_000, "y2": 400_000, "y3": 420_000},
@@ -287,12 +303,16 @@ def _sample(seed: int):
             "init_id": "INV-ROI-005",
             "name": "Human-risk / phishing reporting program",
             "sponsor": "CISO",
+            "owner": "Awareness · L. Torres",
             "status": "Funded via CMP-2026-001",
+            "next_gate": "Board metrics close-out WAV-2026-019",
+            "budget_request_y1": 95_000,
+            "capex_pct": 5,
             "horizon_years": 3,
             "discount_rate": 0.10,
             "summary": "Incident-driven reporting reinforcement — reduce helpdesk misroutes and stuffing repeat.",
             "linked": "CMP-2026-001 · INC-2026-001 · PHISH-2026-003",
-            "so_what": "340 users forwarded phishing to helpdesk; SOC MTTD pulled by KRI-2026-002.",
+            "so_what": "340 users forwarded portal-stuffing mail to helpdesk; KRI-2026-002 MTTD 18.4h vs 8h target — helpdesk flood not in IR playbook.",
             "decision": "Continue sustain phase",
             "benefits": [
                 {"category": "Breach loss avoided (ALE reduction)", "y1": 120_000, "y2": 180_000, "y3": 200_000},
@@ -330,23 +350,150 @@ def _sample(seed: int):
     narrative = pd.DataFrame(
         [
             {
+                "lane": "FY26 envelope",
+                "text": "Security program cap $4.2M OPEX (+$600K board exception). Five initiatives below compete — CFO will not fund all Y1 asks ($1.77M combined).",
+            },
+            {
                 "lane": "CFO framing",
-                "text": "Stop arguing ROI % in a vacuum — show 3-year NPV, payback months, and ALE before/after for risk investments.",
+                "text": "NPV alone is insufficient — show payback months, phased benefits, and ALE before/after. Revenue benefits need RevOps sign-off (INV-ROI-004).",
             },
             {
                 "lane": "Portfolio context",
-                "text": "Featured cases tie to INC-2026-001/009, GAP-2026-001, KRI-2026-001 — not generic 'SOC 2 = good'.",
+                "text": "Numbers trace to INC-2026-001/009, GAP-2026-001, KRI-2026-001/002 — crown-jewel and TPRM cases are incident-shaped, not template SOC 2 math.",
             },
             {
                 "lane": "What wins funding",
-                "text": "Crown-jewel coverage and TPRM uplift have the strongest ROSI; GRC platform is positive NPV but back-loaded.",
+                "text": "INV-ROI-002 approved (board mandate). INV-ROI-003 blocked on Legal + benefit timing. INV-ROI-001 waits on IBM i evidence connector quote.",
             },
             {
                 "lane": "Sensitivity",
-                "text": "Models fall apart if you assume 100% benefit realization in Y1 — stress-test adoption lag.",
+                "text": "Models break if Y1 realizes 100% of labor savings — GRC adoption historically 18-month curve here.",
             },
         ]
     )
+
+    assumptions = pd.DataFrame(
+        [
+            {"assumption_id": "ASM-001", "init_id": "INV-ROI-001", "topic": "Audit labor baseline", "value": "2,400 hrs × $85 blended", "confidence": "High", "source": "GRC time study Aug 2026", "owner": "Internal Audit liaison"},
+            {"assumption_id": "ASM-002", "init_id": "INV-ROI-001", "topic": "Test automation Y1", "value": "35% (not 70%)", "confidence": "Medium", "source": "Vendor SOW draft", "owner": "GRC Director"},
+            {"assumption_id": "ASM-003", "init_id": "INV-ROI-001", "topic": "Revenue benefit", "value": "$0 Y1 — deferred Y2+", "confidence": "Medium", "source": "CFO edict", "owner": "CFO office"},
+            {"assumption_id": "ASM-004", "init_id": "INV-ROI-002", "topic": "Crown-jewel count", "value": "42 assets (CMDB disputed)", "confidence": "Low", "source": "GAP-2026-001 workshop", "owner": "CAASM"},
+            {"assumption_id": "ASM-005", "init_id": "INV-ROI-002", "topic": "ALE reduction", "value": "50% by Y3", "confidence": "Medium", "source": "FAIR workshop", "owner": "Risk"},
+            {"assumption_id": "ASM-006", "init_id": "INV-ROI-003", "topic": "PayrollCo in scope", "value": "Phase 2 only (post-IR)", "confidence": "High", "source": "Legal / IR", "owner": "TPRM"},
+            {"assumption_id": "ASM-007", "init_id": "INV-ROI-003", "topic": "ROSI hurdle", "value": ">150%", "confidence": "High", "source": "CFO email 2026-08-22", "owner": "CFO"},
+            {"assumption_id": "ASM-008", "init_id": "INV-ROI-004", "topic": "Deal pull-forward", "value": "AcmeCorp + NorthStack only", "confidence": "Medium", "source": "RevOps", "owner": "CRO office"},
+            {"assumption_id": "ASM-009", "init_id": "INV-ROI-005", "topic": "Helpdesk misroute reduction", "value": "40% by Y2", "confidence": "Medium", "source": "CMP-2026-001 KPI CKPI-002", "owner": "Awareness"},
+            {"assumption_id": "ASM-010", "init_id": "INV-ROI-005", "topic": "ALE tie to phishing", "value": "Credential → portal path", "confidence": "Medium", "source": "INC-2026-001 lesson learned", "owner": "IR Lead"},
+        ]
+    )
+
+    fte_models = pd.DataFrame(
+        [
+            {"init_id": "INV-ROI-001", "role": "GRC analysts", "hours_yr": 1200, "rate": 85, "automation_pct_y3": 70, "notes": "Control testing + evidence"},
+            {"init_id": "INV-ROI-001", "role": "IT control owners", "hours_yr": 800, "rate": 95, "automation_pct_y3": 45, "notes": "Attestation chase"},
+            {"init_id": "INV-ROI-001", "role": "External audit support", "hours_yr": 400, "rate": 220, "automation_pct_y3": 50, "notes": "PBC preparation"},
+            {"init_id": "INV-ROI-002", "role": "CAASM / asset analysts", "hours_yr": 520, "rate": 90, "automation_pct_y3": 80, "notes": "Manual reconciliations today"},
+            {"init_id": "INV-ROI-002", "role": "SOC enrichment", "hours_yr": 180, "rate": 105, "automation_pct_y3": 30, "notes": "Crown-jewel alert tuning"},
+            {"init_id": "INV-ROI-003", "role": "TPRM analysts", "hours_yr": 960, "rate": 88, "automation_pct_y3": 55, "notes": "Questionnaires + tiering"},
+            {"init_id": "INV-ROI-003", "role": "Procurement legal review", "hours_yr": 120, "rate": 175, "automation_pct_y3": 20, "notes": "Contract clause fights"},
+            {"init_id": "INV-ROI-005", "role": "Helpdesk L1", "hours_yr": 640, "rate": 42, "automation_pct_y3": 35, "notes": "'Is this phishing?' tickets"},
+            {"init_id": "INV-ROI-005", "role": "SOC triage", "hours_yr": 220, "rate": 105, "automation_pct_y3": 25, "notes": "Misrouted forwards"},
+        ]
+    )
+    fte_models["labor_baseline"] = fte_models["hours_yr"] * fte_models["rate"]
+
+    cfo_log = pd.DataFrame(
+        [
+            {"date": today - timedelta(days=18), "init_id": "INV-ROI-001", "question": "Why $420K implementation in Y1 when we already pay for a GRC license?", "response": "License is read-only archive — workflow + IBM i connector is net-new SOW", "status": "Open"},
+            {"date": today - timedelta(days=14), "init_id": "INV-ROI-003", "question": "Show me ROSI, not NPV — processor risk is the board story", "response": "ALE $1.55M → $605K modeled; ROSI 187% at 61% effectiveness", "status": "In review"},
+            {"date": today - timedelta(days=9), "init_id": "INV-ROI-004", "question": "RevOps won't sign $250K Y1 revenue benefit without closed-won proof", "response": "Scenario uses pipeline stage 4 only — sensitivity tab", "status": "Blocked"},
+            {"date": today - timedelta(days=5), "init_id": "INV-ROI-002", "question": "Can we defer JUMP-DMZ-03 SIEM to Q1?", "response": "No — on KRI-2026-001 slide for Sept board", "status": "Closed"},
+            {"date": today - timedelta(days=2), "init_id": "INV-ROI-005", "question": "Isn't this duplicate of campaign spend?", "response": "Campaign is comms; this line is SAT platform + helpdesk workflow", "status": "Closed"},
+        ]
+    )
+
+    funding_gates = pd.DataFrame(
+        [
+            {"gate_id": "GATE-01", "init_id": "INV-ROI-001", "name": "IBM i evidence connector POC", "due": today + timedelta(days=21), "status": "In progress", "blocker": "JD Edwards CNC read-only API pending"},
+            {"gate_id": "GATE-02", "init_id": "INV-ROI-001", "name": "Board capital committee", "due": today + timedelta(days=45), "status": "Scheduled", "blocker": "—"},
+            {"gate_id": "GATE-03", "init_id": "INV-ROI-002", "name": "Crown-jewel CMDB reconcile", "due": today + timedelta(days=14), "status": "At risk", "blocker": "GAP-2026-001 owner dispute"},
+            {"gate_id": "GATE-04", "init_id": "INV-ROI-002", "name": "SIEM on JUMP-DMZ-03", "due": today + timedelta(days=10), "status": "In progress", "blocker": "Change freeze exception filed"},
+            {"gate_id": "GATE-05", "init_id": "INV-ROI-003", "name": "Legal — continuous monitoring clause", "due": today + timedelta(days=28), "status": "Blocked", "blocker": "PayrollCo IR"},
+            {"gate_id": "GATE-06", "init_id": "INV-ROI-003", "name": "CFO ROSI sign-off", "due": today + timedelta(days=12), "status": "Scheduled", "blocker": "—"},
+            {"gate_id": "GATE-07", "init_id": "INV-ROI-005", "name": "Board close-out metrics", "due": today + timedelta(days=12), "status": "Planned", "blocker": "WAV-2026-019 draft"},
+        ]
+    )
+
+    actuals = []
+    for inv in initiatives:
+        iid = inv["init_id"]
+        plan_y1_cost = sum(c["y1"] for c in inv["costs"])
+        plan_y1_ben = sum(b["y1"] for b in inv["benefits"])
+        for mo in range(1, 9):
+            pct = mo / 12
+            noise = float(rng.uniform(0.85, 1.15))
+            actuals.append(
+                {
+                    "init_id": iid,
+                    "month": today.replace(day=1) - timedelta(days=30 * (8 - mo)),
+                    "plan_cost_mtd": plan_y1_cost / 12,
+                    "actual_cost_mtd": (plan_y1_cost / 12) * pct * noise * (1.12 if iid == "INV-ROI-002" else 1.0),
+                    "plan_benefit_mtd": plan_y1_ben / 12,
+                    "actual_benefit_mtd": (plan_y1_ben / 12) * max(0, pct - 0.15) * noise,
+                }
+            )
+    actuals_df = pd.DataFrame(actuals)
+
+    deep = {
+        "INV-ROI-001": {
+            "memo": "Board asked for single GRC source of truth after INC cluster. Finance will not count revenue benefits until RevOps attributes a win — model already reflects $0 Y1.",
+            "counterfactual": "Status quo: 2,400 audit hours, 3 parallel spreadsheet registers, $180K/yr consultants for SOC 2 + ISO evidence alone.",
+            "milestones": [
+                {"when": "2026-10", "what": "IBM i / JDE connector POC complete"},
+                {"when": "2026-11", "what": "Control library migrated (wave 1 — ITGC)"},
+                {"when": "2027-03", "what": "First audit cycle on automated evidence"},
+            ],
+            "deferred": "De-scoped: HR onboarding workflow — belongs in HRIS module, not this SOW.",
+        },
+        "INV-ROI-002": {
+            "memo": "This is the board-mandated line item — not negotiable for Sept packet. PayrollCo assets stay out of phase 1 per Legal.",
+            "counterfactual": "Without program: KRI-2026-001 stays red; cyber insurance renewal cites 'immature CAASM' — modeled $60K premium at risk.",
+            "milestones": [
+                {"when": "2026-09", "what": "JUMP-DMZ-03 SIEM + backup verify"},
+                {"when": "2026-10", "what": "CMDB ↔ crown-jewel reconcile sign-off"},
+                {"when": "2026-12", "what": "Broker re-rate submission"},
+            ],
+            "deferred": "Remote warehouse tape room — Facilities PO-4481 slip 3 weeks.",
+        },
+        "INV-ROI-003": {
+            "memo": "CFO wants ROSI > 150%. Strong on paper (187% at base) but Y1 benefits are thin until PayrollCo assessments resume.",
+            "counterfactual": "Orbit AMS onboarded with spreadsheet tiering — audit finding likely on supplier criticality.",
+            "milestones": [
+                {"when": "2026-09", "what": "CFO review with FAIR deck"},
+                {"when": "2026-10", "what": "Tier-1 monitoring live (ex-PayrollCo)"},
+                {"when": "2027-01", "what": "PayrollCo phase 2 if IR lifted"},
+            ],
+            "deferred": "Continuous monitoring clause — Legal redline with PayrollCo counsel.",
+        },
+        "INV-ROI-005": {
+            "memo": "Funded through campaign CMP-2026-001 — separate ROI case proves helpdesk/SOC hour savings beyond comms spend.",
+            "counterfactual": "340-forward incident repeats without workflow change — modeled $120K Y1 ALE component.",
+            "milestones": [
+                {"when": "2026-09", "what": "Helpdesk auto-reply → report hub"},
+                {"when": "2026-10", "what": "IR playbook add mass-forward scenario"},
+            ],
+            "deferred": "None — sustain phase active.",
+        },
+    }
+
+    budget_envelope = {
+        "fy": "FY26",
+        "opex_cap": 4_200_000,
+        "exception": 600_000,
+        "committed": 1_150_000,
+        "requested_y1": sum(i.get("budget_request_y1", 0) for i in initiatives),
+        "owner": "CFO · CISO joint",
+    }
 
     # Benchmark TEI composites (public study ranges, demo labels only)
     benchmarks = pd.DataFrame(
@@ -357,7 +504,7 @@ def _sample(seed: int):
         ]
     )
 
-    return init_df, benefits_df, costs_df, narrative, benchmarks
+    return init_df, benefits_df, costs_df, narrative, benchmarks, assumptions, fte_models, cfo_log, funding_gates, actuals_df, deep, budget_envelope
 
 
 def _initiative_detail(init: dict, benefits: pd.DataFrame, costs: pd.DataFrame) -> dict:
@@ -379,12 +526,19 @@ def _initiative_detail(init: dict, benefits: pd.DataFrame, costs: pd.DataFrame) 
 def _sync(seed: int):
     need = st.session_state.get(_SYNC_KEY) != seed or "roi_initiatives" not in st.session_state
     if need:
-        i, b, c, n, bench = _sample(seed)
+        i, b, c, n, bench, asm, fte, cfo, gates, act, deep, env = _sample(seed)
         st.session_state.roi_initiatives = i
         st.session_state.roi_benefits = b
         st.session_state.roi_costs = c
         st.session_state.roi_narrative = n
         st.session_state.roi_benchmarks = bench
+        st.session_state.roi_assumptions = asm
+        st.session_state.roi_fte = fte
+        st.session_state.roi_cfo_log = cfo
+        st.session_state.roi_gates = gates
+        st.session_state.roi_actuals = act
+        st.session_state.roi_deep = deep
+        st.session_state.roi_envelope = env
         st.session_state.roi_active = "INV-ROI-001"
         st.session_state[_SYNC_KEY] = seed
     return (
@@ -393,6 +547,13 @@ def _sync(seed: int):
         st.session_state.roi_costs,
         st.session_state.roi_narrative,
         st.session_state.roi_benchmarks,
+        st.session_state.roi_assumptions,
+        st.session_state.roi_fte,
+        st.session_state.roi_cfo_log,
+        st.session_state.roi_gates,
+        st.session_state.roi_actuals,
+        st.session_state.roi_deep,
+        st.session_state.roi_envelope,
     )
 
 
@@ -447,7 +608,61 @@ def _cashflow_chart(tei: dict, *, key: str):
 
 
 
-def _initiative_panel(init: dict, benefits: pd.DataFrame, costs: pd.DataFrame, *, widget_key: str):
+def _fmt_date(ts) -> str:
+    if ts is None:
+        return "—"
+    try:
+        return pd.Timestamp(ts).strftime("%Y-%m-%d")
+    except (ValueError, TypeError):
+        return "—"
+
+
+def _initiative_deep(init_id: str, deep: dict, assumptions: pd.DataFrame, fte: pd.DataFrame, gates: pd.DataFrame, actuals: pd.DataFrame, *, widget_key: str):
+    if init_id not in deep:
+        return
+    pack = deep[init_id]
+    st.markdown("**Program memo**")
+    st.write(pack.get("memo", ""))
+    st.write(f"**Without investment:** {pack.get('counterfactual', '')}")
+    if pack.get("deferred"):
+        st.caption(f"Deferred / descoped: {pack['deferred']}")
+
+    m1, m2 = st.columns(2)
+    with m1:
+        st.markdown("**Milestones**")
+        for m in pack.get("milestones", []):
+            st.write(f"- **{m['when']}** — {m['what']}")
+    with m2:
+        g = gates[gates["init_id"] == init_id]
+        if not g.empty:
+            st.markdown("**Funding gates**")
+            st.dataframe(g.assign(due=g["due"].map(_fmt_date)), use_container_width=True, hide_index=True)
+
+    asm = assumptions[assumptions["init_id"] == init_id]
+    if not asm.empty:
+        st.markdown("**Assumption register**")
+        st.dataframe(asm, use_container_width=True, hide_index=True)
+
+    ft = fte[fte["init_id"] == init_id]
+    if not ft.empty:
+        st.markdown("**FTE / labor model (benefit justification)**")
+        show = ft.copy()
+        show["labor_baseline"] = show["labor_baseline"].map(lambda x: f"${x:,.0f}")
+        st.dataframe(show, use_container_width=True, hide_index=True)
+
+    act = actuals[actuals["init_id"] == init_id].copy()
+    if not act.empty:
+        act["month"] = pd.to_datetime(act["month"])
+        act["cum_plan_cost"] = act["plan_cost_mtd"].cumsum()
+        act["cum_actual_cost"] = act["actual_cost_mtd"].cumsum()
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=act["month"], y=act["cum_plan_cost"], name="Plan cost (YTD)", line=dict(dash="dash")))
+        fig.add_trace(go.Scatter(x=act["month"], y=act["cum_actual_cost"], name="Actual cost (YTD)"))
+        fig.update_layout(title="YTD spend vs plan (synthetic actuals)", height=280)
+        st.plotly_chart(fig, use_container_width=True, key=f"plotly_actuals_{widget_key}")
+
+
+def _initiative_panel(init: dict, benefits: pd.DataFrame, costs: pd.DataFrame, *, widget_key: str, deep: dict | None = None, assumptions: pd.DataFrame | None = None, fte: pd.DataFrame | None = None, gates: pd.DataFrame | None = None, actuals: pd.DataFrame | None = None):
     detail = _initiative_detail(init, benefits, costs)
     tei = detail["tei"]
     fair = detail["fair"]
@@ -473,7 +688,9 @@ def _initiative_panel(init: dict, benefits: pd.DataFrame, costs: pd.DataFrame, *
         f4.metric("Loss avoided / yr", _fmt_money(fair["loss_avoided"]))
 
     c1, c2 = st.columns(2)
-    c1.write(f"**Sponsor:** {init['sponsor']} · **Status:** {init['status']}")
+    c1.write(f"**Sponsor:** {init['sponsor']} · **Owner:** {init.get('owner', '—')}")
+    c1.write(f"**Status:** {init['status']} · **Next gate:** {init.get('next_gate', '—')}")
+    c1.write(f"**Y1 ask:** {_fmt_money(init.get('budget_request_y1', 0))} · **CapEx mix:** {init.get('capex_pct', '—')}%")
     c1.write(f"**Linked:** {init['linked']}")
     c1.write(f"**So what:** {init['so_what']}")
     c2.write(f"**Decision:** {init['decision']}")
@@ -496,8 +713,20 @@ def _initiative_panel(init: dict, benefits: pd.DataFrame, costs: pd.DataFrame, *
         with st.expander("FAIR / ROSI assumptions", expanded=False):
             st.write(f"**Scenario:** {fair.get('scenario', '')}")
             st.write(
-                f"SLE = asset × exposure; ALE = SLE × ARO; control effectiveness reduces ALE; "
-                f"ROSI = (loss avoided − annual cost) / annual cost."
+                "SLE = asset × exposure; ALE = SLE × ARO; control effectiveness reduces ALE; "
+                "ROSI = (loss avoided − annual cost) / annual cost."
+            )
+
+    if deep and init["init_id"] in deep:
+        with st.expander("Program detail — memo, gates, FTE model", expanded=init["init_id"] in FEATURED):
+            _initiative_deep(
+                init["init_id"],
+                deep,
+                assumptions if assumptions is not None else pd.DataFrame(),
+                fte if fte is not None else pd.DataFrame(),
+                gates if gates is not None else pd.DataFrame(),
+                actuals if actuals is not None else pd.DataFrame(),
+                widget_key=f"deep_{widget_key}",
             )
 
 
@@ -542,7 +771,20 @@ def main() -> None:
     )
 
     seed = demo_kit.seed_controls()
-    initiatives, benefits, costs, narrative, benchmarks = _sync(seed)
+    (
+        initiatives,
+        benefits,
+        costs,
+        narrative,
+        benchmarks,
+        assumptions,
+        fte_models,
+        cfo_log,
+        funding_gates,
+        actuals,
+        deep,
+        envelope,
+    ) = _sync(seed)
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("Model settings")
@@ -577,32 +819,85 @@ def main() -> None:
         )
     portfolio = pd.DataFrame(portfolio_rows)
 
-    k1, k2, k3, k4, k5, k6 = st.columns(6)
+    k1, k2, k3, k4, k5, k6, k7 = st.columns(7)
     k1.metric("Portfolio initiatives", len(initiatives))
     k2.metric("Active NPV (net)", _fmt_money(tei["npv_net"]))
-    k3.metric("Active ROI", f"{tei['roi_pct']:.0f}%")
-    k4.metric("Active payback", f"{tei['payback_months']:.0f} mo" if tei["payback_months"] else "—")
-    k5.metric("Positive NPV count", int((portfolio["npv_net"] > 0).sum()))
-    k6.metric("Discount rate", f"{discount_override*100:.0f}%")
+    k3.metric("FY26 Y1 asks", _fmt_money(envelope["requested_y1"]), delta=f"cap {_fmt_money(envelope['opex_cap'])}")
+    k4.metric("Open CFO questions", int((cfo_log["status"] != "Closed").sum()))
+    k5.metric("Gates at risk", int(funding_gates["status"].isin(["At risk", "Blocked"]).sum()))
+    k6.metric("Positive NPV", int((portfolio["npv_net"] > 0).sum()))
+    k7.metric("Discount rate", f"{discount_override*100:.0f}%")
 
-    work, model, rosi_tab, flows, compare, sens, board, export = st.tabs(
-        ["Workbench", "TEI model", "ROSI / FAIR", "Cash flows", "Compare", "Sensitivity", "Board brief", "Export"]
+    over_cap = envelope["requested_y1"] > envelope["opex_cap"] * 0.35
+    if over_cap:
+        st.warning(
+            f"Combined Y1 asks ({_fmt_money(envelope['requested_y1'])}) exceed ~35% of program cap — CFO will force rank."
+        )
+
+    work, model, rosi_tab, flows, assumptions_tab, compare, sens, board, export = st.tabs(
+        [
+            "Workbench",
+            "TEI model",
+            "ROSI / FAIR",
+            "Cash flows",
+            "Assumptions",
+            "Compare",
+            "Sensitivity",
+            "Board brief",
+            "Export",
+        ]
     )
 
     with work:
         st.subheader("Investment workbench")
+
+        e1, e2, e3, e4 = st.columns(4)
+        e1.metric("FY26 OPEX cap", _fmt_money(envelope["opex_cap"]))
+        e2.metric("Board exception", _fmt_money(envelope["exception"]))
+        e3.metric("Already committed", _fmt_money(envelope["committed"]))
+        e4.metric("Unallocated", _fmt_money(envelope["opex_cap"] - envelope["committed"]))
+
+        st.markdown("**Executive narrative**")
         for _, n in narrative.iterrows():
             st.write(f"**{n['lane']}:** {n['text']}")
 
         st.markdown("---")
+        st.markdown("**CFO challenge log**")
+        for _, row in cfo_log.sort_values("date", ascending=False).iterrows():
+            flag = "" if row["status"] == "Closed" else f" · **{row['status']}**"
+            q_short = row["question"] if len(row["question"]) <= 60 else row["question"][:60] + "…"
+            with st.expander(f"{_fmt_date(row['date'])} · {row['init_id']} · {q_short}{flag}"):
+                st.write(f"**Question:** {row['question']}")
+                st.write(f"**Response:** {row['response']}")
+
+        st.markdown("---")
+        st.markdown("**Funding gates (next 45 days)**")
+        soon = funding_gates[funding_gates["due"] <= _today() + timedelta(days=45)].sort_values("due")
+        st.dataframe(
+            soon.assign(due=soon["due"].map(_fmt_date)),
+            use_container_width=True,
+            hide_index=True,
+        )
+
+        st.markdown("---")
         st.markdown(f"**Featured initiatives ({len(FEATURED)})**")
-        pref = ["INV-ROI-001", "INV-ROI-002", "INV-ROI-003"]
+        pref = ["INV-ROI-001", "INV-ROI-002", "INV-ROI-003", "INV-ROI-005"]
         for iid in pref:
             if iid not in FEATURED:
                 continue
             inv = initiatives[initiatives["init_id"] == iid].iloc[0].to_dict()
             st.markdown("---")
-            _initiative_panel(inv, benefits, costs, widget_key=f"feat_{iid}")
+            _initiative_panel(
+                inv,
+                benefits,
+                costs,
+                widget_key=f"feat_{iid}",
+                deep=deep,
+                assumptions=assumptions,
+                fte=fte_models,
+                gates=funding_gates,
+                actuals=actuals,
+            )
 
         st.markdown("---")
         st.markdown("**Portfolio ranking (NPV net)**")
@@ -717,7 +1012,38 @@ def main() -> None:
 
     with flows:
         st.subheader("Cash flows — active initiative")
-        _initiative_panel(active, benefits, costs, widget_key="flows_active")
+        _initiative_panel(
+            active,
+            benefits,
+            costs,
+            widget_key="flows_active",
+            deep=deep,
+            assumptions=assumptions,
+            fte=fte_models,
+            gates=funding_gates,
+            actuals=actuals,
+        )
+
+    with assumptions_tab:
+        st.subheader("Assumption register & labor models")
+        st.caption("Every hard number should trace to an owner and confidence — CFO will challenge Low items first.")
+
+        a_view = assumptions[assumptions["init_id"] == active_id] if active_id else assumptions
+        st.markdown(f"**Active initiative ({active_id})**")
+        st.dataframe(a_view, use_container_width=True, hide_index=True)
+
+        st.markdown("**Full portfolio register**")
+        st.dataframe(assumptions, use_container_width=True, hide_index=True)
+
+        st.markdown("**FTE / labor baselines**")
+        ft = fte_models.copy()
+        ft["labor_baseline_fmt"] = ft["labor_baseline"].map(_fmt_money)
+        st.dataframe(ft, use_container_width=True, hide_index=True)
+
+        conf = assumptions.groupby("confidence").size().reset_index(name="count")
+        fig = px.bar(conf, x="confidence", y="count", color="confidence", title="Assumptions by confidence")
+        fig.update_layout(showlegend=False, height=280)
+        st.plotly_chart(fig, use_container_width=True, key="plotly_asm_conf")
 
     with compare:
         st.subheader("Scenario comparison")
@@ -782,6 +1108,13 @@ def main() -> None:
         st.markdown(f"**So what:** {active['so_what']}")
         st.markdown(f"**Ask:** {active['decision']}")
         st.markdown("**Linked portfolio:** " + active["linked"])
+        if active_id in deep:
+            st.markdown(f"**Memo:** {deep[active_id].get('memo', '')}")
+            st.markdown(f"**Counterfactual:** {deep[active_id].get('counterfactual', '')}")
+
+        st.markdown("#### Open CFO questions")
+        for _, row in cfo_log[cfo_log["init_id"] == active_id].iterrows():
+            st.write(f"- ({_fmt_date(row['date'])}) {row['question']} → *{row['response']}* [{row['status']}]")
 
         st.markdown("#### Alternatives considered")
         alts = initiatives[initiatives["init_id"] != active_id].head(3)
@@ -796,6 +1129,9 @@ def main() -> None:
         c_out = costs.copy()
         demo_kit.csv_download(b_out, "roi_benefit_streams.csv", label="Download benefit streams")
         demo_kit.csv_download(c_out, "roi_cost_streams.csv", label="Download cost streams")
+        demo_kit.csv_download(assumptions, "roi_assumptions.csv", label="Download assumption register")
+        demo_kit.csv_download(cfo_log.assign(date=cfo_log["date"].map(_fmt_date)), "roi_cfo_log.csv", label="Download CFO challenge log")
+        demo_kit.csv_download(funding_gates.assign(due=funding_gates["due"].map(_fmt_date)), "roi_funding_gates.csv", label="Download funding gates")
 
         active_export = pd.DataFrame(
             [

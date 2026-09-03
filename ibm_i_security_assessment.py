@@ -44,17 +44,21 @@ FEATURED_FINDINGS = {
     "FND-IBMI-001",
     "FND-IBMI-002",
     "FND-IBMI-003",
+    "FND-IBMI-006",
     "FND-IBMI-007",
     "FND-IBMI-011",
+    "FND-IBMI-013",
     "FND-IBMI-014",
 }
-_SYNC_KEY = "_ibmi_assess_v1"
+_SYNC_KEY = "_ibmi_assess_v2"
 
 REDBOOKS = [
     {"id": "SG24-8150", "title": "IBM i Security Guide", "use": "System values, QSECURITY, passwords"},
     {"id": "SC41-5302", "title": "IBM i Security Reference", "use": "QAUDJRN entry types, system values"},
     {"id": "SG24-7806", "title": "IBM i PowerHA / HA security notes", "use": "Replication exposure"},
     {"id": "REDP-5460", "title": "IBM i and PCI DSS considerations", "use": "Cardholder data on midrange"},
+    {"id": "SG24-6326", "title": "IBM i and network security", "use": "Exit points, TCP servers"},
+    {"id": "WHITE-FORTRA", "title": "IBM i security assessment practices (industry)", "use": "Domain RAG scoring pattern"},
 ]
 
 
@@ -94,40 +98,61 @@ def _sample(seed: int):
                 "lpar_id": "LPAR-PRODBOX",
                 "name": "PRODBOX",
                 "host": "NSK-IBMI-01",
-                "site": "NorthStack colo A",
+                "site": "NorthStack colo A · cage 12",
                 "os": "IBM i 7.5 TR5",
                 "role": "Production ERP / JDE World",
                 "qsecurity": 40,
                 "serial": "78A3XYZ",
                 "partition": "1",
+                "cpu_pct": 62,
+                "storage_pct": 71,
+                "profiles": 1842,
+                "allobj_count": 14,
+                "default_pwd": 47,
+                "exit_coverage_pct": 10,
                 "crown_jewel": True,
+                "owner": "IBM i Ops · M. Reyes",
                 "linked": "AST-2026-005 · KRI-2026-001 · INC-2026-001",
             },
             {
                 "lpar_id": "LPAR-DEVBOX",
                 "name": "DEVBOX",
                 "host": "NSK-IBMI-02",
-                "site": "NorthStack colo A",
+                "site": "NorthStack colo A · cage 12",
                 "os": "IBM i 7.4 TR11",
-                "role": "Dev / QA",
+                "role": "Dev / QA · weekly prod refresh",
                 "qsecurity": 30,
                 "serial": "78A3XYZ",
                 "partition": "2",
+                "cpu_pct": 28,
+                "storage_pct": 44,
+                "profiles": 410,
+                "allobj_count": 22,
+                "default_pwd": 31,
+                "exit_coverage_pct": 0,
                 "crown_jewel": False,
-                "linked": "Change freeze exceptions",
+                "owner": "DevOps · J. Park",
+                "linked": "Change freeze · PB-2026-002",
             },
             {
                 "lpar_id": "LPAR-HA",
                 "name": "HAREPL",
                 "host": "NSK-IBMI-03",
-                "site": "NorthStack colo B (DR)",
+                "site": "NorthStack colo B (DR) · cage 3",
                 "os": "IBM i 7.5 TR5",
-                "role": "HA target",
+                "role": "HA target / PowerHA",
                 "qsecurity": 40,
                 "serial": "78B9QRS",
                 "partition": "1",
+                "cpu_pct": 18,
+                "storage_pct": 68,
+                "profiles": 1801,
+                "allobj_count": 11,
+                "default_pwd": 40,
+                "exit_coverage_pct": 10,
                 "crown_jewel": True,
-                "linked": "DST-2026-001 · BCP RPO",
+                "owner": "BCP · IBM i Ops",
+                "linked": "DST-2026-001 · BCP RPO · RC.RP-03",
             },
         ]
     )
@@ -568,21 +593,142 @@ def _sample(seed: int):
                 "text": "PAYLIB/PAYMAST *PUBLIC *CHANGE + NetServer /payroll share — PayrollCo-adjacent blast radius. KRI-2026-001 still off target.",
             },
             {
+                "lane": "SST / service tools",
+                "text": "DST password last rotated 2025-04 after Orbit AMS remote. Dual-control CHGDSTPWD still not enforced — FND-IBMI-013 due in 3 days.",
+            },
+            {
+                "lane": "Prior scan delta",
+                "text": "vs SCAN-IBMI-2026-078 (60 days ago): overall −4 pts. Exit-point coverage unchanged; *ALLOBJ count rose 11→14 after PAYBATCH grant.",
+            },
+            {
                 "lane": "90-day ask",
                 "text": "Exit-point log-only → enforce; fix PAYMAST; *ALLOBJ reduction; QAUDLVL + 90-day receivers; QPWDLVL impact on JDE.",
             },
         ]
     )
 
+    # Object authority samples (DSPOBJAUT style)
+    objects = pd.DataFrame(
+        [
+            {"library": "PAYLIB", "object": "PAYMAST", "type": "*FILE", "owner": "PAYOWNER", "public": "*CHANGE", "autl": "*NONE", "objaud": "*NONE", "risk": "Critical", "finding_id": "FND-IBMI-006", "notes": "Payroll master — any interactive user"},
+            {"library": "PAYLIB", "object": "PAYHIST", "type": "*FILE", "owner": "PAYOWNER", "public": "*USE", "autl": "*NONE", "objaud": "*CHANGE", "risk": "High", "finding_id": "FND-IBMI-006", "notes": "History readable"},
+            {"library": "JDFLIB", "object": "F0005", "type": "*FILE", "owner": "JDEOWNER", "public": "*USE", "autl": "JDE_AL", "objaud": "*CHANGE", "risk": "Medium", "finding_id": "", "notes": "JDE World UDC"},
+            {"library": "QGPL", "object": "PAYFIX", "type": "*PGM", "owner": "QPGMR", "public": "*USE", "autl": "*NONE", "objaud": "*NONE", "risk": "High", "finding_id": "FND-IBMI-014", "notes": "Orphan CL in QGPL"},
+            {"library": "QGPL", "object": "TMPPAY", "type": "*FILE", "owner": "QPGMR", "public": "*ALL", "autl": "*NONE", "objaud": "*NONE", "risk": "Critical", "finding_id": "FND-IBMI-014", "notes": "Temp file left public"},
+            {"library": "APPLIB", "object": "CUSTMAST", "type": "*FILE", "owner": "APPOWNER", "public": "*EXCLUDE", "autl": "APP_AL", "objaud": "*CHANGE", "risk": "Low", "finding_id": "", "notes": "OK pattern"},
+            {"library": "QSYS", "object": "QCMD", "type": "*CMD", "owner": "QSYS", "public": "*USE", "autl": "*NONE", "objaud": "*NONE", "risk": "Info", "finding_id": "", "notes": "Expected"},
+            {"library": "HRLIB", "object": "EMPSSN", "type": "*FILE", "owner": "HROWNER", "public": "*USE", "autl": "*NONE", "objaud": "*NONE", "risk": "High", "finding_id": "", "notes": "SSN data — tighten"},
+            {"library": "BKULIB", "object": "SAVFPROD", "type": "*FILE", "owner": "BACKUPOP", "public": "*USE", "autl": "*NONE", "objaud": "*NONE", "risk": "Medium", "finding_id": "", "notes": "Save file readable"},
+            {"library": "PAYLIB", "object": "PAYBAT", "type": "*PGM", "owner": "PAYOWNER", "public": "*USE", "autl": "PAYROLL_AL", "objaud": "*ALL", "risk": "Medium", "finding_id": "", "notes": "Adopted owner USRPRF"},
+        ]
+    )
+
+    # IFS / NetServer shares
+    ifs_shares = pd.DataFrame(
+        [
+            {"path": "/payroll", "share_name": "PAYROLL", "public": "RW", "guest": False, "mapped_users": 18, "risk": "Critical", "finding_id": "FND-IBMI-007", "notes": "Night crew SMB map"},
+            {"path": "/home", "share_name": "HOME", "public": "R", "guest": False, "mapped_users": 120, "risk": "Medium", "finding_id": "FND-IBMI-015", "notes": "7 world-writable dirs under"},
+            {"path": "/jde/export", "share_name": "JDEEXP", "public": "RW", "guest": False, "mapped_users": 9, "risk": "High", "finding_id": "", "notes": "Finance extracts"},
+            {"path": "/tmp/orbit", "share_name": "ORBIT", "public": "RW", "guest": True, "mapped_users": 2, "risk": "Critical", "finding_id": "", "notes": "Vendor Orbit AMS leftover"},
+            {"path": "/backup/nightly", "share_name": "BKUNITE", "public": "R", "guest": False, "mapped_users": 3, "risk": "Medium", "finding_id": "", "notes": "Tape room staging"},
+        ]
+    )
+
+    # Network listeners
+    listeners = pd.DataFrame(
+        [
+            {"port": 23, "service": "Telnet", "state": "*ACTIVE", "tls": False, "source_restrict": "JUMP-DMZ-03 only (claimed)", "risk": "High", "finding_id": "FND-IBMI-010"},
+            {"port": 21, "service": "FTP", "state": "*ACTIVE", "tls": False, "source_restrict": "None", "risk": "Critical", "finding_id": "FND-IBMI-002"},
+            {"port": 446, "service": "DDM / DRDA", "state": "*ACTIVE", "tls": True, "source_restrict": "HA peer", "risk": "Medium", "finding_id": ""},
+            {"port": 8471, "service": "as-database (ODBC)", "state": "*ACTIVE", "tls": False, "source_restrict": "None", "risk": "Critical", "finding_id": "FND-IBMI-002"},
+            {"port": 8476, "service": "as-signon", "state": "*ACTIVE", "tls": False, "source_restrict": "Corporate VPN", "risk": "Medium", "finding_id": ""},
+            {"port": 992, "service": "Telnet TLS", "state": "*INACTIVE", "tls": True, "source_restrict": "—", "risk": "High", "finding_id": "FND-IBMI-010"},
+            {"port": 445, "service": "NetServer SMB", "state": "*ACTIVE", "tls": False, "source_restrict": "Colo VLAN", "risk": "Critical", "finding_id": "FND-IBMI-007"},
+        ]
+    )
+
+    # Command evidence packs
+    evidence_cmds = pd.DataFrame(
+        [
+            {"evidence_id": "EVD-IBMI-001", "finding_id": "FND-IBMI-001", "command": "DSPUSRPRF USRPRF(*ALL) TYPE(*BASIC)", "captured": today - timedelta(days=1), "result_summary": "14 profiles with *ALLOBJ; OPSNIGHT last used yesterday", "operator": "M. Reyes"},
+            {"evidence_id": "EVD-IBMI-002", "finding_id": "FND-IBMI-002", "command": "WRKREGINF EXITPNT(*ALL)", "captured": today - timedelta(days=1), "result_summary": "FTP/ODBC/Telnet/NetServer/RMTCMD unregistered", "operator": "SecEng"},
+            {"evidence_id": "EVD-IBMI-003", "finding_id": "FND-IBMI-003", "command": "ANZDFTPWD OUTPUT(*OUTFILE)", "captured": today - timedelta(days=2), "result_summary": "47 default/known passwords; QUSER/QTCP included", "operator": "IAM"},
+            {"evidence_id": "EVD-IBMI-004", "finding_id": "FND-IBMI-005", "command": "DSPSYSVAL SYSVAL(QAUDLVL)", "captured": today - timedelta(days=1), "result_summary": "*SECURITY *AUTFAIL only — no *NETCMN *PGMADP", "operator": "SOC"},
+            {"evidence_id": "EVD-IBMI-005", "finding_id": "FND-IBMI-006", "command": "DSPOBJAUT OBJ(PAYLIB/PAYMAST) OBJTYPE(*FILE)", "captured": today, "result_summary": "*PUBLIC *CHANGE; no AUTL", "operator": "AppSec"},
+            {"evidence_id": "EVD-IBMI-006", "finding_id": "FND-IBMI-007", "command": "GO NETS → Work with shares", "captured": today - timedelta(days=1), "result_summary": "/payroll share Public RW; 18 mapped sessions", "operator": "IBM i Ops"},
+            {"evidence_id": "EVD-IBMI-007", "finding_id": "FND-IBMI-011", "command": "WRKJRNA JRN(QAUDJRN)", "captured": today - timedelta(days=2), "result_summary": "Receivers deleted after 14 days; MNGRCV(*SYSTEM)", "operator": "SOC"},
+            {"evidence_id": "EVD-IBMI-008", "finding_id": "FND-IBMI-013", "command": "CHGDSTPWD (attempt log)", "captured": today - timedelta(days=5), "result_summary": "Last successful DST change 2025-04-18; no dual control", "operator": "IBM i Ops"},
+            {"evidence_id": "EVD-IBMI-009", "finding_id": "FND-IBMI-010", "command": "NETSTAT *CNN", "captured": today - timedelta(days=1), "result_summary": "Port 23 active from JUMP-DMZ-03; 992 inactive", "operator": "Network"},
+            {"evidence_id": "EVD-IBMI-010", "finding_id": "FND-IBMI-014", "command": "DSPOBJD OBJ(QGPL/*ALL) OBJTYPE(*ALL)", "captured": today - timedelta(days=3), "result_summary": "PAYFIX *PGM + TMPPAY *FILE public in QGPL", "operator": "App owners"},
+        ]
+    )
+
+    # SST / DST dual-control log
+    sst_log = pd.DataFrame(
+        [
+            {"event_id": "SST-2025-0418", "when": today - timedelta(days=503), "action": "CHGDSTPWD", "requester": "Orbit AMS tech", "approver": "— (none)", "dual_control": False, "notes": "Vendor remote — FND-IBMI-013 root cause"},
+            {"event_id": "SST-2026-0112", "when": today - timedelta(days=234), "action": "DST sign-on", "requester": "M. Reyes", "approver": "N/A", "dual_control": False, "notes": "Disk cleanup"},
+            {"event_id": "SST-2026-0620", "when": today - timedelta(days=75), "action": "DST sign-on", "requester": "Vendor HW", "approver": "— (none)", "dual_control": False, "notes": "HMC assist"},
+            {"event_id": "SST-2026-0828", "when": today - timedelta(days=6), "action": "DST sign-on attempt", "requester": "Unknown", "approver": "Blocked?", "dual_control": False, "notes": "Failed PW — investigate"},
+            {"event_id": "SST-POLICY", "when": today, "action": "Policy draft", "requester": "GRC", "approver": "CISO", "dual_control": True, "notes": "Dual-control CHGDSTPWD — not yet live"},
+        ]
+    )
+
+    # Remediation tickets
+    tickets = pd.DataFrame(
+        [
+            {"ticket_id": "CHG-IBMI-4412", "finding_id": "FND-IBMI-002", "title": "Register exit programs log-only (FTP/ODBC/Telnet)", "status": "In change CAB", "owner": "SecEng", "due": today + timedelta(days=14), "effort": "L"},
+            {"ticket_id": "CHG-IBMI-4418", "finding_id": "FND-IBMI-006", "title": "PAYMAST *PUBLIC *EXCLUDE + PAYROLL_AL", "status": "Ready", "owner": "AppSec", "due": today + timedelta(days=5), "effort": "M"},
+            {"ticket_id": "CHG-IBMI-4420", "finding_id": "FND-IBMI-007", "title": "Remove /payroll public share; named ACL", "status": "Blocked — night crew", "owner": "Facilities", "due": today + timedelta(days=7), "effort": "M"},
+            {"ticket_id": "CHG-IBMI-4421", "finding_id": "FND-IBMI-005", "title": "QAUDLVL add *NETCMN *PGMADP", "status": "Scheduled IPL window", "owner": "IBM i Ops", "due": today + timedelta(days=7), "effort": "S"},
+            {"ticket_id": "CHG-IBMI-4425", "finding_id": "FND-IBMI-001", "title": "Retire OPSNIGHT; named night profiles", "status": "HR + Ops workshop", "owner": "IAM", "due": today + timedelta(days=14), "effort": "L"},
+            {"ticket_id": "CHG-IBMI-4430", "finding_id": "FND-IBMI-013", "title": "Rotate DST + dual-control procedure", "status": "Open", "owner": "IBM i Ops", "due": today + timedelta(days=3), "effort": "S"},
+            {"ticket_id": "CHG-IBMI-4433", "finding_id": "FND-IBMI-011", "title": "QAUDJRN 90-day receiver archive", "status": "Storage quote", "owner": "SOC", "due": today + timedelta(days=25), "effort": "M"},
+            {"ticket_id": "CHG-IBMI-4440", "finding_id": "FND-IBMI-003", "title": "ANZDFTPWD remediation wave 1", "status": "In progress", "owner": "IAM", "due": today + timedelta(days=10), "effort": "M"},
+        ]
+    )
+
+    # Prior scan history
+    hist = pd.DataFrame(
+        [
+            {"scan_id": "SCAN-IBMI-2026-040", "as_of": today - timedelta(days=180), "overall": 48, "critical": 5, "exit_gap": 9},
+            {"scan_id": "SCAN-IBMI-2026-061", "as_of": today - timedelta(days=120), "overall": 51, "critical": 4, "exit_gap": 9},
+            {"scan_id": "SCAN-IBMI-2026-078", "as_of": today - timedelta(days=60), "overall": 56, "critical": 3, "exit_gap": 9},
+            {"scan_id": "SCAN-IBMI-2026-091", "as_of": today, "overall": int(domains["score"].mean()), "critical": 3, "exit_gap": 9},
+        ]
+    )
+
+    deep = {
+        "FND-IBMI-001": {
+            "memo": "OPSNIGHT exists because colo night crew shares a single 5250 session binder. CMP-2026-001 huddles cannot attribute actions.",
+            "counterfactual": "If portal stuffing had used OPSNIGHT, QAUDJRN PW entries would not identify a person.",
+            "commands": ["DSPUSRPRF OPSNIGHT", "DSPOBJAUT OBJ(OPSNIGHT) OBJTYPE(*USRPRF)"],
+        },
+        "FND-IBMI-002": {
+            "memo": "Exit-point SOW drafted; Legal reviewing 'log-only 30 days' vs enforce. JUMP-DMZ-03 ODBC from Finance still unmanaged.",
+            "counterfactual": "SafeNet-style registration would have blocked anonymous FTP pulls of PAYMAST during INC-2026-009 window.",
+            "commands": ["WRKREGINF", "DSPEXITPGM EXITPNT(QIBM_QTMF_SERVER_REQ)"],
+        },
+        "FND-IBMI-007": {
+            "memo": "Facilities says night crew needs RW for shift checklists. Alternative: named share + MFA ACS — blocked on schedule.",
+            "counterfactual": "Ransomware via NetServer would encrypt /payroll with no pattern alert today.",
+            "commands": ["GO NETS", "WRKLNK OBJ('/payroll')"],
+        },
+    }
+
     scan_meta = {
         "scan_id": "SCAN-IBMI-2026-091",
         "as_of": today,
         "primary_lpar": "PRODBOX",
+        "prior_scan": "SCAN-IBMI-2026-078",
+        "delta_pts": int(domains["score"].mean()) - 56,
         "tool_pattern": "Security Scan–style domain assessment (synthetic)",
         "assessor": "GRC · IBM i security (sample)",
         "overall_score": int(domains["score"].mean()),
         "overall_rag": _rag(float(domains["score"].mean())),
-        "references": "SG24-8150 · SC41-5302 · CIS IBM i V7R5 · COBIT DSS05",
+        "references": "SG24-8150 · SC41-5302 · CIS IBM i V7R5 · COBIT DSS05 · SG24-6326",
+        "duration_min": 12,
+        "method": "Non-intrusive config collect (demo) — no live WRKREGINF",
     }
 
     return (
@@ -599,6 +745,14 @@ def _sample(seed: int):
         narrative,
         scan_meta,
         pd.DataFrame(REDBOOKS),
+        objects,
+        ifs_shares,
+        listeners,
+        evidence_cmds,
+        sst_log,
+        tickets,
+        hist,
+        deep,
     )
 
 
@@ -617,6 +771,14 @@ def _sync(seed: int):
         "ibmi_narrative",
         "ibmi_scan_meta",
         "ibmi_redbooks",
+        "ibmi_objects",
+        "ibmi_ifs",
+        "ibmi_listeners",
+        "ibmi_evidence",
+        "ibmi_sst",
+        "ibmi_tickets",
+        "ibmi_hist",
+        "ibmi_deep",
     ]
     need = st.session_state.get(_SYNC_KEY) != seed or "ibmi_findings" not in st.session_state
     if need:
@@ -635,7 +797,7 @@ def _domain_pillars(domains: pd.DataFrame):
             st.caption(f"{row['rag']} {row['score']}% · {int(row['fails'])} fails")
 
 
-def _finding_card(row, *, widget_key: str):
+def _finding_card(row, *, widget_key: str, deep: dict | None = None, evidence: pd.DataFrame | None = None, tickets: pd.DataFrame | None = None):
     st.markdown(f"### {row['finding_id']} · {row['title']}")
     a, b, c, d = st.columns(4)
     a.metric("Severity", row["severity"])
@@ -644,18 +806,40 @@ def _finding_card(row, *, widget_key: str):
     d.metric("Due", _fmt(row["due"]))
     st.write(row["detail"])
     c1, c2 = st.columns(2)
-    c1.write(f"**Evidence:** {row['evidence']}")
+    c1.write(f"**Evidence cmd:** {row['evidence']}")
     c1.write(f"**Owner:** {row['owner']} · **LPAR:** {row['lpar_id']}")
     c1.write(f"**Linked:** {row['linked']}")
     c2.write(f"**Remediation:** {row['remediation']}")
     c2.write(f"**CIS:** {row['cis']} · **Redbook:** {row['redbook']}")
     c2.write(f"**ISO 27001:** {row['iso27001']} · **SOC 2:** {row['soc2']} · **PCI:** {row['pci']}")
 
+    fid = row["finding_id"]
+    if deep and fid in deep:
+        with st.expander("Program memo / counterfactual", expanded=False):
+            st.write(f"**Memo:** {deep[fid].get('memo', '')}")
+            st.write(f"**Without fix:** {deep[fid].get('counterfactual', '')}")
+            if deep[fid].get("commands"):
+                st.write("**Reproduce:** " + " · ".join(f"`{c}`" for c in deep[fid]["commands"]))
+    if evidence is not None and not evidence.empty:
+        ev = evidence[evidence["finding_id"] == fid]
+        if not ev.empty:
+            with st.expander("Captured command evidence", expanded=False):
+                st.dataframe(
+                    ev.assign(captured=ev["captured"].map(_fmt)),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+    if tickets is not None and not tickets.empty:
+        tk = tickets[tickets["finding_id"] == fid]
+        if not tk.empty:
+            with st.expander("Remediation tickets", expanded=False):
+                st.dataframe(tk.assign(due=tk["due"].map(_fmt)), use_container_width=True, hide_index=True)
+
 
 def main() -> None:
     portfolio_skin.page_header(
         title="IBM i Security Assessment",
-        lede="LPAR posture workbench — Security Scan–style domains, QAUDJRN, exit points, privileged profiles, CIS/Redbook baselines, and ISO/SOC 2/PCI crosswalks. Synthetic PRODBOX / NorthStack data.",
+        lede="LPAR posture workbench — Security Scan–style domains, QAUDJRN, exit points, object authorities, IFS shares, SST dual-control, CIS/Redbook baselines, and ISO/SOC 2/PCI crosswalks. Synthetic PRODBOX / NorthStack data.",
         kicker="IBM i · Midrange",
     )
 
@@ -674,6 +858,14 @@ def main() -> None:
         narrative,
         scan_meta,
         redbooks,
+        objects,
+        ifs_shares,
+        listeners,
+        evidence,
+        sst_log,
+        tickets,
+        hist,
+        deep,
     ) = _sync(seed)
 
     st.sidebar.markdown("---")
@@ -698,32 +890,51 @@ def main() -> None:
     exit_gap = int((~exits["registered"]).sum())
     drift = int(baseline["drift"].sum())
     cis_ready = float(frameworks[frameworks["framework"].str.contains("CIS")]["readiness_pct"].iloc[0])
+    open_tk = int(tickets["status"].apply(lambda s: s not in {"Closed", "Done"}).sum())
+    pub_crit = int((objects["risk"] == "Critical").sum())
 
-    k1, k2, k3, k4, k5, k6, k7 = st.columns(7)
-    k1.metric("Overall score", f"{overall}%", delta=scan_meta["overall_rag"])
-    k2.metric("Critical findings", crit)
-    k3.metric("High findings", high)
-    k4.metric("Exit points open", exit_gap)
+    k1, k2, k3, k4, k5, k6, k7, k8 = st.columns(8)
+    k1.metric("Overall score", f"{overall}%", delta=f"{scan_meta.get('delta_pts', 0):+d} vs prior")
+    k2.metric("Critical", crit)
+    k3.metric("High", high)
+    k4.metric("Exit gaps", exit_gap)
     k5.metric("Baseline drift", drift)
-    k6.metric("LPARs in scope", len(lpars))
-    k7.metric("CIS readiness", f"{cis_ready:.0f}%")
+    k6.metric("Open tickets", open_tk)
+    k7.metric("Critical objects", pub_crit)
+    k8.metric("CIS ready", f"{cis_ready:.0f}%")
 
     if overall < 55:
         st.error(
-            f"Scan {scan_meta['scan_id']} — {scan_meta['primary_lpar']} is Red overall. "
+            f"Scan {scan_meta['scan_id']} — {scan_meta['primary_lpar']} is Red overall "
+            f"({scan_meta.get('delta_pts', 0):+d} vs {scan_meta.get('prior_scan', 'prior')}). "
             "Network/exit points and IFS public shares dominate residual risk."
         )
     elif crit:
         st.warning(f"{crit} critical findings open — treat *ALLOBJ, exit points, and PAYMAST before board packet.")
 
-    work, domains_tab, findings_tab, sys_tab, exit_tab, aud_tab, cross_tab, base_tab, board_tab, export_tab = st.tabs(
+    (
+        work,
+        domains_tab,
+        findings_tab,
+        sys_tab,
+        obj_tab,
+        exit_tab,
+        aud_tab,
+        sst_tab,
+        cross_tab,
+        base_tab,
+        board_tab,
+        export_tab,
+    ) = st.tabs(
         [
             "Workbench",
             "Scan domains",
             "Findings",
             "System values",
+            "Objects / IFS",
             "Exit points",
             "QAUDJRN",
+            "SST / service tools",
             "Crosswalk",
             "Baseline / CIS",
             "Board brief",
@@ -734,14 +945,21 @@ def main() -> None:
     with work:
         st.subheader("IBM i posture workbench")
         st.caption(
-            f"**{scan_meta['scan_id']}** · {_fmt(scan_meta['as_of'])} · {scan_meta['tool_pattern']} · "
-            f"Refs: {scan_meta['references']}"
+            f"**{scan_meta['scan_id']}** · {_fmt(scan_meta['as_of'])} · ~{scan_meta.get('duration_min', 10)} min · "
+            f"{scan_meta['tool_pattern']} · Refs: {scan_meta['references']}"
         )
         _domain_pillars(domains)
 
         st.markdown("**Executive narrative**")
         for _, n in narrative.iterrows():
             st.write(f"**{n['lane']}:** {n['text']}")
+
+        st.markdown("---")
+        st.markdown("**Remediation queue**")
+        for _, t in tickets.sort_values("due").iterrows():
+            flag = " · BLOCKED" if "Blocked" in str(t["status"]) else ""
+            with st.expander(f"{t['ticket_id']} · {t['title']} · {_fmt(t['due'])}{flag}"):
+                st.write(f"**Finding:** {t['finding_id']} · **Owner:** {t['owner']} · **Status:** {t['status']} · **Effort:** {t['effort']}")
 
         st.markdown("---")
         c1, c2 = st.columns([1.1, 1])
@@ -759,26 +977,29 @@ def main() -> None:
             fig.update_layout(yaxis_range=[0, 105], height=360)
             st.plotly_chart(fig, use_container_width=True, key="plotly_ibmi_domains")
         with c2:
-            fig = px.bar(
-                frameworks,
-                x="framework",
-                y="readiness_pct",
-                color="readiness_pct",
-                title="Framework readiness (% passing)",
-            )
-            fig.update_layout(height=360, xaxis_tickangle=-25)
-            st.plotly_chart(fig, use_container_width=True, key="plotly_ibmi_fw")
+            fig = px.line(hist, x="as_of", y="overall", markers=True, title="Overall score trend (prior scans)")
+            fig.update_layout(height=360)
+            st.plotly_chart(fig, use_container_width=True, key="plotly_ibmi_hist")
 
         st.markdown("**LPARs**")
         st.dataframe(lpars, use_container_width=True, hide_index=True)
 
         st.markdown(f"**Featured findings ({len(FEATURED_FINDINGS)})**")
-        pref = ["FND-IBMI-001", "FND-IBMI-002", "FND-IBMI-003", "FND-IBMI-007", "FND-IBMI-011", "FND-IBMI-014"]
+        pref = [
+            "FND-IBMI-001",
+            "FND-IBMI-002",
+            "FND-IBMI-003",
+            "FND-IBMI-006",
+            "FND-IBMI-007",
+            "FND-IBMI-011",
+            "FND-IBMI-013",
+            "FND-IBMI-014",
+        ]
         feat = findings[findings["finding_id"].isin(FEATURED_FINDINGS)].copy()
         feat["_o"] = feat["finding_id"].map(lambda x: pref.index(x) if x in pref else 99)
         for _, row in feat.sort_values("_o").iterrows():
             st.markdown("---")
-            _finding_card(row, widget_key=f"feat_{row['finding_id']}")
+            _finding_card(row, widget_key=f"feat_{row['finding_id']}", deep=deep, evidence=evidence, tickets=tickets)
 
     with domains_tab:
         st.subheader("Scan domains")
@@ -797,8 +1018,13 @@ def main() -> None:
 
     with findings_tab:
         st.subheader("Finding register")
+        search = st.text_input("Search findings", placeholder="PAYMAST, exit, *ALLOBJ…", key="ibmi_fnd_search")
+        show = view_f
+        if search.strip():
+            q = search.strip().lower()
+            show = show[show.apply(lambda r: q in " ".join(str(v).lower() for v in r), axis=1)]
         st.dataframe(
-            view_f[
+            show[
                 [
                     "finding_id",
                     "lpar_id",
@@ -811,14 +1037,14 @@ def main() -> None:
                     "iso27001",
                     "soc2",
                 ]
-            ].assign(due=view_f["due"].map(_fmt)),
+            ].assign(due=show["due"].map(_fmt)),
             use_container_width=True,
             hide_index=True,
         )
-        if not view_f.empty:
-            pick = st.selectbox("Drill into finding", view_f["finding_id"].tolist(), key="fnd_pick")
-            row = view_f[view_f["finding_id"] == pick].iloc[0]
-            _finding_card(row, widget_key="drill")
+        if not show.empty:
+            pick = st.selectbox("Drill into finding", show["finding_id"].tolist(), key="fnd_pick")
+            row = show[show["finding_id"] == pick].iloc[0]
+            _finding_card(row, widget_key="drill", deep=deep, evidence=evidence, tickets=tickets)
 
         by_sev = findings.groupby("severity").size().reset_index(name="count")
         fig = px.bar(by_sev, x="severity", y="count", color="severity", title="Findings by severity")
@@ -835,8 +1061,29 @@ def main() -> None:
         st.markdown("**Privileged profiles (*ALLOBJ and friends)**")
         st.dataframe(priv.assign(last_used=priv["last_used"].map(_fmt)), use_container_width=True, hide_index=True)
 
+    with obj_tab:
+        st.subheader("Object authorities & IFS / NetServer")
+        st.caption("DSPOBJAUT-style crown-jewel sample + NetServer shares — public authority is the midrange classic miss.")
+        st.markdown("**Libraries / objects**")
+        st.dataframe(objects, use_container_width=True, hide_index=True)
+        hot = objects[objects["risk"].isin(["Critical", "High"])]
+        st.warning(f"{len(hot)} objects Critical/High — PAYMAST and QGPL orphans lead.")
+
+        st.markdown("**IFS / NetServer shares**")
+        st.dataframe(ifs_shares, use_container_width=True, hide_index=True)
+        fig = px.bar(ifs_shares, x="share_name", y="mapped_users", color="risk", title="Mapped sessions by share")
+        fig.update_layout(height=300)
+        st.plotly_chart(fig, use_container_width=True, key="plotly_ibmi_ifs")
+
+        st.markdown("**Command evidence register**")
+        st.dataframe(
+            evidence.assign(captured=evidence["captured"].map(_fmt)),
+            use_container_width=True,
+            hide_index=True,
+        )
+
     with exit_tab:
-        st.subheader("Network exit points")
+        st.subheader("Network exit points & listeners")
         st.caption(
             "Exit-point firewall view (SafeNet-style): visibility and control over FTP, ODBC, Telnet, "
             "NetServer, Remote Command — without changing QSECURITY."
@@ -854,6 +1101,9 @@ def main() -> None:
         )
         fig.update_layout(height=360)
         st.plotly_chart(fig, use_container_width=True, key="plotly_ibmi_exit")
+
+        st.markdown("**TCP listeners (NETSTAT-style)**")
+        st.dataframe(listeners, use_container_width=True, hide_index=True)
 
     with aud_tab:
         st.subheader("QAUDJRN activity (synthetic)")
@@ -877,6 +1127,22 @@ def main() -> None:
         )
         st.dataframe(legend, use_container_width=True, hide_index=True)
         st.warning("Receiver retention currently 14 days (FND-IBMI-011) — insufficient for board IR reconstruct.")
+
+    with sst_tab:
+        st.subheader("SST / DST service tools")
+        st.caption("Dual-control for CHGDSTPWD is policy-draft only — last real rotation was vendor Orbit AMS in 2025-04.")
+        st.dataframe(
+            sst_log.assign(when=sst_log["when"].map(_fmt)),
+            use_container_width=True,
+            hide_index=True,
+        )
+        bad = sst_log[~sst_log["dual_control"]]
+        st.error(f"{len(bad)} of {len(sst_log)} SST events lack dual control — including the password change that still stands.")
+        with st.expander("Recommended dual-control procedure (sample)"):
+            st.write(
+                "1. Ticket + CAB for CHGDSTPWD · 2. Two operators present (Ops + Security) · "
+                "3. Log event_id in GRC · 4. Rotate after any vendor remote · 5. Test DST sign-on under change window."
+            )
 
     with cross_tab:
         st.subheader("Compliance crosswalk")
@@ -924,11 +1190,15 @@ def main() -> None:
         fig.update_layout(height=280)
         st.plotly_chart(fig, use_container_width=True, key="plotly_ibmi_baseline_gauge")
 
+        st.markdown("**Prior scan history**")
+        st.dataframe(hist.assign(as_of=hist["as_of"].map(_fmt)), use_container_width=True, hide_index=True)
+
     with board_tab:
         st.subheader("Board / CISO brief — IBM i")
         st.markdown(
             f"**Scan:** {scan_meta['scan_id']} on **{scan_meta['primary_lpar']}** "
-            f"({_fmt(scan_meta['as_of'])}) · Overall **{overall}% ({scan_meta['overall_rag']})**"
+            f"({_fmt(scan_meta['as_of'])}) · Overall **{overall}% ({scan_meta['overall_rag']})** · "
+            f"Δ {scan_meta.get('delta_pts', 0):+d} vs {scan_meta.get('prior_scan', 'prior')}"
         )
         st.markdown("#### Headline")
         st.write(
@@ -936,15 +1206,18 @@ def main() -> None:
             f"**{crit} critical** and **{high} high** findings. "
             f"**{exit_gap}** network exit points unregistered — FTP/ODBC/Telnet/NetServer effectively open "
             f"to any authenticated profile. Payroll file **PAYMAST** is *PUBLIC *CHANGE; "
-            f"IFS **/payroll** share is world-writable."
+            f"IFS **/payroll** share is world-writable. DST password unchanged since Orbit AMS remote (2025-04)."
         )
         st.markdown("#### Domain RAG")
         for _, r in domains.iterrows():
             st.write(f"- **{r['domain']}:** {r['rag']} {r['score']}% ({int(r['fails'])} fails) — {r['benchmark']}")
         st.markdown("#### Top asks (30 days)")
-        for fid in ["FND-IBMI-001", "FND-IBMI-002", "FND-IBMI-006", "FND-IBMI-007", "FND-IBMI-005"]:
+        for fid in ["FND-IBMI-001", "FND-IBMI-002", "FND-IBMI-006", "FND-IBMI-007", "FND-IBMI-005", "FND-IBMI-013"]:
             row = findings[findings["finding_id"] == fid].iloc[0]
             st.write(f"- **{fid}** ({row['severity']}): {row['title']}")
+        st.markdown("#### Change tickets in flight")
+        for _, t in tickets.head(6).iterrows():
+            st.write(f"- **{t['ticket_id']}** [{t['status']}]: {t['title']}")
         st.markdown("#### Framework impact")
         st.write(
             f"CIS readiness **{frameworks.iloc[0]['readiness_pct']:.0f}%** · "
@@ -955,7 +1228,7 @@ def main() -> None:
         st.markdown("#### Linked portfolio")
         st.write(
             "INC-2026-001 · INC-2026-009 · GAP-2026-001 · KRI-2026-001/002 · "
-            "CMP-2026-001 · DST-2026-001 · AST-2026-005"
+            "CMP-2026-001 · DST-2026-001 · AST-2026-005 · Orbit AMS · PayrollCo"
         )
 
     with export_tab:
@@ -964,6 +1237,11 @@ def main() -> None:
         demo_kit.csv_download(domains, "ibmi_domain_scores.csv", label="Download domain scores")
         demo_kit.csv_download(sysvals, "ibmi_system_values.csv", label="Download system values")
         demo_kit.csv_download(exits, "ibmi_exit_points.csv", label="Download exit points")
+        demo_kit.csv_download(objects, "ibmi_object_authorities.csv", label="Download object authorities")
+        demo_kit.csv_download(ifs_shares, "ibmi_ifs_shares.csv", label="Download IFS shares")
+        demo_kit.csv_download(evidence.assign(captured=evidence["captured"].map(_fmt)), "ibmi_command_evidence.csv", label="Download command evidence")
+        demo_kit.csv_download(tickets.assign(due=tickets["due"].map(_fmt)), "ibmi_remediation_tickets.csv", label="Download remediation tickets")
+        demo_kit.csv_download(sst_log.assign(when=sst_log["when"].map(_fmt)), "ibmi_sst_log.csv", label="Download SST log")
         demo_kit.csv_download(crosswalk, "ibmi_crosswalk.csv", label="Download compliance crosswalk")
         demo_kit.csv_download(
             baseline.assign(last_change=baseline["last_change"].map(_fmt)),
@@ -976,10 +1254,12 @@ def main() -> None:
                 {"metric": "scan_id", "value": scan_meta["scan_id"]},
                 {"metric": "overall_score", "value": overall},
                 {"metric": "overall_rag", "value": scan_meta["overall_rag"]},
+                {"metric": "delta_vs_prior", "value": scan_meta.get("delta_pts", 0)},
                 {"metric": "critical", "value": crit},
                 {"metric": "high", "value": high},
                 {"metric": "exit_gaps", "value": exit_gap},
                 {"metric": "baseline_drift", "value": drift},
+                {"metric": "open_tickets", "value": open_tk},
             ]
         )
         demo_kit.csv_download(summary, "ibmi_executive_summary.csv", label="Download executive summary")
